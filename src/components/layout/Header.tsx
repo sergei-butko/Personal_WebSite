@@ -8,6 +8,7 @@ import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher'
 /** Single source of truth for navigation. Adding a route is one line here. */
 export const navItems = [
   { key: 'blog', path: 'blog' },
+  { key: 'threads', path: 'threads' },
   { key: 'photos', path: 'photos' },
   { key: 'about', path: 'about' },
   { key: 'cv', path: 'cv' },
