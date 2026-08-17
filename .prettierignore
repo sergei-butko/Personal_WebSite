@@ -2,3 +2,9 @@ node_modules
 .next
 out
 package-lock.json
+
+# Hand-authored prose. Prettier's MDX parser still targets MDX v1, so it reads
+# an MDX v3 comment `{/* ... */}` as markdown emphasis and rewrites it to
+# `{/_ ... _/}`, which no longer compiles. It also reflows paragraphs, which is
+# the author's call to make, not the formatter's.
+src/content/posts
