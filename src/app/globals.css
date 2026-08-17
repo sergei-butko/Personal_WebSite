@@ -60,6 +60,183 @@
   }
 }
 
+/*
+ * Long-form post body. Hand-rolled rather than @tailwindcss/typography so the
+ * only colours in play are the tokens above — the plugin ships its own grey
+ * ramp, which would quietly become a second source of truth for the palette.
+ */
+@layer components {
+  .prose {
+    font-size: 16.5px;
+    line-height: 1.75;
+  }
+
+  .prose > * + * {
+    margin-top: 1.15em;
+  }
+
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    scroll-margin-top: 2rem;
+  }
+
+  .prose h2 {
+    margin-top: 2.4em;
+    font-size: 1.5em;
+  }
+
+  .prose h3 {
+    margin-top: 2em;
+    font-size: 1.2em;
+  }
+
+  .prose h4 {
+    margin-top: 1.8em;
+    font-size: 1.05em;
+  }
+
+  /* rehype-autolink-headings wraps the heading text; keep it looking like text. */
+  .prose .heading-anchor {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .prose .heading-anchor:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent);
+    text-underline-offset: 4px;
+  }
+
+  .prose a:not(.heading-anchor) {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+  }
+
+  .prose strong {
+    font-weight: 650;
+  }
+
+  .prose ul,
+  .prose ol {
+    padding-left: 1.35em;
+  }
+
+  .prose ul {
+    list-style: disc;
+  }
+
+  .prose ol {
+    list-style: decimal;
+  }
+
+  .prose li::marker {
+    color: var(--color-muted);
+  }
+
+  .prose li + li {
+    margin-top: 0.4em;
+  }
+
+  .prose blockquote {
+    border-left: 2px solid var(--color-accent);
+    padding-left: 1.1em;
+    font-style: italic;
+    color: var(--color-muted);
+  }
+
+  .prose hr {
+    border: 0;
+    border-top: 1px solid var(--color-edge);
+    margin-block: 2.5em;
+  }
+
+  .prose img {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-edge);
+  }
+
+  .prose figcaption {
+    margin-top: 0.6em;
+    font-family: var(--font-mono);
+    font-size: 0.72em;
+    color: var(--color-muted);
+  }
+
+  /* GFM tables — reformulation comparisons live here. */
+  .prose table {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+  }
+
+  .prose th,
+  .prose td {
+    border-bottom: 1px solid var(--color-edge);
+    padding: 0.55em 0.9em;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .prose th {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Inline code. Fenced blocks are styled by Shiki and opted out below. */
+  .prose code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background-color: var(--color-chip);
+    color: var(--color-chip-ink);
+    border-radius: 6px;
+    padding: 0.15em 0.4em;
+  }
+
+  .prose pre {
+    overflow-x: auto;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-edge);
+    padding: 1em 1.15em;
+    font-size: 0.82em;
+    line-height: 1.65;
+  }
+
+  .prose pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  .prose sup a {
+    font-family: var(--font-mono);
+    font-size: 0.7em;
+  }
+}
+
+/*
+ * Shiki emits both themes in one pass: light inline, dark as custom properties.
+ * Swapping them here means no highlight flash and no client-side JavaScript.
+ */
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
