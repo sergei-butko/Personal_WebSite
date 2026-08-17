@@ -8,31 +8,8 @@ import { BentoGrid } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
 import { Chip, Eyebrow } from '@/components/ui/Chip'
 import { threadsSnapshot } from '@/content/threads.generated'
-
-// TODO(serhii): verify — placeholder posts until the MDX pipeline lands in Phase 3.
-// These link to the blog index, not to /blog/<slug>, because post detail
-// routes do not exist yet. Phase 3 switches these to per-post links.
-const placeholderPosts = [
-  {
-    slug: 'bleu-de-chanel-2014-vs-current',
-    title: 'Bleu de Chanel EDP: what changed between 2014 and the current batch',
-    summary:
-      'Everyone says it has been reformulated. Fewer people say what actually moved.',
-    date: '2026-08-14',
-    tags: ['Chanel', 'reformulation'],
-    readingMinutes: 9,
-  },
-  {
-    slug: 'reading-batch-codes',
-    title: 'Reading batch codes without a decoder site',
-    date: '2026-08-02',
-  },
-  {
-    slug: 'vintage-you-remember',
-    title: 'Why the vintage you remember may never have existed',
-    date: '2026-07-21',
-  },
-] as const
+import { getPosts } from '@/lib/posts'
+import { slugify } from '@/lib/slug'
 
 export default async function HomePage({
   params,
@@ -43,33 +20,45 @@ export default async function HomePage({
   if (!isLocale(locale)) notFound()
 
   const dict = getDictionary(locale)
-  const [hero, ...rest] = placeholderPosts
+  const posts = await getPosts(locale)
+  const [hero, ...rest] = posts
   const primarySocials = socialLinks.filter((link) => link.primary)
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
       <BentoGrid>
         {/* Newest post — the point of the page. */}
-        <Card as="article" featured className="sm:col-span-2 lg:col-span-3">
-          <div className="flex h-full flex-col justify-between gap-4">
-            <div>
-              <Eyebrow>{dict.home.latestLabel}</Eyebrow>
-              <h2 className="font-serif text-2xl leading-tight font-semibold tracking-tight">
-                <Link href={localePath(locale, 'blog')}>{hero.title}</Link>
-              </h2>
-              <p className="mt-2 max-w-[52ch] text-sm text-muted">{hero.summary}</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {hero.tags.map((tag) => (
-                  <Chip key={tag}>{tag}</Chip>
-                ))}
+        {hero ? (
+          <Card as="article" featured className="sm:col-span-2 lg:col-span-3">
+            <div className="flex h-full flex-col justify-between gap-4">
+              <div>
+                <Eyebrow>{dict.home.latestLabel}</Eyebrow>
+                <h2 className="font-serif text-2xl leading-tight font-semibold tracking-tight">
+                  <Link href={localePath(locale, `blog/${hero.slug}`)}>{hero.title}</Link>
+                </h2>
+                <p className="mt-2 max-w-[52ch] text-sm text-muted">{hero.summary}</p>
+                <ul className="mt-3 flex flex-wrap gap-1.5">
+                  {hero.tags.map((tag) => (
+                    <li key={tag}>
+                      <Link href={localePath(locale, `blog/tag/${slugify(tag)}`)}>
+                        <Chip>{tag}</Chip>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
+              <p className="font-mono text-[11px] text-muted">
+                <time dateTime={hero.date}>{hero.date}</time> · {hero.readingMinutes}{' '}
+                {dict.common.readingTime}
+              </p>
             </div>
-            <p className="font-mono text-[11px] text-muted">
-              <time dateTime={hero.date}>{hero.date}</time> · {hero.readingMinutes}{' '}
-              {dict.common.readingTime}
-            </p>
-          </div>
-        </Card>
+          </Card>
+        ) : (
+          <Card className="sm:col-span-2 lg:col-span-3">
+            <Eyebrow>{dict.home.latestLabel}</Eyebrow>
+            <p className="text-sm text-muted">{dict.blog.empty}</p>
+          </Card>
+        )}
 
         {/* Who I am — personal first. */}
         <Card className="flex flex-col gap-3">
@@ -105,24 +94,36 @@ export default async function HomePage({
         </Card>
 
         {/* Recent writing. */}
-        <Card className="sm:col-span-2">
-          <Eyebrow>{dict.home.moreWriting}</Eyebrow>
-          <ul>
-            {rest.map((post) => (
-              <li
-                key={post.slug}
-                className="border-b border-edge py-2.5 last:border-0 last:pb-0"
-              >
-                <h3 className="font-serif text-sm font-semibold">
-                  <Link href={localePath(locale, 'blog')}>{post.title}</Link>
-                </h3>
-                <time dateTime={post.date} className="font-mono text-[10.5px] text-muted">
-                  {post.date}
-                </time>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        {rest.length > 0 ? (
+          <Card className="sm:col-span-2">
+            <Eyebrow>{dict.home.moreWriting}</Eyebrow>
+            <ul>
+              {rest.slice(0, 4).map((post) => (
+                <li
+                  key={post.slug}
+                  className="border-b border-edge py-2.5 last:border-0 last:pb-0"
+                >
+                  <h3 className="font-serif text-sm font-semibold">
+                    <Link href={localePath(locale, `blog/${post.slug}`)}>
+                      {post.title}
+                    </Link>
+                  </h3>
+                  <time
+                    dateTime={post.date}
+                    className="font-mono text-[10.5px] text-muted"
+                  >
+                    {post.date}
+                  </time>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[11px]">
+              <Link href={localePath(locale, 'blog')} className="text-accent">
+                {dict.blog.backToBlog} &rarr;
+              </Link>
+            </p>
+          </Card>
+        ) : null}
 
         {/* Photos — filled by the Telegram mirror in Phase 4. */}
         <Card className="sm:col-span-2">
@@ -151,7 +152,7 @@ export default async function HomePage({
 
         <Card>
           <p className="font-serif text-3xl leading-none font-semibold tracking-tight text-accent">
-            {placeholderPosts.length}
+            {posts.length}
           </p>
           <p className="mt-1 text-xs text-muted">{dict.home.postsWritten}</p>
         </Card>
