@@ -9,6 +9,7 @@ export const uk: Dictionary = {
     about: 'Про мене',
     cv: 'Резюме',
     projects: 'Проєкти',
+    threads: 'Threads',
   },
   home: {
     latestLabel: 'Нове — парфумерія',
@@ -22,12 +23,22 @@ export const uk: Dictionary = {
     dayJobTitle: 'DevOps-інженер',
     dayJobBody:
       'Хмарні платформи, CI/CD та інфраструктура як код. Резюме і проєкти — тут.',
+    threads: 'З Threads',
+    threadsAll: 'Усі дописи',
   },
   blog: {
     title: 'Блог',
     intro: 'Про парфумерію — реформуляції, будинки та люди за ними.',
   },
   photos: { title: 'Фото', intro: 'Дзеркало мого Telegram-каналу.' },
+  threads: {
+    title: 'Threads',
+    intro: 'Коротші думки, дзеркало з Threads.',
+    empty: 'Ще нічого не синхронізовано.',
+    viewOnThreads: 'Переглянути у Threads',
+    imageAlt: 'Фото з допису у Threads',
+    syncedAt: 'синхронізовано',
+  },
   about: { title: 'Про мене', intro: 'Хто я і як зі мною звʼязатися.' },
   cv: { title: 'Резюме', intro: 'Досвід, навички та освіта.' },
   projects: { title: 'Проєкти', intro: 'Те, що я створив.' },

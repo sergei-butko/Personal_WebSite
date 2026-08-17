@@ -1,0 +1,48 @@
+name: Sync Threads
+
+on:
+  schedule:
+    # Every 6 hours. Threads is not a news feed; polling harder buys nothing
+    # and burns rate limit.
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+# Needs to push the regenerated snapshot back to main.
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-threads
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync posts from Threads
+        env:
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+        run: npm run sync:threads
+
+      - name: Commit if the feed changed
+        run: |
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "No change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/content/threads.generated.ts public/images/threads
+          git commit -m "chore: sync Threads posts [skip ci]"
+          git push
+          echo "Pushed — deploy.yml will pick this up."

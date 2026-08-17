@@ -6,6 +6,7 @@ export const en = {
     about: 'About',
     cv: 'CV',
     projects: 'Projects',
+    threads: 'Threads',
   },
   home: {
     latestLabel: 'Latest — perfumery',
@@ -19,12 +20,22 @@ export const en = {
     dayJobTitle: 'DevOps Engineer',
     dayJobBody:
       'Cloud platforms, CI/CD, and infrastructure as code. CV and projects live over here.',
+    threads: 'From Threads',
+    threadsAll: 'All posts',
   },
   blog: {
     title: 'Blog',
     intro: 'Writing on perfumery — reformulations, houses, and the people behind them.',
   },
   photos: { title: 'Photos', intro: 'Mirrored from my Telegram channel.' },
+  threads: {
+    title: 'Threads',
+    intro: 'Shorter thoughts, mirrored from Threads.',
+    empty: 'Nothing synced yet.',
+    viewOnThreads: 'View on Threads',
+    imageAlt: 'Photo from a Threads post',
+    syncedAt: 'synced',
+  },
   about: { title: 'About', intro: 'Who I am, and how to reach me.' },
   cv: { title: 'CV', intro: 'Experience, skills, and education.' },
   projects: { title: 'Projects', intro: 'Things I have built.' },
