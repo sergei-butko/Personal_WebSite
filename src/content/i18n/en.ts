@@ -26,6 +26,28 @@ export const en = {
   blog: {
     title: 'Blog',
     intro: 'Writing on perfumery — reformulations, houses, and the people behind them.',
+    empty: 'Nothing published in this language yet.',
+    allTags: 'Everything',
+    filterLegend: 'Filter posts by tag',
+    taggedPrefix: 'Tagged',
+    taggedIntro: 'Posts filed under this tag.',
+    backToBlog: 'All posts',
+    draft: 'Draft',
+    updated: 'Updated',
+    previous: 'Older',
+    next: 'Newer',
+    notTranslatedTitle: 'Not in this language yet',
+    notTranslatedBody:
+      'This post has not been translated. It is written in the languages below.',
+  },
+  fragrance: {
+    title: 'The bottle',
+    house: 'House',
+    name: 'Fragrance',
+    perfumer: 'Perfumer',
+    concentration: 'Concentration',
+    year: 'Released',
+    batchCode: 'Batch code',
   },
   photos: { title: 'Photos', intro: 'Mirrored from my Telegram channel.' },
   threads: {
