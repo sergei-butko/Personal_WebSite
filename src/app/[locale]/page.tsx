@@ -7,6 +7,7 @@ import { socialLinks } from '@/content/social'
 import { BentoGrid } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
 import { Chip, Eyebrow } from '@/components/ui/Chip'
+import { threadsSnapshot } from '@/content/threads.generated'
 
 // TODO(serhii): verify — placeholder posts until the MDX pipeline lands in Phase 3.
 // These link to the blog index, not to /blog/<slug>, because post detail
@@ -154,6 +155,35 @@ export default async function HomePage({
           </p>
           <p className="mt-1 text-xs text-muted">{dict.home.postsWritten}</p>
         </Card>
+
+        {/* Latest from Threads. Renders nothing until the first sync. */}
+        {threadsSnapshot.posts.length > 0 ? (
+          <Card className="sm:col-span-2">
+            <Eyebrow>{dict.home.threads}</Eyebrow>
+            <ul>
+              {threadsSnapshot.posts.slice(0, 3).map((post) => (
+                <li
+                  key={post.id}
+                  className="border-b border-edge py-2 last:border-0 last:pb-0"
+                >
+                  <a
+                    href={post.permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="line-clamp-2 text-[13px] text-muted transition hover:text-ink"
+                  >
+                    {post.text || post.permalink}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[11px]">
+              <Link href={localePath(locale, 'threads')} className="text-accent">
+                {dict.home.threadsAll} &rarr;
+              </Link>
+            </p>
+          </Card>
+        ) : null}
 
         {/* Engineering, deliberately understated. */}
         <Card className="sm:col-span-2">

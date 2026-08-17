@@ -1,0 +1,69 @@
+name: Refresh Threads token
+
+# Threads long-lived tokens last 60 days and die permanently if not refreshed
+# inside that window. This job keeps it alive automatically.
+#
+# OPTIONAL. It needs a second secret, GH_SECRETS_PAT — a fine-grained PAT
+# scoped to this repository alone with "Secrets: read and write", because the
+# built-in GITHUB_TOKEN is not allowed to write secrets. If that secret is
+# absent the job skips itself and does nothing.
+#
+# Not setting it up is a valid choice. Then the token simply expires after 60
+# days, the scheduled sync fails, and GitHub emails you about the failed run —
+# at which point you run `npm run threads:refresh -- <token>` locally and
+# update THREADS_ACCESS_TOKEN by hand. Loud failure, no silent rot.
+
+on:
+  schedule:
+    # Weekly. Tokens must be at least 24h old to refresh, and refreshing
+    # early is harmless — each refresh resets the full 60 days.
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check whether auto-refresh is configured
+        id: check
+        env:
+          PAT: ${{ secrets.GH_SECRETS_PAT }}
+        run: |
+          if [[ -z "$PAT" ]]; then
+            echo "GH_SECRETS_PAT not set — skipping auto-refresh."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.check.outputs.configured == 'true'
+
+      - uses: actions/setup-node@v7
+        if: steps.check.outputs.configured == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.check.outputs.configured == 'true'
+        run: npm ci
+
+      - name: Refresh and store the token
+        if: steps.check.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_SECRETS_PAT }}
+          CURRENT: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_TOKEN_RAW: '1'
+        run: |
+          set -euo pipefail
+          NEW=$(npm run --silent threads:refresh -- "$CURRENT")
+          if [[ ${#NEW} -lt 20 ]]; then
+            echo "Refresh did not return a plausible token. Leaving the existing one alone."
+            exit 1
+          fi
+          gh secret set THREADS_ACCESS_TOKEN --body "$NEW" --repo "$GITHUB_REPOSITORY"
+          echo "Token refreshed and stored."
