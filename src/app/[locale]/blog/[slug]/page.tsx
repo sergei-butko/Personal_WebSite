@@ -17,14 +17,21 @@ import { mdxComponents } from '@/components/mdx/MdxComponents'
  * it — a reader who hits the language switcher halfway through an article
  * lands somewhere useful instead of on a 404.
  */
+/** Placeholder route so an empty blog still satisfies `output: 'export'`. */
+const EMPTY_PARAM = { slug: '__no-posts__' }
+
 export async function generateStaticParams({
   params,
 }: {
   params: { locale: string }
 }): Promise<Array<{ slug: string }>> {
-  if (!isLocale(params.locale)) return []
+  if (!isLocale(params.locale)) return [EMPTY_PARAM]
   const slugs = await getAllSlugs()
-  return slugs.map((slug) => ({ slug }))
+  // `output: 'export'` treats an empty array as a build error, so an
+  // all-drafts or brand-new blog would fail to build. Emit one sentinel
+  // route instead; the page below calls notFound() for it, which renders
+  // the ordinary 404. Nothing links to it.
+  return slugs.length > 0 ? slugs.map((slug) => ({ slug })) : [EMPTY_PARAM]
 }
 
 export async function generateMetadata({

@@ -12,14 +12,18 @@ import { TagFilter } from '@/components/sections/TagFilter'
  * language of the post, so the two locales have genuinely different tag sets
  * rather than translations of one set.
  */
+/** Placeholder route so a tagless blog still satisfies `output: 'export'`. */
+const EMPTY_PARAM = { tag: '__no-tags__' }
+
 export async function generateStaticParams({
   params,
 }: {
   params: { locale: string }
 }): Promise<Array<{ tag: string }>> {
-  if (!isLocale(params.locale)) return []
+  if (!isLocale(params.locale)) return [EMPTY_PARAM]
   const tags = await getTags(params.locale)
-  return tags.map((tag) => ({ tag: tag.slug }))
+  // Same `output: 'export'` constraint as the [slug] route.
+  return tags.length > 0 ? tags.map((tag) => ({ tag: tag.slug })) : [EMPTY_PARAM]
 }
 
 async function resolve(locale: Locale, tagSlug: string) {
