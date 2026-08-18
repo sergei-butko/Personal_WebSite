@@ -1,4 +1,4 @@
-import { socialLinks } from '@/content/social'
+import { primaryLinks } from '@/lib/links'
 import { profile } from '@/content/profile'
 
 export function Footer() {
@@ -9,12 +9,12 @@ export function Footer() {
           &copy; {new Date().getFullYear()} {profile.name}
         </p>
         <ul className="flex flex-wrap gap-4">
-          {socialLinks.map((link) => (
-            <li key={link.platform}>
+          {primaryLinks.map((link) => (
+            <li key={link.href}>
               <a
                 href={link.href}
                 target="_blank"
-                rel="me noopener noreferrer"
+                rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
                 className="transition hover:text-ink"
               >
                 {link.label}

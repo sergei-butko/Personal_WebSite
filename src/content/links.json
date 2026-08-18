@@ -1,0 +1,71 @@
+[
+  {
+    "id": "writing",
+    "title": { "en": "Writing", "uk": "Тексти" },
+    "links": [
+      {
+        "label": "Threads",
+        "href": "https://www.threads.com/@sergei_butko",
+        "note": {
+          "en": "Perfumery notes, as they occur to me",
+          "uk": "Нотатки про парфумерію"
+        },
+        "primary": true,
+        "identity": true
+      }
+    ]
+  },
+  {
+    "id": "photography",
+    "title": { "en": "Photography", "uk": "Фотографія" },
+    "links": [
+      {
+        "label": "Telegram",
+        "href": "https://t.me/just_my_photos",
+        "note": {
+          "en": "Just Photos — нічого зайвого",
+          "uk": "Just Photos — нічого зайвого"
+        },
+        "primary": true,
+        "identity": true
+      },
+      {
+        "label": "Instagram",
+        "href": "https://www.instagram.com/",
+        "primary": false,
+        "identity": true
+      }
+    ]
+  },
+  {
+    "id": "engineering",
+    "title": { "en": "Engineering", "uk": "Інженерія" },
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/sergei-butko",
+        "primary": true,
+        "identity": true
+      },
+      {
+        "label": "LinkedIn",
+        "href": "https://www.linkedin.com/",
+        "primary": false,
+        "identity": true
+      }
+    ]
+  },
+  {
+    "id": "elsewhere",
+    "title": { "en": "Elsewhere", "uk": "Інше" },
+    "links": [
+      { "label": "X", "href": "https://x.com/", "primary": false, "identity": true },
+      {
+        "label": "Email",
+        "href": "mailto:sergei.butko24@gmail.com",
+        "primary": true,
+        "identity": false
+      }
+    ]
+  }
+]
