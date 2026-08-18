@@ -16,3 +16,6 @@ npm-debug.log*
 
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# Ad-hoc Telegram page dumps; the tracked fixture lives in scripts/__fixtures__/
+tg-sample.html
