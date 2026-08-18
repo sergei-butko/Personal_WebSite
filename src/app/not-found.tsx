@@ -6,7 +6,7 @@ export default function NotFound() {
   const dict = getDictionary(defaultLocale)
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-3 px-5 text-center">
-      <h1 className="font-serif text-3xl font-semibold">{dict.common.notFoundTitle}</h1>
+      <h1 className="text-3xl font-semibold">{dict.common.notFoundTitle}</h1>
       <p className="text-muted">{dict.common.notFoundBody}</p>
       <Link
         href={localePath(defaultLocale)}
