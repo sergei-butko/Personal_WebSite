@@ -33,7 +33,7 @@ export default async function HomePage({
             <div className="flex h-full flex-col justify-between gap-4">
               <div>
                 <Eyebrow>{dict.home.latestLabel}</Eyebrow>
-                <h2 className="font-serif text-2xl leading-tight font-semibold tracking-tight">
+                <h2 className="text-2xl leading-tight font-semibold tracking-tight">
                   <Link href={localePath(locale, `blog/${hero.slug}`)}>{hero.title}</Link>
                 </h2>
                 <p className="mt-2 max-w-[52ch] text-sm text-muted">{hero.summary}</p>
@@ -69,7 +69,7 @@ export default async function HomePage({
             {profile.initials}
           </div>
           <div>
-            <h2 className="font-serif text-base font-semibold">{profile.name}</h2>
+            <h2 className="text-base font-semibold">{profile.name}</h2>
             <p className="text-accent mt-0.5 text-xs font-semibold">
               {profile.headline[locale]}
             </p>
@@ -103,7 +103,7 @@ export default async function HomePage({
                   key={post.slug}
                   className="border-b border-edge py-2.5 last:border-0 last:pb-0"
                 >
-                  <h3 className="font-serif text-sm font-semibold">
+                  <h3 className="text-sm font-semibold">
                     <Link href={localePath(locale, `blog/${post.slug}`)}>
                       {post.title}
                     </Link>
@@ -144,14 +144,14 @@ export default async function HomePage({
 
         <Card>
           <Eyebrow>{dict.home.collection}</Eyebrow>
-          <p className="font-serif text-3xl leading-none font-semibold tracking-tight text-accent">
+          <p className="text-3xl leading-none font-semibold tracking-tight text-accent">
             &mdash;
           </p>
           <p className="mt-1 text-xs text-muted">{dict.home.bottles}</p>
         </Card>
 
         <Card>
-          <p className="font-serif text-3xl leading-none font-semibold tracking-tight text-accent">
+          <p className="text-3xl leading-none font-semibold tracking-tight text-accent">
             {posts.length}
           </p>
           <p className="mt-1 text-xs text-muted">{dict.home.postsWritten}</p>

@@ -9,10 +9,16 @@
  * editing this block, not hunting through components.
  */
 @theme {
+  /*
+   * One typeface. IBM Plex Sans for everything readable, IBM Plex Mono for
+   * anything that must align in columns — code blocks, batch-code diagrams,
+   * tabular metadata. Same design, so they read as a single family rather
+   * than two.
+   */
   --font-sans:
-    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-serif: 'Fraunces Variable', ui-serif, Georgia, 'Times New Roman', serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+    'IBM Plex Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --radius-card: 18px;
 
@@ -78,9 +84,8 @@
   .prose h2,
   .prose h3,
   .prose h4 {
-    font-family: var(--font-serif);
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-weight: 650;
+    letter-spacing: -0.02em;
     line-height: 1.25;
     scroll-margin-top: 2rem;
   }
