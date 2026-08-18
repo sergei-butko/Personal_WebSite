@@ -4,6 +4,7 @@ import { isLocale, localePath } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { profile } from '@/content/profile'
 import { linkGroups, primaryLinks } from '@/lib/links'
+import { PlatformIcon } from '@/components/ui/PlatformIcon'
 import { BentoGrid } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
 import { Chip, Eyebrow } from '@/components/ui/Chip'
@@ -216,33 +217,28 @@ export default async function HomePage({
           </Card>
         ) : null}
 
-        {/* Links directory, summarised. */}
+        {/* Links directory, as brand marks. */}
         <Card className="sm:col-span-2">
           <Eyebrow>{dict.links.homeLabel}</Eyebrow>
-          <ul className="flex flex-col gap-2">
-            {linkGroups.map((group) => (
-              <li
-                key={group.id}
-                className="flex flex-wrap items-baseline gap-x-2 gap-y-1"
-              >
-                <span className="min-w-24 text-[12px] text-muted">
-                  {group.title[locale]}
-                </span>
-                <span className="flex flex-wrap gap-1.5">
-                  {group.links.map((link) => (
-                    <a
-                      key={link.href}
-                      href={link.href}
-                      target={link.href.startsWith('mailto:') ? undefined : '_blank'}
-                      rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
-                      className="rounded-full bg-chip px-2.5 py-0.5 text-[11px] font-medium text-chip-ink transition hover:text-ink"
-                    >
+          <ul className="flex flex-wrap gap-2">
+            {linkGroups
+              .flatMap((group) => group.links)
+              .map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    target={link.href.startsWith('mailto:') ? undefined : '_blank'}
+                    rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
+                    title={link.label}
+                    className="flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1.5 transition hover:border-muted"
+                  >
+                    <PlatformIcon platform={link.platform} className="h-4 w-4" />
+                    <span className="text-[11px] font-medium text-muted">
                       {link.label}
-                    </a>
-                  ))}
-                </span>
-              </li>
-            ))}
+                    </span>
+                  </a>
+                </li>
+              ))}
           </ul>
           <p className="mt-3 text-[11px]">
             <Link href={localePath(locale, 'links')} className="text-accent">
