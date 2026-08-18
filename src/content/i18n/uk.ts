@@ -6,6 +6,7 @@ export const uk: Dictionary = {
     home: 'Головна',
     blog: 'Блог',
     photos: 'Фото',
+    links: 'Посилання',
     about: 'Про мене',
     cv: 'Резюме',
     projects: 'Проєкти',
@@ -73,6 +74,12 @@ export const uk: Dictionary = {
   about: { title: 'Про мене', intro: 'Хто я і як зі мною звʼязатися.' },
   cv: { title: 'Резюме', intro: 'Досвід, навички та освіта.' },
   projects: { title: 'Проєкти', intro: 'Те, що я створив.' },
+  links: {
+    title: 'Посилання',
+    intro: 'Усе, де мене можна знайти, в одному місці.',
+    homeLabel: 'Деінде',
+    all: 'Усі посилання',
+  },
   common: {
     placeholder: 'Ця сторінка — заготовка. Справжній вміст зʼявиться пізніше.',
     readingTime: 'хв читання',

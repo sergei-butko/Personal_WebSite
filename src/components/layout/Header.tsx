@@ -10,6 +10,7 @@ export const navItems = [
   { key: 'blog', path: 'blog' },
   { key: 'threads', path: 'threads' },
   { key: 'photos', path: 'photos' },
+  { key: 'links', path: 'links' },
   { key: 'about', path: 'about' },
   { key: 'cv', path: 'cv' },
   { key: 'projects', path: 'projects' },
