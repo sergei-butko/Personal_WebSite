@@ -45,6 +45,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/content/photos.generated.ts public/images/photos
-          git commit -m "chore: sync Telegram photos [skip ci]"
+          # No [skip ci]: this push is exactly what should trigger
+          # deploy.yml. ci.yml ignores main and the sync workflows are
+          # schedule/dispatch only, so there is no loop to guard against.
+          git commit -m "chore: sync Telegram photos"
           git push
           echo "Pushed — deploy.yml will pick this up."
