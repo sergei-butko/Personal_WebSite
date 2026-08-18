@@ -41,8 +41,8 @@ export function PostCard({
           <h2
             className={
               featured
-                ? 'font-serif text-2xl leading-tight font-semibold tracking-tight'
-                : 'font-serif text-lg leading-snug font-semibold tracking-tight'
+                ? 'text-2xl leading-tight font-semibold tracking-tight'
+                : 'text-lg leading-snug font-semibold tracking-tight'
             }
           >
             <Link href={localePath(locale, `blog/${post.slug}`)}>{post.title}</Link>

@@ -19,10 +19,7 @@ export function Header({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   return (
     <header className="border-b border-edge">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <Link
-          href={localePath(locale)}
-          className="font-serif text-lg font-semibold tracking-tight"
-        >
+        <Link href={localePath(locale)} className="text-lg font-semibold tracking-tight">
           {profile.name}
         </Link>
 
