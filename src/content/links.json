@@ -4,7 +4,9 @@
     "title": { "en": "Writing", "uk": "Тексти" },
     "links": [
       {
+        "platform": "threads",
         "label": "Threads",
+        "handle": "@sergei_butko",
         "href": "https://www.threads.com/@sergei_butko",
         "note": {
           "en": "Perfumery notes, as they occur to me",
@@ -20,7 +22,9 @@
     "title": { "en": "Photography", "uk": "Фотографія" },
     "links": [
       {
+        "platform": "telegram",
         "label": "Telegram",
+        "handle": "@just_my_photos",
         "href": "https://t.me/just_my_photos",
         "note": {
           "en": "Just Photos — нічого зайвого",
@@ -30,6 +34,7 @@
         "identity": true
       },
       {
+        "platform": "instagram",
         "label": "Instagram",
         "href": "https://www.instagram.com/",
         "primary": false,
@@ -38,20 +43,19 @@
     ]
   },
   {
-    "id": "engineering",
-    "title": { "en": "Engineering", "uk": "Інженерія" },
+    "id": "listening",
+    "title": { "en": "Listening", "uk": "Музика" },
     "links": [
       {
-        "label": "GitHub",
-        "href": "https://github.com/sergei-butko",
-        "primary": true,
-        "identity": true
-      },
-      {
-        "label": "LinkedIn",
-        "href": "https://www.linkedin.com/",
+        "platform": "applemusic",
+        "label": "Apple Music",
+        "href": "https://music.apple.com/",
+        "note": {
+          "en": "What the photos were taken to",
+          "uk": "Те, під що знімалося"
+        },
         "primary": false,
-        "identity": true
+        "identity": false
       }
     ]
   },
@@ -59,8 +63,30 @@
     "id": "elsewhere",
     "title": { "en": "Elsewhere", "uk": "Інше" },
     "links": [
-      { "label": "X", "href": "https://x.com/", "primary": false, "identity": true },
       {
+        "platform": "x",
+        "label": "X",
+        "href": "https://x.com/",
+        "primary": false,
+        "identity": true
+      },
+      {
+        "platform": "facebook",
+        "label": "Facebook",
+        "href": "https://www.facebook.com/",
+        "primary": false,
+        "identity": true
+      },
+      {
+        "platform": "github",
+        "label": "GitHub",
+        "handle": "sergei-butko",
+        "href": "https://github.com/sergei-butko",
+        "primary": true,
+        "identity": true
+      },
+      {
+        "platform": "email",
         "label": "Email",
         "href": "mailto:sergei.butko24@gmail.com",
         "primary": true,

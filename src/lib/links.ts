@@ -16,7 +16,11 @@ const localized = z.object({
 })
 
 const linkSchema = z.object({
+  /** Key into the platform registry; unknown ids fall back to a neutral mark. */
+  platform: z.string().min(1).optional(),
   label: z.string().min(1),
+  /** Shown under the label — @handle, username, whatever identifies you there. */
+  handle: z.string().min(1).optional(),
   href: z.string().url(),
   /** Optional one-liner shown under the label. */
   note: localized.partial().optional(),
