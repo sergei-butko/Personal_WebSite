@@ -3,6 +3,7 @@ export const en = {
     home: 'Home',
     blog: 'Blog',
     photos: 'Photos',
+    links: 'Links',
     about: 'About',
     cv: 'CV',
     projects: 'Projects',
@@ -71,6 +72,12 @@ export const en = {
   about: { title: 'About', intro: 'Who I am, and how to reach me.' },
   cv: { title: 'CV', intro: 'Experience, skills, and education.' },
   projects: { title: 'Projects', intro: 'Things I have built.' },
+  links: {
+    title: 'Links',
+    intro: 'Everywhere I am, in one place.',
+    homeLabel: 'Elsewhere',
+    all: 'All links',
+  },
   common: {
     placeholder: 'This page is a placeholder — real content arrives in a later phase.',
     readingTime: 'min read',

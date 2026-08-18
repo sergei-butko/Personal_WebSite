@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { isLocale, localePath } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { profile } from '@/content/profile'
-import { socialLinks } from '@/content/social'
+import { linkGroups, primaryLinks } from '@/lib/links'
 import { BentoGrid } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
 import { Chip, Eyebrow } from '@/components/ui/Chip'
@@ -27,7 +27,7 @@ export default async function HomePage({
   const dict = getDictionary(locale)
   const posts = await getPosts(locale)
   const [hero, ...rest] = posts
-  const primarySocials = socialLinks.filter((link) => link.primary)
+  const primarySocials = primaryLinks
   const recentPhotos = photoSnapshot.photos
     .filter((photo) => !photoOverrides[photo.id]?.hidden)
     .slice(0, 8)
@@ -87,11 +87,11 @@ export default async function HomePage({
           </div>
           <ul className="mt-1 flex flex-wrap gap-1.5">
             {primarySocials.map((link) => (
-              <li key={link.platform}>
+              <li key={link.href}>
                 <a
                   href={link.href}
                   target="_blank"
-                  rel="me noopener noreferrer"
+                  rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
                   className="inline-block rounded-full border border-edge px-2.5 py-1 text-[11px] font-medium text-muted transition hover:text-ink"
                 >
                   {link.label}
@@ -215,6 +215,41 @@ export default async function HomePage({
             </p>
           </Card>
         ) : null}
+
+        {/* Links directory, summarised. */}
+        <Card className="sm:col-span-2">
+          <Eyebrow>{dict.links.homeLabel}</Eyebrow>
+          <ul className="flex flex-col gap-2">
+            {linkGroups.map((group) => (
+              <li
+                key={group.id}
+                className="flex flex-wrap items-baseline gap-x-2 gap-y-1"
+              >
+                <span className="min-w-24 text-[12px] text-muted">
+                  {group.title[locale]}
+                </span>
+                <span className="flex flex-wrap gap-1.5">
+                  {group.links.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target={link.href.startsWith('mailto:') ? undefined : '_blank'}
+                      rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
+                      className="rounded-full bg-chip px-2.5 py-0.5 text-[11px] font-medium text-chip-ink transition hover:text-ink"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[11px]">
+            <Link href={localePath(locale, 'links')} className="text-accent">
+              {dict.links.all} &rarr;
+            </Link>
+          </p>
+        </Card>
 
         {/* Engineering, deliberately understated. */}
         <Card className="sm:col-span-2">
