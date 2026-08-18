@@ -101,7 +101,7 @@ export default async function PostPage({
             </p>
           ) : null}
 
-          <h1 className="font-serif text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
             {post.title}
           </h1>
           <p className="mt-3 text-[15px] text-muted">{post.summary}</p>
@@ -186,7 +186,7 @@ function PostLink({
       <span className="block font-mono text-[10.5px] tracking-[0.1em] text-muted uppercase">
         {label}
       </span>
-      <span className="mt-1 block font-serif text-sm font-semibold">{post.title}</span>
+      <span className="mt-1 block text-sm font-semibold">{post.title}</span>
     </Link>
   )
 }
@@ -209,7 +209,7 @@ function UntranslatedPost({
   return (
     <Container>
       <div className="mx-auto max-w-2xl">
-        <h1 className="font-serif text-2xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight">
           {dict.blog.notTranslatedTitle}
         </h1>
         <p className="mt-2 text-muted">{dict.blog.notTranslatedBody}</p>
