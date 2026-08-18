@@ -34,14 +34,23 @@
 }
 
 /* Dark palette. Same token names, different values. */
+/*
+ * Dark palette. Deliberately lifted off pure black — a near-black canvas is
+ * high-contrast to the point of glare in a dim room, and pushes the eye to
+ * work harder, not less. This is a warm-neutral slate with enough separation
+ * between canvas, surface and edge to keep the bento cards legible.
+ *
+ * Every pair here is measured, not eyeballed: ink on surface 13.9:1, muted on
+ * surface 6.1:1, chip text on chip 8.1:1 — all clear of WCAG AA's 4.5:1.
+ */
 .dark {
-  --color-canvas: #0b0b0f;
-  --color-ink: #f6f6f8;
-  --color-muted: #8f8f9c;
-  --color-surface: #15151c;
-  --color-edge: #26262f;
-  --color-chip: #1e1e28;
-  --color-chip-ink: #b4b4c2;
+  --color-canvas: #17171b;
+  --color-ink: #ececed;
+  --color-muted: #9d9da8;
+  --color-surface: #1f1f25;
+  --color-edge: #33333d;
+  --color-chip: #2a2a33;
+  --color-chip-ink: #c2c2cd;
 }
 
 @layer base {
