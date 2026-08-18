@@ -1,65 +1,108 @@
-# Editable Threads mirror + /admin
+# /admin — scope and architecture
 
-Spec for a later phase. Two changes that depend on each other.
-Blocked on Meta account access; Telegram photos are being done first.
+The site is a static export on GitHub Pages: no server, no database, no
+runtime auth. Everything below is built within that constraint.
+
+**Status:** links directory and Cloudinary media layer shipped. The rest is
+specified here and not yet built.
 
 ---
 
-## Why the current Threads mirror has to change
+## The two decisions that shape everything
 
-It writes `src/content/threads.generated.ts` and re-writes it every six
-hours. Editing that file is pointless — the next cron overwrites it. Serhii
-wants mirrored posts **fully copied, stored, and editable**, so the sync has
-to stop producing a generated artefact and start producing content files.
+**Media lives in Cloudinary, not git.** Uploads go straight from /admin to
+Cloudinary; the repo stores only a `publicId` and intrinsic dimensions.
+Cloudinary resizes and negotiates AVIF/WebP on its CDN, so uploaded content
+needs no sharp pipeline. `lib/media.ts` is the only module that builds a
+media URL, so switching to R2 later is one file.
 
-## A. Sync writes MDX, not a data file
+**CMS-editable content cannot be TypeScript.** Sveltia reads JSON, YAML and
+Markdown. Anything editable from /admin becomes a data file with a zod schema
+guarding it at load — `content/links.json` is the pattern to copy.
 
-`scripts/sync-threads.ts` changes its output to:
+---
 
+## Collections
+
+### Albums — `content/albums/<slug>.json`
+
+A Telegram-style grouped post: several photos, ordered, with a caption and an
+optional track.
+
+```jsonc
+{
+  "slug": "kyiv-morning",
+  "date": "2026-06-17",
+  "title": { "en": "…", "uk": "…" },
+  "caption": { "en": "…", "uk": "…" },
+  "images": [
+    {
+      "publicId": "albums/kyiv-1",
+      "width": 3000,
+      "height": 2000,
+      "alt": { "en": "…", "uk": "…" },
+    },
+  ],
+  "music": { "provider": "spotify", "url": "https://open.spotify.com/track/…" },
+  "sourceUrl": "https://t.me/just_my_photos/547",
+  "draft": true,
+}
 ```
-src/content/posts/threads-<sourceId>.<locale>.mdx
-```
 
-Frontmatter:
+Ordering is the array order — the CMS list widget drags to reorder, which is
+the whole point. Uploads here are the originals, at whatever quality you
+choose; nothing is re-encoded on the way in.
+
+### Music embeds
+
+`music` holds a provider and a URL, and the site renders the official embed —
+Spotify, YouTube, SoundCloud or Apple Music. Nothing is hosted.
+
+This is not only cheaper, it is the only lawful option: the tracks referenced
+in the channel (The Offspring, Amy Winehouse) are commercial recordings, and
+hosting the audio would be infringement regardless of where the file sat.
+Embeds also give listeners the full track rather than a clip.
+
+A `<details>`-style lazy embed is preferred — Spotify's iframe is heavy and
+sets third-party cookies before anyone presses play.
+
+### Posts — `content/posts/<slug>.<locale>.mdx`
+
+Already exists. Gains fields for the card format:
 
 ```yaml
-title: <first line, trimmed to ~70 chars, ellipsis if cut>
-date: <post timestamp, YYYY-MM-DD>
-summary: <first ~160 chars of body>
-tags: ['threads']
-source: threads
-sourceId: '<Threads media id>'
-sourceUrl: <permalink>
-draft: true # ALWAYS. Nothing auto-publishes.
+brand: Chanel # manual grouping, one per post
+tags: [niche, edp, woody] # multiselect pills, from a fixed vocabulary
+sourceUrl: https://www.threads.com/@sergei_butko/post/…
+images: # Cloudinary, same shape as albums
+  - publicId: posts/bleu-1
+    width: 2000
+    height: 1500
 ```
 
-**The one rule that matters: never overwrite an existing file.** Match on
-`sourceId`. If a file for that id exists in any locale, skip it entirely —
-do not diff, do not merge, do not touch. Serhii's edits win permanently. The
-cron only ever adds posts it has never seen.
+`brand` is a free-text-with-suggestions field, not an enum: new houses appear
+constantly and a build should not fail because one is missing from a list.
 
-`draft: true` on every import is deliberate: a synced post is raw material,
-not something that should appear because a cron ran.
+`tags` is a fixed vocabulary so the pills stay consistent — a `select` widget
+with `multiple: true`. Starting set:
 
-Locale: imports land in one configured default (`SYNC_DEFAULT_LOCALE`,
-default `uk`). Translating means creating the sibling file by hand, same as
-any other post.
+`niche`, `designer`, `luxury`, `edt`, `edp`, `parfum`, `extrait`, `floral`,
+`woody`, `chypre`, `fougere`, `oriental`, `fresh`, `gourmand`,
+`reformulation`, `vintage`
 
-Images: unchanged. Downloaded, re-encoded to AVIF + WebP, never hotlinked.
+Brand and tag index pages come free from the existing tag-page machinery.
 
-**Retire what the mirror needed and the blog does not:**
-`src/content/threads.generated.ts`, `src/lib/threads.ts`,
-`ThreadsPostCard.tsx`, `ThreadsImage.tsx`, `/[locale]/threads/`, and the
-home-page Threads tile. Mirrored posts become blog posts under a `threads`
-tag. Keep `docs/SETUP-THREADS.md`.
+### Links — `content/links.json`
 
-## B. /admin — Sveltia CMS
+Shipped. Grouped, bilingual titles, per-link notes, `primary` and `identity`
+flags.
 
-A git-based CMS. `/admin` is a static page that authenticates with GitHub and
-commits straight to this repo. The site stays on GitHub Pages.
+---
+
+## Sveltia CMS
 
 ```
-public/admin/index.html     loads Sveltia CMS from a CDN
+public/admin/index.html     loads Sveltia from a CDN
 public/admin/config.yml     collections, fields, backend
 ```
 
@@ -68,54 +111,82 @@ backend:
   name: github
   repo: sergei-butko/Personal_WebSite
   branch: main
-  base_url: https://<worker>.workers.dev # the OAuth broker
-publish_mode: editorial_workflow # saves land as PRs
-media_folder: public/images/uploads
-public_folder: /Personal_WebSite/images/uploads # basePath applies here
+  base_url: https://<worker>.workers.dev
+publish_mode: editorial_workflow
+media_library:
+  name: cloudinary
+  config:
+    cloud_name: <cloud>
+    api_key: <public api key>
 ```
 
-Collections: `posts` (folder `src/content/posts`, pattern
-`<slug>.<locale>.mdx`) with a field per frontmatter key — `draft` as a
-visible toggle, `fragrance` as a nested group. Optionally `profile` and
-`social` as file collections.
+Cloudinary's API key is publishable — it is the API _secret_ that must never
+reach the browser. Unsigned uploads use a named upload preset instead.
 
 ### Auth, and what actually secures it
 
 Deploy [`sveltia-cms-auth`](https://github.com/sveltia/sveltia-cms-auth) as a
-Cloudflare Worker (free tier). Register a GitHub OAuth app with callback
-`<worker-url>/callback`, put client id and secret in the Worker's encrypted
-env, set `ALLOWED_DOMAINS` to `sergei-butko.github.io`.
+Cloudflare Worker. Register a GitHub OAuth app with callback
+`<worker-url>/callback`; client id and secret go in the Worker's encrypted
+env; `ALLOWED_DOMAINS` set to the site host.
 
-**The Worker does not decide who may edit, and does not need to.** It only
-completes an OAuth handshake. Authorisation is GitHub's: a token can only
-commit where its user already has write access. This repo has one
-collaborator, so only Serhii can save. Anyone else reaching `/admin` can log
-in and will be refused by GitHub on the first write.
+**The Worker does not decide who may edit.** It only completes an OAuth
+handshake. Authorisation is GitHub's: a token can only commit where its user
+already has write access, and this repo has one collaborator. Anyone else can
+reach /admin and log in; GitHub refuses them on the first save.
 
-Worth stating because the alternative people reach for — a password check in
-a static page — is not security. It ships to the browser.
+Worth stating plainly because the instinct — a password field on a static
+page — secures nothing. It ships to the browser.
 
-### What to expect
+### Expect
 
-- Saving is a git commit, so a change goes live via CI in a couple of
-  minutes. Not instant; that is the trade for having no server.
-- With `editorial_workflow`, saves become PRs — a second chance to catch
-  something before it is public. Recommended after the seed-post incident.
-- `/admin` lives in `public/`, so it is served as-is and never touched by the
-  `[locale]` routing.
+- Saving is a git commit: live in ~2 minutes via CI, not instantly.
+- `editorial_workflow` turns saves into PRs. Recommended, after the
+  seed-post incident.
+- `/admin` sits in `public/`, so `[locale]` routing never touches it.
 
-### Verify early, before building the rest
+### Verify before building it out
 
-Sveltia is a Markdown CMS. These posts are **MDX with JSX components**
-(`<Callout>`, `<Compare>`). Before wiring up every collection, open one
-existing post in the CMS, save it unchanged, and diff. If JSX survives
-round-tripping, proceed. If it is mangled: restrict the CMS to
-frontmatter-plus-prose posts, or drop JSX from MDX in favour of plain
-Markdown with styled classes. **Do not discover this after migrating
-everything.**
+Sveltia is a Markdown CMS; these posts are MDX with JSX components
+(`<Callout>`, `<Compare>`). Open one post, save it unchanged, diff it. If JSX
+survives, continue. If not: restrict the CMS to prose-only posts, or drop JSX
+in favour of Markdown with styled classes. **Do not find this out after
+migrating everything.**
 
-## Order
+---
 
-1. Sync → MDX, never-overwrite, `draft: true`. Retire the old surface.
-2. Sveltia round-trip test on one post.
-3. Worker + OAuth app, then `/admin` config and collections.
+## Migrating the 400 committed photos
+
+Decided: move them to Cloudinary and purge the blobs from history.
+
+This rewrites every commit hash and needs a force-push. Order matters.
+
+1. **Upload.** `scripts/migrate-photos-to-cloudinary.ts` reads
+   `photos.generated.ts`, uploads each original to Cloudinary under
+   `photos/<telegram-id>-<n>`, and writes a new snapshot holding `publicId`
+   plus dimensions. Idempotent — skips ids already present.
+2. **Verify.** Build and confirm every image resolves from the CDN. Keep the
+   local files until this passes.
+3. **Repoint the sync.** `sync-telegram.ts` stops downloading and
+   re-encoding; it uploads to Cloudinary and records the `publicId`.
+4. **Delete** `public/images/photos/` and commit.
+5. **Purge history**, only once 1–4 are merged and verified:
+   ```bash
+   git clone --mirror <repo> purge && cd purge
+   git filter-repo --path public/images/photos --invert-paths
+   git push --force --all && git push --force --tags
+   ```
+6. **Re-clone.** Every existing clone is now invalid — delete and clone
+   fresh. Do not merge an old clone back in; it would reintroduce the blobs.
+
+Take a backup clone before step 5. `git filter-repo` is not reversible.
+
+---
+
+## Order of work
+
+1. Album collection, gallery rendering, music embeds.
+2. Post card fields — brand, tags, images, source link — and index pages.
+3. Sveltia round-trip test on one post.
+4. Worker + OAuth app; `/admin` config and collections.
+5. Photo migration, then the history purge as its own change.
