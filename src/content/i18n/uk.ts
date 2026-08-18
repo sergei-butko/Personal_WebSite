@@ -51,7 +51,17 @@ export const uk: Dictionary = {
     year: 'Випуск',
     batchCode: 'Код партії',
   },
-  photos: { title: 'Фото', intro: 'Дзеркало мого Telegram-каналу.' },
+  photos: {
+    title: 'Фото',
+    intro: 'Дзеркало мого Telegram-каналу.',
+    empty: 'Ще нічого не синхронізовано.',
+    viewChannel: 'Перейти до каналу',
+    viewOnTelegram: 'Переглянути в Telegram',
+    open: 'Відкрити фото:',
+    close: 'Закрити',
+    genericAlt: 'Фото з каналу Just Photos',
+    syncedAt: 'синхронізовано',
+  },
   threads: {
     title: 'Threads',
     intro: 'Коротші думки, дзеркало з Threads.',

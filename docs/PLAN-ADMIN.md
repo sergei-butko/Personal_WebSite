@@ -30,7 +30,7 @@ tags: ['threads']
 source: threads
 sourceId: '<Threads media id>'
 sourceUrl: <permalink>
-draft: true          # ALWAYS. Nothing auto-publishes.
+draft: true # ALWAYS. Nothing auto-publishes.
 ```
 
 **The one rule that matters: never overwrite an existing file.** Match on
@@ -68,10 +68,10 @@ backend:
   name: github
   repo: sergei-butko/Personal_WebSite
   branch: main
-  base_url: https://<worker>.workers.dev   # the OAuth broker
-publish_mode: editorial_workflow           # saves land as PRs
+  base_url: https://<worker>.workers.dev # the OAuth broker
+publish_mode: editorial_workflow # saves land as PRs
 media_folder: public/images/uploads
-public_folder: /Personal_WebSite/images/uploads   # basePath applies here
+public_folder: /Personal_WebSite/images/uploads # basePath applies here
 ```
 
 Collections: `posts` (folder `src/content/posts`, pattern

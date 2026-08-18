@@ -49,7 +49,17 @@ export const en = {
     year: 'Released',
     batchCode: 'Batch code',
   },
-  photos: { title: 'Photos', intro: 'Mirrored from my Telegram channel.' },
+  photos: {
+    title: 'Photos',
+    intro: 'Mirrored from my Telegram channel.',
+    empty: 'Nothing synced yet.',
+    viewChannel: 'View the channel',
+    viewOnTelegram: 'View on Telegram',
+    open: 'Open photo:',
+    close: 'Close',
+    genericAlt: 'Photo from the Just Photos channel',
+    syncedAt: 'synced',
+  },
   threads: {
     title: 'Threads',
     intro: 'Shorter thoughts, mirrored from Threads.',

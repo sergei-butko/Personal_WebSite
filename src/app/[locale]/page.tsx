@@ -8,6 +8,11 @@ import { BentoGrid } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
 import { Chip, Eyebrow } from '@/components/ui/Chip'
 import { threadsSnapshot } from '@/content/threads.generated'
+import { photoSnapshot } from '@/content/photos.generated'
+import { photoOverrides } from '@/content/photo-meta'
+import { resolveAlt } from '@/lib/photo-alt'
+import { basePath } from '@/lib/paths'
+import { PhotoImage } from '@/components/ui/PhotoImage'
 import { getPosts } from '@/lib/posts'
 import { slugify } from '@/lib/slug'
 
@@ -23,6 +28,9 @@ export default async function HomePage({
   const posts = await getPosts(locale)
   const [hero, ...rest] = posts
   const primarySocials = socialLinks.filter((link) => link.primary)
+  const recentPhotos = photoSnapshot.photos
+    .filter((photo) => !photoOverrides[photo.id]?.hidden)
+    .slice(0, 8)
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
@@ -129,13 +137,35 @@ export default async function HomePage({
         <Card className="sm:col-span-2">
           <Eyebrow>{dict.home.photos}</Eyebrow>
           <div className="grid grid-cols-4 gap-2">
-            {Array.from({ length: 8 }, (_, i) => (
-              <div
-                key={i}
-                aria-hidden="true"
-                className="aspect-square rounded-xl border border-edge bg-chip"
-              />
-            ))}
+            {recentPhotos.length > 0
+              ? recentPhotos.map((photo) => (
+                  <Link
+                    key={`${photo.id}-${photo.src}`}
+                    href={localePath(locale, 'photos')}
+                    className="overflow-hidden rounded-xl border border-edge"
+                  >
+                    <PhotoImage
+                      photo={photo}
+                      alt={resolveAlt(
+                        photo,
+                        photoOverrides[photo.id],
+                        locale,
+                        dict.photos.genericAlt
+                      )}
+                      basePath={basePath}
+                      sizes="(max-width: 640px) 25vw, 120px"
+                      className="aspect-square h-full w-full object-cover"
+                    />
+                  </Link>
+                ))
+              : // Placeholders until the first sync, so the tile keeps its shape.
+                Array.from({ length: 8 }, (_, i) => (
+                  <div
+                    key={i}
+                    aria-hidden="true"
+                    className="aspect-square rounded-xl border border-edge bg-chip"
+                  />
+                ))}
           </div>
           <p className="mt-3 font-mono text-[10.5px] text-muted">
             {dict.home.photosSynced}
