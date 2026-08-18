@@ -11,8 +11,6 @@
  * Docs: https://developers.facebook.com/docs/threads/get-started/long-lived-tokens
  */
 
-export {} // Makes this a module, so top-level await is allowed.
-
 const HOST = 'https://graph.threads.net'
 
 interface TokenResponse {
@@ -28,7 +26,22 @@ function fail(message: string): never {
 
 async function call(url: URL): Promise<TokenResponse> {
   const res = await fetch(url)
-  const body = (await res.json()) as TokenResponse & { error?: { message?: string } }
+  const text = await res.text()
+
+  // Meta does not always answer with JSON — maintenance pages, rate-limit
+  // interstitials and proxy errors arrive as HTML. Parsing blindly turns those
+  // into "Unexpected token '<'", which says nothing useful in a CI log. A
+  // token that silently fails to refresh is the costliest failure here, so the
+  // error has to be readable.
+  let body: TokenResponse & { error?: { message?: string } }
+  try {
+    body = JSON.parse(text) as TokenResponse & { error?: { message?: string } }
+  } catch {
+    fail(
+      `Threads API ${res.status} returned non-JSON (${text.length} bytes): ` +
+        `${text.slice(0, 200).replace(/\s+/g, ' ')}`
+    )
+  }
 
   if (!res.ok || !body.access_token) {
     fail(`Threads API ${res.status}: ${body.error?.message ?? JSON.stringify(body)}`)
@@ -54,7 +67,7 @@ function report(token: TokenResponse): void {
 async function main(): Promise<void> {
   const [mode, token] = [process.argv[2], process.argv[3]]
 
-  if (!token) fail(`Usage: tsx scripts/threads-token.ts <exchange|refresh> <token>`)
+  if (!token) fail('Usage: tsx scripts/threads-token.ts <exchange|refresh> <token>')
 
   if (mode === 'exchange') {
     const secret = process.env.THREADS_APP_SECRET
@@ -79,4 +92,10 @@ async function main(): Promise<void> {
   fail(`Unknown mode "${mode}". Use "exchange" or "refresh".`)
 }
 
-await main()
+// Not top-level await: tsx transpiles these to CJS (the package is not
+// type: module), and esbuild rejects top-level await in CJS output.
+// An explicit entrypoint works under either format.
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error)
+  process.exit(1)
+})

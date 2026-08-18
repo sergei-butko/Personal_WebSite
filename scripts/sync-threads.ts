@@ -85,7 +85,22 @@ if (!token) fail('THREADS_ACCESS_TOKEN is not set.')
 
 async function getJson<T>(url: URL): Promise<T> {
   const res = await fetch(url)
-  const body = (await res.json()) as T & { error?: { message?: string } }
+  const text = await res.text()
+
+  // Meta does not always answer with JSON — maintenance pages, rate-limit
+  // interstitials and proxy errors all arrive as HTML. Parsing blindly turns
+  // those into "Unexpected token '<'", which says nothing useful in a CI log
+  // at 4am. Report the status and a snippet of what actually came back.
+  let body: T & { error?: { message?: string } }
+  try {
+    body = JSON.parse(text) as T & { error?: { message?: string } }
+  } catch {
+    fail(
+      `Threads API ${res.status} returned non-JSON (${text.length} bytes): ` +
+        `${text.slice(0, 200).replace(/\s+/g, ' ')}`
+    )
+  }
+
   if (!res.ok) {
     fail(`Threads API ${res.status}: ${body.error?.message ?? JSON.stringify(body)}`)
   }
@@ -310,4 +325,10 @@ async function main(): Promise<void> {
   console.log(`✓ ${posts.length} posts written to ${OUT_DATA}`)
 }
 
-await main()
+// Not top-level await: tsx transpiles these to CJS (the package is not
+// type: module), and esbuild rejects top-level await in CJS output.
+// An explicit entrypoint works under either format.
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error)
+  process.exit(1)
+})
