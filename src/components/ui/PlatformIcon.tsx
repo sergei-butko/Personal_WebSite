@@ -10,11 +10,29 @@ import { getPlatform } from '@/lib/platforms'
 export function PlatformIcon({
   platform,
   className = 'h-5 w-5',
+  forceColor,
 }: {
   platform: string | undefined
   className?: string
+  /** Overrides the brand colour — used on brand-coloured backgrounds. */
+  forceColor?: string
 }) {
   const { path, light, dark, label } = getPlatform(platform)
+
+  if (forceColor) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+        className={`${className} shrink-0`}
+        fill={forceColor}
+      >
+        <title>{label}</title>
+        <path d={path} />
+      </svg>
+    )
+  }
 
   return (
     <svg
