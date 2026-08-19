@@ -30,18 +30,11 @@ const linkSchema = z.object({
   identity: z.boolean().default(false),
 })
 
-const groupSchema = z.object({
-  id: z.string().min(1),
-  title: localized,
-  links: z.array(linkSchema).min(1),
-})
+export const linksSchema = z.array(linkSchema)
 
-export const linksSchema = z.array(groupSchema)
-
-export type LinkGroup = z.infer<typeof groupSchema>
 export type Link = z.infer<typeof linkSchema>
 
-function load(): LinkGroup[] {
+function load(): Link[] {
   const parsed = linksSchema.safeParse(rawLinks)
   if (!parsed.success) {
     const issues = parsed.error.issues
@@ -52,9 +45,7 @@ function load(): LinkGroup[] {
   return parsed.data
 }
 
-export const linkGroups: LinkGroup[] = load()
+export const links: Link[] = load()
 
-/** Flattened, for the hero and the home card. */
-export const primaryLinks: Link[] = linkGroups
-  .flatMap((group) => group.links)
-  .filter((link) => link.primary)
+/** For the hero and the footer, where space is tight. */
+export const primaryLinks: Link[] = links.filter((link) => link.primary)

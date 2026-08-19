@@ -5,15 +5,19 @@ import { profile } from '@/content/profile'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher'
 
-/** Single source of truth for navigation. Adding a route is one line here. */
+/**
+ * Single source of truth for navigation. Adding a route is one line here.
+ *
+ * `blog` and `projects` are deliberately absent: both routes still build and
+ * are reachable by URL, they are just not advertised while there is nothing
+ * published in them. Re-add a line to bring either back.
+ */
 export const navItems = [
-  { key: 'blog', path: 'blog' },
   { key: 'threads', path: 'threads' },
   { key: 'photos', path: 'photos' },
   { key: 'links', path: 'links' },
   { key: 'about', path: 'about' },
   { key: 'cv', path: 'cv' },
-  { key: 'projects', path: 'projects' },
 ] as const
 
 export function Header({ locale, dict }: { locale: Locale; dict: Dictionary }) {
