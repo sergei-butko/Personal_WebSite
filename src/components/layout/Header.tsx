@@ -13,6 +13,7 @@ import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher'
  * published in them. Re-add a line to bring either back.
  */
 export const navItems = [
+  { key: 'home', path: '' },
   { key: 'threads', path: 'threads' },
   { key: 'photos', path: 'photos' },
   { key: 'links', path: 'links' },

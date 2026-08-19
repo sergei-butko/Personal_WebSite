@@ -31,55 +31,35 @@ export default async function LinksPage({
                 // rel="me" on identity links is what lets Mastodon and similar
                 // verify the profile really is yours.
                 rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
-                style={
-                  {
-                    ['--brand']: brand.light,
-                    ['--brand-dark']: brand.dark,
-                  } as CSSProperties
-                }
+                style={{ ['--brand']: brand.light } as CSSProperties}
                 className={[
-                  'relative flex h-full items-start gap-3 overflow-hidden rounded-[var(--radius-card)]',
-                  'border border-edge p-4 pl-5',
-                  // 8% is the ceiling: at 12% the muted note text drops below
-                  // 4.5:1 against the tint on the strongest brands. Measured,
-                  // not guessed.
-                  'bg-[color-mix(in_srgb,var(--brand)_8%,var(--color-surface))]',
-                  'dark:bg-[color-mix(in_srgb,var(--brand-dark)_8%,var(--color-surface))]',
-                  'transition duration-200 hover:-translate-y-0.5',
-                  'hover:border-[var(--brand)] dark:hover:border-[var(--brand-dark)]',
+                  'relative flex h-24 items-center overflow-hidden rounded-[var(--radius-card)]',
+                  'bg-[var(--brand)] px-6 text-white',
+                  'transition duration-200 hover:-translate-y-0.5 hover:brightness-110',
                   'motion-reduce:hover:translate-y-0',
                 ].join(' ')}
               >
-                {/* Brand stripe — carries the colour at full strength where no
-                    text sits, so the card reads as the platform's without
-                    tinting anything that has to stay readable. */}
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-y-0 left-0 w-1 bg-[var(--brand)] dark:bg-[var(--brand-dark)]"
-                />
-
-                {/* Oversized watermark, bottom-right, well behind the text. */}
+                {/* Oversized mark, white, bleeding off the right edge. */}
                 <PlatformIcon
                   platform={link.platform}
-                  className="pointer-events-none absolute -right-6 -bottom-7 h-28 w-28 opacity-[0.09]"
+                  forceColor="#ffffff"
+                  className="pointer-events-none absolute -right-5 h-28 w-28 opacity-20"
                 />
 
-                <PlatformIcon
-                  platform={link.platform}
-                  className="relative mt-0.5 h-6 w-6"
-                />
-                <span className="relative min-w-0">
-                  <span className="block text-[15px] font-semibold">{link.label}</span>
-                  {link.handle ? (
-                    <span className="block font-mono text-[11px] text-muted">
-                      {link.handle}
-                    </span>
-                  ) : null}
-                  {link.note?.[locale] ? (
-                    <span className="mt-1.5 block text-[12.5px] leading-relaxed text-muted">
-                      {link.note[locale]}
-                    </span>
-                  ) : null}
+                <span className="relative flex items-center gap-3">
+                  <PlatformIcon
+                    platform={link.platform}
+                    forceColor="#ffffff"
+                    className="h-7 w-7"
+                  />
+                  {/*
+                   * 20px bold, deliberately. Four of these brand colours sit
+                   * between 3:1 and 4.5:1 against white — enough for WCAG
+                   * large text (14pt bold) but not for body copy. Sizing the
+                   * name to actually be large text is the honest fix; nudging
+                   * the brand colours until they pass would make them wrong.
+                   */}
+                  <span className="text-[20px] leading-none font-bold">{link.label}</span>
                 </span>
               </a>
             </li>
