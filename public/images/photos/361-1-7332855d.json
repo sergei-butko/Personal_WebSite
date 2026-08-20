@@ -1,0 +1,25 @@
+{
+  "src": "/images/photos/361-1-7332855d-530.webp",
+  "webp": [
+    {
+      "src": "/images/photos/361-1-7332855d-400.webp",
+      "width": 400
+    },
+    {
+      "src": "/images/photos/361-1-7332855d-530.webp",
+      "width": 530
+    }
+  ],
+  "avif": [
+    {
+      "src": "/images/photos/361-1-7332855d-400.avif",
+      "width": 400
+    },
+    {
+      "src": "/images/photos/361-1-7332855d-530.avif",
+      "width": 530
+    }
+  ],
+  "width": 530,
+  "height": 800
+}
