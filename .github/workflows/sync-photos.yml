@@ -1,10 +1,14 @@
 name: Sync Telegram photos
 
 on:
-  schedule:
-    # Every 6 hours, offset from the Threads sync so the two never contend
-    # for a push to main.
-    - cron: '43 */6 * * *'
+  # SCHEDULE DISABLED. The sync names files by hashing the Telegram CDN URL,
+  # and those URLs are signed and rotate on every fetch — so each run produced
+  # a fresh set of filenames for identical images, never reused the cache, and
+  # never deleted the old ones. Thirteen runs turned 402 photos into 10,377
+  # files and 827 MB.
+  #
+  # Left as manual-dispatch-only until images move to external storage, which
+  # removes the problem rather than patching it. See docs/PLAN-ADMIN.md.
   workflow_dispatch:
 
 permissions:
