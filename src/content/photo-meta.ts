@@ -1,4 +1,4 @@
-import type { PhotoOverride } from '@/lib/photos'
+import type { PhotoOverride } from '@/lib/photos/types'
 
 /**
  * Hand-written overrides, keyed by Telegram message id.

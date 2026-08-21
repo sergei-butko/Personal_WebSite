@@ -1,7 +1,7 @@
-import type { ThreadsPost } from '@/lib/threads'
+import type { ThreadsPost } from '@/lib/threads/types'
 import type { Locale } from '@/lib/i18n'
-import { Card } from '@/components/ui/Card'
-import { ThreadsPicture } from '@/components/ui/ThreadsImage'
+import { Card } from '@/components/ui/card'
+import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 
 /**
  * Alt-text policy. Threads does not require alt text, so most images arrive
@@ -58,9 +58,12 @@ export function ThreadsPostCard({
           ].join(' ')}
         >
           {post.images.map((image, index) => (
-            <ThreadsPicture
+            <CloudinaryImage
               key={image.publicId}
-              image={{ ...image, alt: resolveAlt(post, index, imageFallbackAlt) }}
+              asset={image}
+              alt={resolveAlt(post, index, imageFallbackAlt)}
+              sizes="(max-width: 640px) 100vw, 640px"
+              className="h-auto w-full rounded-xl border border-edge"
             />
           ))}
         </div>

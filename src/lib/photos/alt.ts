@@ -1,5 +1,5 @@
 import type { Locale } from '@/lib/i18n'
-import type { Photo, PhotoOverride } from '@/lib/photos'
+import type { Photo, PhotoOverride } from './types'
 
 /**
  * Alt text for a mirrored photo.

@@ -2,9 +2,9 @@ import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { threadsSnapshot } from '@/content/threads.generated'
-import { isUnsynced } from '@/lib/threads'
-import { Container, PageHeading } from '@/components/layout/Container'
-import { ThreadsPostCard } from '@/components/sections/ThreadsPostCard'
+import { isUnsynced } from '@/lib/threads/types'
+import { ThreadsPostCard } from '@/components/threads/post-card'
+import { Container, PageHeading } from '@/components/layout/container'
 
 export default async function ThreadsPage({
   params,

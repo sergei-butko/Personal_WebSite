@@ -2,9 +2,9 @@ import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import matter from 'gray-matter'
 import { isLocale, locales, type Locale } from '@/lib/i18n'
-import { slugify } from '@/lib/slug'
-import { formatFrontmatterError, postFrontmatterSchema } from '@/lib/frontmatter'
-import type { Post, PostMeta, TagSummary } from '@/lib/types'
+import { slugify } from './slug'
+import { formatFrontmatterError, postFrontmatterSchema } from './frontmatter'
+import type { Post, PostMeta, TagSummary } from './types'
 
 /**
  * Reads `src/content/posts/<slug>.<locale>.mdx` at build time.

@@ -3,13 +3,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { isLocale, localeNames, localePath, type Locale } from '@/lib/i18n'
 import { getDictionary, type Dictionary } from '@/content/i18n'
-import { getAdjacentPosts, getAllSlugs, getPost, getTranslations } from '@/lib/posts'
-import { compileMdx } from '@/lib/mdx'
-import { slugify } from '@/lib/slug'
-import { Container } from '@/components/layout/Container'
-import { Chip } from '@/components/ui/Chip'
-import { FragranceCard } from '@/components/sections/FragranceCard'
-import { mdxComponents } from '@/components/mdx/MdxComponents'
+import { getAdjacentPosts, getAllSlugs, getPost, getTranslations } from '@/lib/blog/posts'
+import { compileMdx } from '@/lib/blog/mdx'
+import { slugify } from '@/lib/blog/slug'
+import { FragranceCard } from '@/components/blog/fragrance-card'
+import { mdxComponents } from '@/components/blog/mdx-components'
+import { Container } from '@/components/layout/container'
+import { Chip } from '@/components/ui/chip'
+import { Eyebrow } from '@/components/ui/eyebrow'
 
 /**
  * Every slug is generated in every language, including the ones it has not
@@ -96,9 +97,9 @@ export default async function PostPage({
 
         <header className="mb-8">
           {post.draft ? (
-            <p className="mb-2 font-mono text-[10.5px] font-semibold tracking-[0.1em] text-accent uppercase">
+            <Eyebrow tone="accent" className="mb-2">
               {dict.blog.draft}
-            </p>
+            </Eyebrow>
           ) : null}
 
           <h1 className="text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">

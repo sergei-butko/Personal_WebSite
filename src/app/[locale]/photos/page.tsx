@@ -3,10 +3,10 @@ import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { photoSnapshot } from '@/content/photos.generated'
 import { photoOverrides } from '@/content/photo-meta'
-import { isUnsynced } from '@/lib/photos'
-import { resolveAlt, resolveCaption } from '@/lib/photo-alt'
-import { Container, PageHeading } from '@/components/layout/Container'
-import { PhotoGallery, type GalleryItem } from '@/components/sections/PhotoGallery'
+import { isUnsynced } from '@/lib/photos/types'
+import { resolveAlt, resolveCaption } from '@/lib/photos/alt'
+import { PhotoGallery, type GalleryItem } from '@/components/photos/gallery'
+import { Container, PageHeading } from '@/components/layout/container'
 
 export default async function PhotosPage({
   params,

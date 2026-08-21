@@ -1,4 +1,5 @@
-import type { FragranceMeta } from '@/lib/types'
+import type { FragranceMeta } from '@/lib/blog/types'
+import { Eyebrow } from '@/components/ui/eyebrow'
 
 interface FragranceCardProps {
   fragrance: FragranceMeta
@@ -33,9 +34,7 @@ export function FragranceCard({ fragrance, labels }: FragranceCardProps) {
 
   return (
     <aside className="mb-10 rounded-[var(--radius-card)] border border-edge bg-surface p-5">
-      <p className="mb-3 font-mono text-[10.5px] font-semibold tracking-[0.1em] text-muted uppercase">
-        {labels.title}
-      </p>
+      <Eyebrow className="mb-3">{labels.title}</Eyebrow>
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
         {rows.map((row) => (
           <div

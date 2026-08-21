@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { localePath, type Locale } from '@/lib/i18n'
-import { slugify } from '@/lib/slug'
-import type { PostMeta } from '@/lib/types'
-import { Card } from '@/components/ui/Card'
-import { Chip } from '@/components/ui/Chip'
+import { slugify } from '@/lib/blog/slug'
+import type { PostMeta } from '@/lib/blog/types'
+import { Card } from '@/components/ui/card'
+import { Chip } from '@/components/ui/chip'
+import { Eyebrow } from '@/components/ui/eyebrow'
 
 interface PostCardProps {
   post: PostMeta
@@ -33,9 +34,9 @@ export function PostCard({
       <div className="flex h-full flex-col justify-between gap-4">
         <div>
           {post.draft ? (
-            <p className="mb-2 font-mono text-[10.5px] font-semibold tracking-[0.1em] text-accent uppercase">
+            <Eyebrow tone="accent" className="mb-2">
               {draftLabel}
-            </p>
+            </Eyebrow>
           ) : null}
 
           <h2

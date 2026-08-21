@@ -18,7 +18,7 @@ const isoDate = z
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value)
   }, 'is not a real calendar date')
 
-export const concentrations = [
+const concentrations = [
   'Cologne',
   'EDC',
   'EDT',
@@ -58,7 +58,6 @@ export const postFrontmatterSchema = z.strictObject({
 
 export type PostFrontmatter = z.infer<typeof postFrontmatterSchema>
 export type FragranceMeta = z.infer<typeof fragranceSchema>
-export type Concentration = (typeof concentrations)[number]
 
 /** Flatten a Zod issue list into something readable in CI logs. */
 export function formatFrontmatterError(file: string, error: z.ZodError): string {

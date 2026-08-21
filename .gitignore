@@ -25,3 +25,6 @@ tg-sample.html
 # 827 MB of duplicated photos before the migration — the ignore keeps a stray
 # local run from putting it back.
 /public/images/
+
+# Personal working notes — must never reach a public repo.
+CLAUDE.local.md
