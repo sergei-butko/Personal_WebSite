@@ -10,7 +10,10 @@ export default function RootPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-5 text-center">
       <LocaleRedirect />
-      <p className="text-muted">Choose a language / Оберіть мову</p>
+      {/* WCAG 3.1.2: the page is lang="en", so the Ukrainian half has to say so. */}
+      <p className="text-muted">
+        Choose a language / <span lang="uk">Оберіть мову</span>
+      </p>
       <div className="flex gap-3">
         {locales.map((locale) => (
           <Link

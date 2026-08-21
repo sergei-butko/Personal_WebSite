@@ -34,7 +34,7 @@ npm run dev      # http://localhost:3000
 ```
 src/
 ├── app/              routing only — a folder with page.tsx is a URL
-│   ├── page.tsx      `/` locale detector
+│   ├── (detect)/     `/` locale detector — a route group, not a URL segment
 │   ├── not-found.tsx 404
 │   └── [locale]/     every real page, generated for `en` and `uk`
 ├── components/
