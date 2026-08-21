@@ -24,7 +24,7 @@ import type {
   ThreadsMediaType,
   ThreadsPost,
   ThreadsSnapshot,
-} from '../src/lib/threads'
+} from '../src/lib/threads/types'
 
 const HOST = 'https://graph.threads.net/v1.0'
 const OUT_DATA = 'src/content/threads.generated.ts'
@@ -228,7 +228,7 @@ async function normalise(post: ApiPost): Promise<ThreadsPost | null> {
 }
 
 function render(snapshot: ThreadsSnapshot): string {
-  return `import type { ThreadsSnapshot } from '@/lib/threads'
+  return `import type { ThreadsSnapshot } from '@/lib/threads/types'
 
 /**
  * GENERATED FILE — do not edit by hand.

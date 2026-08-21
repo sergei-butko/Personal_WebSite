@@ -1,7 +1,7 @@
-import type { ThreadsPost } from '@/lib/threads'
+import type { ThreadsPost } from '@/lib/threads/types'
 import type { Locale } from '@/lib/i18n'
-import { Card } from '@/components/ui/Card'
-import { ThreadsPicture } from '@/components/ui/ThreadsImage'
+import { Card } from '@/components/ui/card'
+import { ThreadsPicture } from './image'
 
 /**
  * Alt-text policy. Threads does not require alt text, so most images arrive

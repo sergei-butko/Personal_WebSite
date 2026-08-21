@@ -39,15 +39,39 @@ error rather than English leaking into the Ukrainian site.
 
 ## Layering
 
+Grouped by domain one level deep, following the layout Vercel uses in its own
+open repos (`vercel/commerce`, `vercel/chatbot`): `app/` + `components/` +
+`lib/`, no `features/`, no `shared/`, no re-export barrels.
+
 ```
-content/     data + MDX — the only files Serhii edits by hand
-lib/         types, i18n, pure logic
-components/ui        dumb primitives (Card, BentoGrid, Chip)
-components/sections  composed, content-aware
-app/         routing + metadata only
+src/
+  app/         routing + metadata only. Every folder with a page.tsx is a URL.
+  components/  blog/ photos/ threads/ links/ layout/ ui/
+  lib/         blog/ photos/ threads/ links/ + i18n, media, paths, types
+  content/     data + MDX — the only files Serhii edits by hand
 ```
 
-Components never import from `content/` — pages pass data down. Keep it that way.
+Dependencies point one way: `app/ -> components/ -> lib/ -> content/`.
+
+- `lib/` never imports a component value. A type is fine — `lib/blog/mdx.ts`
+  needs the `MDXComponents` shape.
+- `components/` never import `content/`; they take props. **One exception:**
+  `components/layout/` is site chrome, instantiated once by the locale layout
+  and reusable by nobody, so `header.tsx` and `footer.tsx` read
+  `@/content/profile` directly. `vercel/commerce` does the same — its
+  `footer.tsx` fetches its own menu.
+- `content/` may name a type to describe its own shape, never import a value.
+
+**Enforced in `eslint.config.mjs`, not by hand.** The prose version of the
+components rule sat in this file for months while `header.tsx` and `footer.tsx`
+both broke it. If you add a layer, add its zone there — and write a deliberately
+wrong import to confirm the rule fires, because a misconfigured zone passes
+silently and looks exactly like a clean codebase.
+
+**Naming:** kebab-case filenames, PascalCase exports (`post-card.tsx` exports
+`PostCard`) — the Vercel convention, and it sidesteps case-only renames on
+macOS's case-insensitive filesystem. Same-folder siblings import relatively
+(`./post-card`); everything else uses `@/`.
 
 ## Conventions
 

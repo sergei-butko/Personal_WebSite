@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { localePath, type Locale } from '@/lib/i18n'
-import { slugify } from '@/lib/slug'
-import type { PostMeta } from '@/lib/types'
-import { Card } from '@/components/ui/Card'
-import { Chip } from '@/components/ui/Chip'
+import { slugify } from '@/lib/blog/slug'
+import type { PostMeta } from '@/lib/blog/types'
+import { Card } from '@/components/ui/card'
+import { Chip } from '@/components/ui/chip'
 
 interface PostCardProps {
   post: PostMeta

@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { links } from '@/lib/links'
-import { getPlatform } from '@/lib/platforms'
-import { Container, PageHeading } from '@/components/layout/Container'
-import { PlatformIcon } from '@/components/ui/PlatformIcon'
+import { getPlatform } from '@/lib/links/platforms'
+import { PlatformIcon } from '@/components/links/platform-icon'
+import { Container, PageHeading } from '@/components/layout/container'
 
 export default async function LinksPage({
   params,

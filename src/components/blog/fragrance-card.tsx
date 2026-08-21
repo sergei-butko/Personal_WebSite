@@ -1,4 +1,4 @@
-import type { FragranceMeta } from '@/lib/types'
+import type { FragranceMeta } from '@/lib/blog/types'
 
 interface FragranceCardProps {
   fragrance: FragranceMeta

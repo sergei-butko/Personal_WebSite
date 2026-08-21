@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypeShiki from '@shikijs/rehype'
-import type { MDXComponents } from '@/components/mdx/MdxComponents'
+import type { MDXComponents } from '@/components/blog/mdx-components'
 
 /**
  * MDX -> React component, at build time.

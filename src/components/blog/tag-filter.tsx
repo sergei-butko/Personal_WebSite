@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { localePath, type Locale } from '@/lib/i18n'
-import type { TagSummary } from '@/lib/types'
+import type { TagSummary } from '@/lib/blog/types'
 
 interface TagFilterProps {
   tags: TagSummary[]

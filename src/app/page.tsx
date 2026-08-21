@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LocaleRedirect } from '@/components/layout/LocaleRedirect'
+import { LocaleRedirect } from '@/components/layout/locale-redirect'
 import { locales, localeNames, localePath } from '@/lib/i18n'
 
 /**

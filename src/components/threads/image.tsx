@@ -1,4 +1,4 @@
-import type { ThreadsImage as ThreadsImageData } from '@/lib/threads'
+import type { ThreadsImage as ThreadsImageData } from '@/lib/threads/types'
 import { mediaSrcSet, mediaUrl, MEDIA_WIDTHS } from '@/lib/media'
 
 /**

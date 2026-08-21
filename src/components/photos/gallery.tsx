@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Photo } from '@/lib/photos'
-import { PhotoImage } from '@/components/ui/PhotoImage'
+import type { Photo } from '@/lib/photos/types'
+import { PhotoImage } from './image'
 
 export interface GalleryItem {
   photo: Photo

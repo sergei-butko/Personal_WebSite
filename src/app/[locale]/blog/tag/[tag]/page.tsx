@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { isLocale, type Locale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
-import { getPostsByTag, getTags } from '@/lib/posts'
-import { Container, PageHeading } from '@/components/layout/Container'
-import { PostList } from '@/components/sections/PostList'
-import { TagFilter } from '@/components/sections/TagFilter'
+import { getPostsByTag, getTags } from '@/lib/blog/posts'
+import { Container, PageHeading } from '@/components/layout/container'
+import { PostList } from '@/components/blog/post-list'
+import { TagFilter } from '@/components/blog/tag-filter'
 
 /**
  * One pre-rendered page per tag per language. Tags are written in the

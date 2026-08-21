@@ -1,7 +1,7 @@
 import { isLocale } from '@/lib/i18n'
 import { notFound } from 'next/navigation'
 import { getDictionary } from '@/content/i18n'
-import { Container, PageHeading } from '@/components/layout/Container'
+import { Container, PageHeading } from '@/components/layout/container'
 
 export default async function AboutPage({
   params,

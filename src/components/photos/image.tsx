@@ -1,4 +1,4 @@
-import type { Photo } from '@/lib/photos'
+import type { Photo } from '@/lib/photos/types'
 import { mediaSrcSet, mediaUrl, MEDIA_WIDTHS } from '@/lib/media'
 
 /**

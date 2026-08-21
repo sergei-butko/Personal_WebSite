@@ -1,4 +1,4 @@
-import { getPlatform } from '@/lib/platforms'
+import { getPlatform } from '@/lib/links/platforms'
 
 /**
  * Brand mark for a platform.
