@@ -13,21 +13,8 @@
 
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD ?? ''
 
-export interface MediaImage {
-  /** Cloudinary public id, e.g. "photos/kyiv-morning". Not a URL. */
-  publicId: string
-  /** Intrinsic size, stored so the browser can reserve space before loading. */
-  width: number
-  height: number
-  alt?: Partial<Record<'en' | 'uk', string>>
-}
-
 /** Widths generated for srcset. Cloudinary makes these on demand. */
-export const MEDIA_WIDTHS = [400, 800, 1200, 1600] as const
-
-export function isConfigured(): boolean {
-  return CLOUD_NAME.length > 0
-}
+const MEDIA_WIDTHS = [400, 800, 1200, 1600] as const
 
 /**
  * Fails the build when content needs Cloudinary and the cloud name is absent.
@@ -37,7 +24,7 @@ export function isConfigured(): boolean {
  * it produces a site that builds green and ships 400 broken images. Callers
  * that hold real content call this first, so a missing var stops CI instead.
  */
-export function assertConfigured(context: string): void {
+function assertConfigured(context: string): void {
   if (CLOUD_NAME) return
   throw new Error(
     `NEXT_PUBLIC_CLOUDINARY_CLOUD is not set, but ${context} needs it to build ` +
@@ -75,9 +62,4 @@ export function mediaSrcSet(publicId: string, intrinsicWidth: number): string {
  */
 export function widestWidth(intrinsicWidth: number): number {
   return [...MEDIA_WIDTHS].reverse().find((w) => w <= intrinsicWidth) ?? MEDIA_WIDTHS[0]
-}
-
-/** Largest sensible single URL, for the src attribute and OG images. */
-export function mediaSrc(image: MediaImage): string {
-  return mediaUrl(image.publicId, widestWidth(image.width))
 }

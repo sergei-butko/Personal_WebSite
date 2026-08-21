@@ -12,7 +12,7 @@ import { LocaleSwitcher } from '@/components/layout/locale-switcher'
  * are reachable by URL, they are just not advertised while there is nothing
  * published in them. Re-add a line to bring either back.
  */
-export const navItems = [
+const navItems = [
   { key: 'home', path: '' },
   { key: 'threads', path: 'threads' },
   { key: 'photos', path: 'photos' },

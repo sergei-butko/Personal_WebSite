@@ -30,7 +30,7 @@ const linkSchema = z.object({
   identity: z.boolean().default(false),
 })
 
-export const linksSchema = z.array(linkSchema)
+const linksSchema = z.array(linkSchema)
 
 export type Link = z.infer<typeof linkSchema>
 

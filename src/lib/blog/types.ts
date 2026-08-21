@@ -28,4 +28,4 @@ export interface TagSummary {
   count: number
 }
 
-export type { PostFrontmatter, FragranceMeta, Concentration } from './frontmatter'
+export type { FragranceMeta } from './frontmatter'

@@ -63,7 +63,7 @@ const brand = (
   dark: dark ?? `#${icon.hex}`,
 })
 
-export const platforms = {
+const platforms = {
   facebook: brand(siFacebook),
   x: { ...brand(siX), light: SOFT_DARK, dark: SOFT_LIGHT },
   instagram: brand(siInstagram),
@@ -77,14 +77,14 @@ export const platforms = {
   email: { label: 'Email', path: MAIL_PATH, light: '#6366F1', dark: '#A5B4FC' },
 } as const
 
-export type PlatformId = keyof typeof platforms
+type PlatformId = keyof typeof platforms
 
-export function isPlatformId(value: string): value is PlatformId {
+function isPlatformId(value: string): value is PlatformId {
   return value in platforms
 }
 
 /** Neutral fallback for a platform with no registered mark. */
-export const fallbackPlatform: Platform = {
+const fallbackPlatform: Platform = {
   label: 'Link',
   path: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 1.8a8.2 8.2 0 1 1 0 16.4 8.2 8.2 0 0 1 0-16.4Z',
   light: '#6B6B76',

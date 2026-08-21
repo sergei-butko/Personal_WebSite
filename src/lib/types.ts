@@ -8,7 +8,7 @@ import type { Locale } from '@/lib/i18n'
  */
 
 /** A value that exists in every supported language. */
-export type Localized<T = string> = Record<Locale, T>
+type Localized<T = string> = Record<Locale, T>
 
 export interface Profile {
   name: string

@@ -10,6 +10,7 @@ import { FragranceCard } from '@/components/blog/fragrance-card'
 import { mdxComponents } from '@/components/blog/mdx-components'
 import { Container } from '@/components/layout/container'
 import { Chip } from '@/components/ui/chip'
+import { Eyebrow } from '@/components/ui/eyebrow'
 
 /**
  * Every slug is generated in every language, including the ones it has not
@@ -96,9 +97,9 @@ export default async function PostPage({
 
         <header className="mb-8">
           {post.draft ? (
-            <p className="mb-2 font-mono text-[10.5px] font-semibold tracking-[0.1em] text-accent uppercase">
+            <Eyebrow tone="accent" className="mb-2">
               {dict.blog.draft}
-            </p>
+            </Eyebrow>
           ) : null}
 
           <h1 className="text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
