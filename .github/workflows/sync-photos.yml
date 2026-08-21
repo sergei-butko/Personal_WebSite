@@ -1,16 +1,23 @@
 name: Sync Telegram photos
 
+# Manual only, on purpose.
+#
+# This ran every six hours. That is four Actions runs a day against a channel
+# that gets a handful of posts a month, and every run that found something
+# pushed a commit to main and triggered a deploy. The channel is not a feed
+# anyone is waiting on, so the cost — a noisy main history and a queue of
+# pipeline runs — bought nothing.
+#
+# Nothing about the sync requires a schedule. It is idempotent: public ids come
+# from the Telegram message id, so a repeat run replaces the asset in Cloudinary
+# rather than adding a copy, and a run that finds no change commits nothing.
+# (An earlier scheme hashed the signed source URL, which rotates per fetch;
+# thirteen runs left 10,377 files and 827 MB in the repository. That is fixed,
+# and is not why this is manual.)
+#
+# To pull new photos: Actions → Sync Telegram photos → Run workflow, both
+# inputs unticked. See docs/RUNBOOK-CLOUDINARY.md for force and prune.
 on:
-  schedule:
-    # Every 6 hours, offset from the Threads sync so the two never contend
-    # for a push to main.
-    #
-    # Safe to run on a schedule again: the public id is now derived from the
-    # Telegram message id, so a repeat run replaces the asset in Cloudinary
-    # instead of adding a copy. The previous scheme hashed the signed source
-    # URL, which rotates per fetch — thirteen runs left 10,377 files and
-    # 827 MB in the repository.
-    - cron: '43 */6 * * *'
   workflow_dispatch:
     inputs:
       force:
@@ -61,7 +68,7 @@ jobs:
           # The secret never reaches the site build; delivery only needs the
           # public cloud name, which deploy.yml sets separately.
           CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
-          # Both default to off, so the scheduled run is never destructive and
+          # Both default to off, so an ordinary run is never destructive and
           # never re-downloads the whole channel.
           SYNC_FORCE: ${{ inputs.force && '1' || '0' }}
           SYNC_PRUNE: ${{ inputs.prune && '1' || '0' }}
@@ -78,8 +85,9 @@ jobs:
           # /public/images/ is gitignored.
           git add src/content/photos.generated.ts src/content/photo-hashes.generated.ts
           # No [skip ci]: this push is exactly what should trigger
-          # deploy.yml. ci.yml ignores main and the sync workflows are
-          # schedule/dispatch only, so there is no loop to guard against.
+          # deploy.yml, and it is the whole point of running the sync by hand.
+          # ci.yml ignores main and this workflow is dispatch-only, so there is
+          # no loop to guard against.
           git commit -m "chore: sync Telegram photos"
           git push
           echo "Pushed — deploy.yml will pick this up."
