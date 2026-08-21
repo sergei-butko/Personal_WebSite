@@ -218,8 +218,10 @@ Run it with **force** alone first if you want to see what prune would remove
 before removing it — the `N photos → M distinct assets` line tells you how many
 duplicates were found.
 
-Afterwards, leave both unticked. The six-hourly run then only picks up what is
-new.
+Afterwards, leave both unticked. There is no schedule — the sync runs only when
+you start it — so this is also how you pull new photos day to day: Run workflow,
+nothing ticked. It commits only if the channel actually changed, and that commit
+is what triggers the deploy.
 
 ### Re-uploading everything from a shell
 
