@@ -34,7 +34,16 @@ code changes.
 
 **Bilingual EN + UK.** One route tree under `app/[locale]/` with
 `generateStaticParams()`. `/` is a client-side locale detector because static export
-cannot redirect. `uk.ts` is typed against `en.ts`, so a missing key is a compile
+cannot redirect.
+
+**There are two root layouts, not one, and that is deliberate.** `<html lang>` has
+to be the real locale, and a shared `app/layout.tsx` has no params, so it can only
+emit a bare `<html>` — which is what shipped for months. `app/[locale]/layout.tsx`
+and `app/(detect)/layout.tsx` each render their own `<html>`, which is why the font
+and `globals.css` imports appear in both, and a third time in `not-found.tsx`.
+Next renders the global 404 in a shell of its own that we cannot set `lang` on;
+adding an `<html>` there nests two of them. Do not try to merge these back into one
+root layout without checking what happens to `lang` and to the 404's stylesheet. `uk.ts` is typed against `en.ts`, so a missing key is a compile
 error rather than English leaking into the Ukrainian site.
 
 ## Layering
