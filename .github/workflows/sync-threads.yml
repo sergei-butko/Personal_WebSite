@@ -32,6 +32,8 @@ jobs:
       - name: Sync posts from Threads
         env:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          # Images are re-hosted in Cloudinary, never committed.
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
         run: npm run sync:threads
 
       - name: Commit if the feed changed
@@ -42,7 +44,9 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/content/threads.generated.ts public/images/threads
+          # Only the snapshot. Image bytes are in Cloudinary and
+          # /public/images/ is gitignored.
+          git add src/content/threads.generated.ts
           # No [skip ci]: this push is exactly what should trigger
           # deploy.yml. ci.yml ignores main and the sync workflows are
           # schedule/dispatch only, so there is no loop to guard against.

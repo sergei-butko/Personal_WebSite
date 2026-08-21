@@ -37,3 +37,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_BASE_PATH: /Personal_WebSite
+          # Must match deploy.yml: lib/media.ts throws when a photo needs a URL
+          # and this is unset, so a PR that would ship broken images fails here
+          # rather than on the live site.
+          NEXT_PUBLIC_CLOUDINARY_CLOUD: ${{ vars.CLOUDINARY_CLOUD }}

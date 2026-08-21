@@ -1,14 +1,16 @@
 name: Sync Telegram photos
 
 on:
-  # SCHEDULE DISABLED. The sync names files by hashing the Telegram CDN URL,
-  # and those URLs are signed and rotate on every fetch — so each run produced
-  # a fresh set of filenames for identical images, never reused the cache, and
-  # never deleted the old ones. Thirteen runs turned 402 photos into 10,377
-  # files and 827 MB.
-  #
-  # Left as manual-dispatch-only until images move to external storage, which
-  # removes the problem rather than patching it. See docs/PLAN-ADMIN.md.
+  schedule:
+    # Every 6 hours, offset from the Threads sync so the two never contend
+    # for a push to main.
+    #
+    # Safe to run on a schedule again: the public id is now derived from the
+    # Telegram message id, so a repeat run replaces the asset in Cloudinary
+    # instead of adding a copy. The previous scheme hashed the signed source
+    # URL, which rotates per fetch — thirteen runs left 10,377 files and
+    # 827 MB in the repository.
+    - cron: '43 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -39,6 +41,11 @@ jobs:
 
       - name: Sync photos
         run: npm run sync:photos
+        env:
+          # cloudinary://<api_key>:<api_secret>@<cloud_name>
+          # The secret never reaches the site build; delivery only needs the
+          # public cloud name, which deploy.yml sets separately.
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
 
       - name: Commit if the channel changed
         run: |
@@ -48,7 +55,9 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/content/photos.generated.ts public/images/photos
+          # Only the snapshot. Image bytes are in Cloudinary and
+          # /public/images/ is gitignored.
+          git add src/content/photos.generated.ts
           # No [skip ci]: this push is exactly what should trigger
           # deploy.yml. ci.yml ignores main and the sync workflows are
           # schedule/dispatch only, so there is no loop to guard against.

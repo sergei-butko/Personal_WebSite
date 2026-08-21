@@ -36,13 +36,11 @@ function formatDate(iso: string, locale: Locale): string {
 export function ThreadsPostCard({
   post,
   locale,
-  basePath,
   imageFallbackAlt,
   className = '',
 }: {
   post: ThreadsPost
   locale: Locale
-  basePath: string
   imageFallbackAlt: string
   className?: string
 }) {
@@ -61,8 +59,7 @@ export function ThreadsPostCard({
         >
           {post.images.map((image, index) => (
             <ThreadsPicture
-              key={image.src}
-              basePath={basePath}
+              key={image.publicId}
               image={{ ...image, alt: resolveAlt(post, index, imageFallbackAlt) }}
             />
           ))}

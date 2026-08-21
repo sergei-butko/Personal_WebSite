@@ -1,41 +1,42 @@
 import type { ThreadsImage as ThreadsImageData } from '@/lib/threads'
-
-function srcSet(variants: { src: string; width: number }[], basePath: string): string {
-  return variants.map((v) => `${basePath}${v.src} ${v.width}w`).join(', ')
-}
+import { mediaSrcSet, mediaUrl, MEDIA_WIDTHS } from '@/lib/media'
 
 /**
- * Plain <picture> rather than next/image: the static export has no image
- * optimiser, and the sync script has already produced correctly-sized AVIF
- * and WebP. Explicit width/height prevents layout shift.
+ * A Threads image delivered from Cloudinary.
  *
- * basePath must be passed in — this is a server component rendered inside a
- * static export, and raw <img> src values are not prefixed automatically.
+ * One <img>, not a <picture>: Cloudinary's `f_auto` negotiates AVIF/WebP from
+ * the Accept header, so there is no format list to enumerate here. Explicit
+ * width/height prevents layout shift.
+ *
+ * No basePath — these are absolute URLs on another origin, and prefixing them
+ * with /Personal_WebSite would corrupt them.
  */
 export function ThreadsPicture({
   image,
-  basePath,
   sizes = '(max-width: 640px) 100vw, 640px',
   priority = false,
 }: {
   image: ThreadsImageData
-  basePath: string
   sizes?: string
   priority?: boolean
 }) {
+  const widest =
+    [...MEDIA_WIDTHS].reverse().find((w) => w <= image.width) ?? MEDIA_WIDTHS[0]
+
   return (
-    <picture>
-      <source type="image/avif" srcSet={srcSet(image.avif, basePath)} sizes={sizes} />
-      <source type="image/webp" srcSet={srcSet(image.webp, basePath)} sizes={sizes} />
-      <img
-        src={`${basePath}${image.src}`}
-        width={image.width}
-        height={image.height}
-        alt={image.alt}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        className="h-auto w-full rounded-xl border border-edge"
-      />
-    </picture>
+    // next/image is unavailable under output: 'export', and Cloudinary already
+    // does the resizing and format negotiation this rule asks for.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={mediaUrl(image.publicId, widest)}
+      srcSet={mediaSrcSet(image.publicId, image.width)}
+      sizes={sizes}
+      width={image.width}
+      height={image.height}
+      alt={image.alt}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      className="h-auto w-full rounded-xl border border-edge"
+    />
   )
 }

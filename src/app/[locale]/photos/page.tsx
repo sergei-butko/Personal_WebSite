@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
-import { basePath } from '@/lib/paths'
 import { getDictionary } from '@/content/i18n'
 import { photoSnapshot } from '@/content/photos.generated'
 import { photoOverrides } from '@/content/photo-meta'
@@ -48,7 +47,6 @@ export default async function PhotosPage({
         <>
           <PhotoGallery
             items={items}
-            basePath={basePath}
             closeLabel={dict.photos.close}
             openLabelPrefix={dict.photos.open}
             viewOnTelegram={dict.photos.viewOnTelegram}

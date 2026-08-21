@@ -1,42 +1,49 @@
 import type { Photo } from '@/lib/photos'
-
-function srcSet(variants: { src: string; width: number }[], basePath: string): string {
-  return variants.map((v) => `${basePath}${v.src} ${v.width}w`).join(', ')
-}
+import { mediaSrcSet, mediaUrl, MEDIA_WIDTHS } from '@/lib/media'
 
 /**
- * Plain <picture>: the static export has no image optimiser, and the sync has
- * already produced correctly-sized AVIF and WebP. Explicit width/height keeps
- * the grid from shifting as images load.
+ * A photo delivered from Cloudinary.
+ *
+ * One <img> rather than a <picture> with AVIF and WebP sources: Cloudinary's
+ * `f_auto` inspects the Accept header and serves the best format the browser
+ * takes, so format negotiation happens at the CDN and there is nothing to
+ * enumerate here. Widths still need enumerating — the browser picks from
+ * srcSet before any request is made.
+ *
+ * basePath is intentionally absent. These are absolute URLs on another origin,
+ * so the /Personal_WebSite prefix must NOT be applied; passing it would
+ * produce https://sergei-butko.github.io/Personal_WebSite/https://res.cloud...
  */
 export function PhotoImage({
   photo,
   alt,
-  basePath,
   sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px',
   className = '',
   priority = false,
 }: {
   photo: Photo
   alt: string
-  basePath: string
   sizes?: string
   className?: string
   priority?: boolean
 }) {
+  const widest =
+    [...MEDIA_WIDTHS].reverse().find((w) => w <= photo.width) ?? MEDIA_WIDTHS[0]
+
   return (
-    <picture>
-      <source type="image/avif" srcSet={srcSet(photo.avif, basePath)} sizes={sizes} />
-      <source type="image/webp" srcSet={srcSet(photo.webp, basePath)} sizes={sizes} />
-      <img
-        src={`${basePath}${photo.src}`}
-        width={photo.width}
-        height={photo.height}
-        alt={alt}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        className={className}
-      />
-    </picture>
+    // next/image is unavailable under output: 'export', and Cloudinary already
+    // does the resizing and format negotiation this rule asks for.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={mediaUrl(photo.publicId, widest)}
+      srcSet={mediaSrcSet(photo.publicId, photo.width)}
+      sizes={sizes}
+      width={photo.width}
+      height={photo.height}
+      alt={alt}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      className={className}
+    />
   )
 }
