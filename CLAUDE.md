@@ -94,6 +94,15 @@ Components never import from `content/` — pages pass data down. Keep it that w
   10,377 files and 827 MB across thirteen runs. **Any re-hosting key must derive
   from a stable source id**, which is why public ids are `<postId>-<slot>`.
   See `docs/RUNBOOK-CLOUDINARY.md`.
+- **Sync caps must not silently truncate.** `SYNC_MAX_PHOTOS` defaulted to 400
+  against a larger channel; the walk is newest-first, so it dropped the oldest
+  27 photos and reported it in a console warning nobody read. No photo cap
+  now, and hitting the page guard is a hard failure rather than a truncated
+  snapshot. If a limit ever bounds output, it fails or it is impossible to
+  miss — never a warning.
+- **Images are deduplicated by content hash** (sha256 of the bytes), mapped in
+  `photo-hashes.generated.ts`. Never by URL — signed URLs differ per fetch.
+  `npm run test:dedup` pins the rule.
 
 ## State
 
@@ -127,6 +136,8 @@ time and verify each; don't fold them into feature work.
 The build must be run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
 and `NEXT_PUBLIC_CLOUDINARY_CLOUD=<cloud>` once the photo snapshot is non-empty —
 `lib/media.ts` throws rather than emitting empty `src` attributes.
+
+Also run `npm run test:telegram` and `npm run test:dedup`.
 
 Scripts must be **executed**, not just typechecked. `sync-threads.ts` passed
 typecheck and build for weeks while failing at runtime on every scheduled run.

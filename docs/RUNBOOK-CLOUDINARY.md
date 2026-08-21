@@ -186,13 +186,50 @@ there is no encode step and no variant files.
 `/public/images/` is gitignored. If it reappears locally, something ran an old
 script — nothing in the tree writes there any more.
 
-### Re-uploading everything
+### Distinctness
 
-The snapshot doubles as the upload cache. To force a full re-upload:
+Images are deduplicated by **sha256 of the file bytes**, recorded in
+`src/content/photo-hashes.generated.ts`. The same photo posted to the channel
+twice produces two entries in the snapshot — both posts are real and both
+appear in the gallery — but only one Cloudinary asset.
+
+It cannot be deduplicated by URL: Telegram signs its CDN URLs and they differ
+per fetch for identical images. That is the mistake the first implementation
+made, and `npm run test:dedup` now pins the rule.
+
+### Pulling the whole channel
+
+There is no photo cap by default any more. It used to default to 400, the
+channel has more, and because the walk runs newest-first the cap silently
+dropped the **oldest** photos — everything before message 38.
+
+To re-pull the whole channel and collapse any duplicates:
+
+Actions → **Sync Telegram photos** → **Run workflow**, and tick:
+
+- **force** — re-download and re-hash every photo, ignoring both caches.
+  Required for the first run, because photos uploaded before hashing existed
+  have no recorded hash and cannot be matched otherwise.
+- **prune** — delete Cloudinary assets the new snapshot does not reference.
+  This is the only destructive option in the sync. It lists every id before
+  deleting it; read the log.
+
+Run it with **force** alone first if you want to see what prune would remove
+before removing it — the `N photos → M distinct assets` line tells you how many
+duplicates were found.
+
+Afterwards, leave both unticked. The six-hourly run then only picks up what is
+new.
+
+### Re-uploading everything from a shell
 
 ```bash
+node --env-file=.env -e "process.exit(0)"   # confirm .env parses
 SYNC_FORCE=1 npm run sync:photos
 ```
+
+`tsx` does not read `.env` the way `next build` does, so export the variables
+or use `--env-file` when running by hand.
 
 ### Free-tier headroom
 
