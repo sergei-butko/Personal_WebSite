@@ -19,3 +19,9 @@ tsconfig.tsbuildinfo
 
 # Ad-hoc Telegram page dumps; the tracked fixture lives in scripts/__fixtures__/
 tg-sample.html
+
+# Image bytes are never committed. They live in Cloudinary, uploaded by the
+# sync scripts; only src/content/*.generated.ts is in git. This directory was
+# 827 MB of duplicated photos before the migration — the ignore keeps a stray
+# local run from putting it back.
+/public/images/

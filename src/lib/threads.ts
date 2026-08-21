@@ -2,28 +2,20 @@
  * Types for the Threads mirror.
  *
  * The API returns far more than we need, and Meta's media URLs are signed
- * and expire. We normalise at the sync boundary and download images locally,
- * so the rest of the app never sees Meta's shape and never depends on their
- * CDN. If they rename a field, exactly one file changes.
+ * and expire. We normalise at the sync boundary and re-host images in
+ * Cloudinary, so the rest of the app never sees Meta's shape and never
+ * depends on their CDN. If they rename a field, exactly one file changes.
+ *
+ * Image bytes are not in this repository — see lib/photos.ts for why.
  */
 
 export type ThreadsMediaType =
   'TEXT_POST' | 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' | 'AUDIO' | 'REPOST_FACADE'
 
-export interface ThreadsImageVariant {
-  /** Path under /images/threads/, relative to the site root (no basePath). */
-  src: string
-  width: number
-}
-
 export interface ThreadsImage {
-  /** Largest WebP variant — the src attribute. */
-  src: string
-  /** Smaller WebP variants for srcset. */
-  webp: ThreadsImageVariant[]
-  /** Matching AVIF variants, served first via <picture>. */
-  avif: ThreadsImageVariant[]
-  /** Intrinsic size of the largest variant, for aspect-ratio and CLS. */
+  /** Cloudinary public id, e.g. "threads/17900000000000000-0". Not a URL. */
+  publicId: string
+  /** Intrinsic size, for aspect-ratio and CLS. */
   width: number
   height: number
   /**

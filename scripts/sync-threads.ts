@@ -17,13 +17,10 @@
  * Docs: https://developers.facebook.com/docs/threads/threads-media
  */
 
-import { createHash } from 'node:crypto'
-import { mkdir, readFile, writeFile, access } from 'node:fs/promises'
-import path from 'node:path'
-import sharp from 'sharp'
+import { readFile, writeFile, access } from 'node:fs/promises'
+import { cloudName, configureCloudinary, uploadImage } from './cloudinary'
 import type {
   ThreadsImage,
-  ThreadsImageVariant,
   ThreadsMediaType,
   ThreadsPost,
   ThreadsSnapshot,
@@ -31,9 +28,7 @@ import type {
 
 const HOST = 'https://graph.threads.net/v1.0'
 const OUT_DATA = 'src/content/threads.generated.ts'
-const OUT_IMAGES = 'public/images/threads'
-const PUBLIC_PREFIX = '/images/threads'
-const WIDTHS = [400, 800, 1200]
+const FOLDER = process.env.THREADS_MEDIA_FOLDER ?? 'threads'
 const PAGE_SIZE = 100
 
 const FIELDS = [
@@ -152,80 +147,47 @@ async function exists(file: string): Promise<boolean> {
 }
 
 /**
- * Downloads one image and emits AVIF + WebP at every width up to the
- * original. Never upscales — a 500px source yields only the 400px variant
- * plus its own size.
+ * Re-hosts one Threads image in Cloudinary under a stable public id.
+ *
+ * The id is `threads/<postId>-<slot>` — Meta's post id, which does not
+ * rotate. Meta's own media_url is signed and expires, so it is never stored
+ * and never rendered; only the bytes behind it are kept, once.
+ *
+ * Returns null on failure so one dead image cannot fail the whole sync.
  */
-async function processImage(
+async function rehost(
   sourceUrl: string,
   postId: string,
   index: number,
   alt: string
 ): Promise<ThreadsImage | null> {
-  const hash = createHash('sha1').update(sourceUrl).digest('hex').slice(0, 8)
-  const stem = `${postId}-${index}-${hash}`
+  const publicId = `${FOLDER}/${postId}-${index}`
 
-  let original: Buffer
-  const probe = path.join(OUT_IMAGES, `${stem}-meta.json`)
-
-  if (await exists(probe)) {
-    // Already processed on an earlier run; reuse the recorded dimensions.
-    const cached = JSON.parse(await readFile(probe, 'utf8')) as ThreadsImage
-    return cached
-  }
-
+  let bytes: Buffer
   try {
     const res = await fetch(sourceUrl)
     if (!res.ok) {
-      console.warn(`  ! image ${stem}: HTTP ${res.status}, skipping`)
+      console.warn(`  ! image ${publicId}: HTTP ${res.status}, skipping`)
       return null
     }
-    original = Buffer.from(await res.arrayBuffer())
+    bytes = Buffer.from(await res.arrayBuffer())
   } catch (error) {
-    console.warn(`  ! image ${stem}: ${(error as Error).message}, skipping`)
+    console.warn(`  ! image ${publicId}: ${(error as Error).message}, skipping`)
     return null
   }
 
-  const image = sharp(original)
-  const meta = await image.metadata()
-  if (!meta.width || !meta.height) {
-    console.warn(`  ! image ${stem}: unreadable dimensions, skipping`)
+  try {
+    const uploaded = await uploadImage(bytes, publicId)
+    return {
+      publicId: uploaded.publicId,
+      width: uploaded.width,
+      height: uploaded.height,
+      alt: alt.trim(),
+    }
+  } catch (error) {
+    console.warn(`  ! image ${publicId}: upload failed — ${(error as Error).message}`)
     return null
   }
-
-  const targets = WIDTHS.filter((w) => w < meta.width!)
-  targets.push(meta.width)
-
-  const webp: ThreadsImageVariant[] = []
-  const avif: ThreadsImageVariant[] = []
-
-  for (const width of targets) {
-    const resized = sharp(original).resize({ width, withoutEnlargement: true })
-    await resized
-      .clone()
-      .webp({ quality: 82 })
-      .toFile(path.join(OUT_IMAGES, `${stem}-${width}.webp`))
-    await resized
-      .clone()
-      .avif({ quality: 62 })
-      .toFile(path.join(OUT_IMAGES, `${stem}-${width}.avif`))
-    webp.push({ src: `${PUBLIC_PREFIX}/${stem}-${width}.webp`, width })
-    avif.push({ src: `${PUBLIC_PREFIX}/${stem}-${width}.avif`, width })
-  }
-
-  const largest = targets[targets.length - 1]!
-  const scale = largest / meta.width
-  const result: ThreadsImage = {
-    src: `${PUBLIC_PREFIX}/${stem}-${largest}.webp`,
-    webp,
-    avif,
-    width: largest,
-    height: Math.round(meta.height * scale),
-    alt: alt.trim(),
-  }
-
-  await writeFile(probe, JSON.stringify(result, null, 2))
-  return result
 }
 
 async function normalise(post: ApiPost): Promise<ThreadsPost | null> {
@@ -249,7 +211,7 @@ async function normalise(post: ApiPost): Promise<ThreadsPost | null> {
 
   const images: ThreadsImage[] = []
   for (const [index, source] of sources.entries()) {
-    const image = await processImage(source.url, post.id, index, source.alt)
+    const image = await rehost(source.url, post.id, index, source.alt)
     if (image) images.push(image)
   }
 
@@ -281,7 +243,10 @@ export const threadsSnapshot: ThreadsSnapshot = ${JSON.stringify(snapshot, null,
 }
 
 async function main(): Promise<void> {
-  await mkdir(OUT_IMAGES, { recursive: true })
+  // Fails in the first second when the secret is missing, rather than after
+  // a full paginated crawl of the API.
+  await configureCloudinary()
+  console.log(`→ cloudinary cloud: ${cloudName()}`)
 
   console.log('→ resolving account')
   const username = await fetchUsername()

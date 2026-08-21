@@ -24,13 +24,11 @@ export interface GalleryItem {
  */
 export function PhotoGallery({
   items,
-  basePath,
   closeLabel,
   openLabelPrefix,
   viewOnTelegram,
 }: {
   items: GalleryItem[]
-  basePath: string
   closeLabel: string
   openLabelPrefix: string
   viewOnTelegram: string
@@ -72,7 +70,7 @@ export function PhotoGallery({
     <>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item, index) => (
-          <li key={`${item.photo.id}-${item.photo.src}`}>
+          <li key={`${item.photo.id}-${item.photo.publicId}`}>
             <a
               href={item.photo.permalink}
               target="_blank"
@@ -95,7 +93,6 @@ export function PhotoGallery({
               <PhotoImage
                 photo={item.photo}
                 alt={item.alt}
-                basePath={basePath}
                 priority={index < 4}
                 className="aspect-square h-full w-full object-cover"
               />
@@ -121,7 +118,6 @@ export function PhotoGallery({
             <PhotoImage
               photo={current.photo}
               alt={current.alt}
-              basePath={basePath}
               sizes="90vw"
               priority
               className="max-h-[75dvh] w-auto max-w-full rounded-xl object-contain"

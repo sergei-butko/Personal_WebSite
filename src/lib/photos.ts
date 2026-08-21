@@ -1,15 +1,17 @@
 /**
  * Types for the Telegram photo mirror.
  *
- * Telegram's CDN URLs are signed and expire, so images are downloaded and
- * re-encoded at build time. Nothing here ever points at telesco.pe.
+ * Telegram's CDN URLs are signed and expire, so nothing here ever points at
+ * telesco.pe. The sync re-hosts each photo in Cloudinary and stores only its
+ * public id; delivery URLs are built at render time by lib/media.ts.
+ *
+ * Image bytes are deliberately NOT in this repository. An earlier version
+ * downloaded and re-encoded every photo into public/images/photos/, keyed on a
+ * hash of the signed Telegram URL — which rotates on every fetch, so the cache
+ * never hit and each run left another full copy behind. The public id below is
+ * derived from the Telegram message id and slot instead: stable across runs,
+ * so a re-sync overwrites in place rather than accumulating.
  */
-
-export interface PhotoVariant {
-  /** Path under /images/photos/, relative to the site root (no basePath). */
-  src: string
-  width: number
-}
 
 export interface Photo {
   /** Telegram message id. Stable, and the key for manual overrides. */
@@ -20,10 +22,9 @@ export interface Photo {
   timestamp: string
   /** Caption as written, in whatever language. Often empty. */
   caption: string
-  /** Largest WebP variant. */
-  src: string
-  webp: PhotoVariant[]
-  avif: PhotoVariant[]
+  /** Cloudinary public id, e.g. "telegram/571-0". Not a URL, and not a path. */
+  publicId: string
+  /** Intrinsic size, so the grid can reserve space before the image loads. */
   width: number
   height: number
 }
