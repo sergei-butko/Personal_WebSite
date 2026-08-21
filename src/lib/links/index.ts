@@ -49,3 +49,26 @@ export const links: Link[] = load()
 
 /** For the hero and the footer, where space is tight. */
 export const primaryLinks: Link[] = links.filter((link) => link.primary)
+
+/**
+ * `rel` for an outbound link.
+ *
+ * `me` marks a verified identity link — that is what lets Mastodon and similar
+ * confirm the profile really is yours — and noopener/noreferrer are the usual
+ * hardening for anything opening in a new tab.
+ */
+export function linkRel(link: Link): string {
+  return `${link.identity ? 'me ' : ''}noopener noreferrer`.trim()
+}
+
+/**
+ * `target` for an outbound link. mailto: must open in place — sending it to a
+ * new tab leaves an empty one behind once the mail client takes over.
+ *
+ * This existed at two of the three call sites; the footer hardcoded `_blank`
+ * and so opened the mailto address in a new tab. Having one function is the
+ * point: the rule cannot be applied in two places out of three.
+ */
+export function linkTarget(link: Link): '_blank' | undefined {
+  return link.href.startsWith('mailto:') ? undefined : '_blank'
+}

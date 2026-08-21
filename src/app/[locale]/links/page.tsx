@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
-import { links } from '@/lib/links'
+import { links, linkRel, linkTarget } from '@/lib/links'
 import { getPlatform } from '@/lib/links/platforms'
 import { PlatformIcon } from '@/components/links/platform-icon'
 import { Container, PageHeading } from '@/components/layout/container'
@@ -27,10 +27,8 @@ export default async function LinksPage({
             <li key={link.href}>
               <a
                 href={link.href}
-                target={link.href.startsWith('mailto:') ? undefined : '_blank'}
-                // rel="me" on identity links is what lets Mastodon and similar
-                // verify the profile really is yours.
-                rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
+                target={linkTarget(link)}
+                rel={linkRel(link)}
                 style={{ ['--brand']: brand.light } as CSSProperties}
                 className={[
                   'relative flex h-24 items-center overflow-hidden rounded-[var(--radius-card)]',

@@ -1,4 +1,4 @@
-import { primaryLinks } from '@/lib/links'
+import { primaryLinks, linkRel, linkTarget } from '@/lib/links'
 import { profile } from '@/content/profile'
 
 export function Footer() {
@@ -13,8 +13,8 @@ export function Footer() {
             <li key={link.href}>
               <a
                 href={link.href}
-                target="_blank"
-                rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
+                target={linkTarget(link)}
+                rel={linkRel(link)}
                 className="transition hover:text-ink"
               >
                 {link.label}

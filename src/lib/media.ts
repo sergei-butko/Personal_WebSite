@@ -65,9 +65,19 @@ export function mediaSrcSet(publicId: string, intrinsicWidth: number): string {
     .join(', ')
 }
 
+/**
+ * The largest generated width that does not exceed the original.
+ *
+ * Every `src` attribute needs this, and it was written out three times — once
+ * per image component and once here — before being pulled into one place. The
+ * `c_limit` transform means asking for more than the original just returns the
+ * original, so this is about not lying in the URL rather than about correctness.
+ */
+export function widestWidth(intrinsicWidth: number): number {
+  return [...MEDIA_WIDTHS].reverse().find((w) => w <= intrinsicWidth) ?? MEDIA_WIDTHS[0]
+}
+
 /** Largest sensible single URL, for the src attribute and OG images. */
 export function mediaSrc(image: MediaImage): string {
-  const widest =
-    [...MEDIA_WIDTHS].reverse().find((w) => w <= image.width) ?? MEDIA_WIDTHS[0]
-  return mediaUrl(image.publicId, widest)
+  return mediaUrl(image.publicId, widestWidth(image.width))
 }
