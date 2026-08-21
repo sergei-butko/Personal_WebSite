@@ -10,7 +10,7 @@ import type { PhotoSnapshot } from '@/lib/photos/types'
  * Hand edits belong in photo-meta.ts, which the sync never touches.
  */
 export const photoSnapshot: PhotoSnapshot = {
-  "syncedAt": "2026-08-21T19:14:01.277Z",
+  "syncedAt": "2026-08-21T23:12:46.473Z",
   "channel": "just_my_photos",
   "photos": [
     {
@@ -91,6 +91,15 @@ export const photoSnapshot: PhotoSnapshot = {
       "timestamp": "2026-08-21T13:43:39.000Z",
       "caption": "",
       "publicId": "telegram/580-3",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 580,
+      "permalink": "https://t.me/just_my_photos/580",
+      "timestamp": "2026-08-21T13:43:39.000Z",
+      "caption": "",
+      "publicId": "telegram/580-4",
       "width": 800,
       "height": 530
     },

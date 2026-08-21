@@ -47,6 +47,7 @@ export const photoHashes: Record<string, string> = {
   "d6a98fd8a8f0e2c809b55a3663d4f61b74d559bd4b2737b7b4112786b0d1a37e": "telegram/28-2",
   "d86598ffcb11e16d0f1ea7f23024f76496db036bd41183e7faaa6d01690f1e20": "telegram/13-3",
   "e213196155387e835004dddb4d977bd6bb3f62de4ce617658260ac6c2ccc796f": "telegram/33-2",
+  "ea3f0cf4e9bca82a38a4194f26d20c750d4a4d4bd052bc9e7332c2adc4a637cc": "telegram/580-4",
   "ed3b5bb63946b32c43867a6714b86ccfe7e6d56f3c79175fcc8993a84de258a8": "telegram/23-1",
   "f082b41932b2976d45184796d92a0453a5d35ddf5682c56228a6347a677a94e8": "telegram/33-0",
   "f0bb0b419bccf3ec3e779cc0dc04a87c88baa0b245ea19ad304f3cea1fa627e6": "telegram/23-4",
