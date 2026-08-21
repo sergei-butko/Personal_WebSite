@@ -10,9 +10,108 @@ import type { PhotoSnapshot } from '@/lib/photos'
  * Hand edits belong in photo-meta.ts, which the sync never touches.
  */
 export const photoSnapshot: PhotoSnapshot = {
-  "syncedAt": "2026-08-21T11:04:57.584Z",
+  "syncedAt": "2026-08-21T19:14:01.277Z",
   "channel": "just_my_photos",
   "photos": [
+    {
+      "id": 588,
+      "permalink": "https://t.me/just_my_photos/588",
+      "timestamp": "2026-08-21T13:45:51.000Z",
+      "caption": "",
+      "publicId": "telegram/588-0",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 588,
+      "permalink": "https://t.me/just_my_photos/588",
+      "timestamp": "2026-08-21T13:45:51.000Z",
+      "caption": "",
+      "publicId": "telegram/588-1",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 588,
+      "permalink": "https://t.me/just_my_photos/588",
+      "timestamp": "2026-08-21T13:45:51.000Z",
+      "caption": "",
+      "publicId": "telegram/588-2",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 588,
+      "permalink": "https://t.me/just_my_photos/588",
+      "timestamp": "2026-08-21T13:45:51.000Z",
+      "caption": "",
+      "publicId": "telegram/588-3",
+      "width": 530,
+      "height": 800
+    },
+    {
+      "id": 588,
+      "permalink": "https://t.me/just_my_photos/588",
+      "timestamp": "2026-08-21T13:45:51.000Z",
+      "caption": "",
+      "publicId": "telegram/588-4",
+      "width": 800,
+      "height": 581
+    },
+    {
+      "id": 580,
+      "permalink": "https://t.me/just_my_photos/580",
+      "timestamp": "2026-08-21T13:43:39.000Z",
+      "caption": "",
+      "publicId": "telegram/580-0",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 580,
+      "permalink": "https://t.me/just_my_photos/580",
+      "timestamp": "2026-08-21T13:43:39.000Z",
+      "caption": "",
+      "publicId": "telegram/580-1",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 580,
+      "permalink": "https://t.me/just_my_photos/580",
+      "timestamp": "2026-08-21T13:43:39.000Z",
+      "caption": "",
+      "publicId": "telegram/580-2",
+      "width": 530,
+      "height": 800
+    },
+    {
+      "id": 580,
+      "permalink": "https://t.me/just_my_photos/580",
+      "timestamp": "2026-08-21T13:43:39.000Z",
+      "caption": "",
+      "publicId": "telegram/580-3",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 580,
+      "permalink": "https://t.me/just_my_photos/580",
+      "timestamp": "2026-08-21T13:43:39.000Z",
+      "caption": "",
+      "publicId": "telegram/580-5",
+      "width": 800,
+      "height": 530
+    },
+    {
+      "id": 580,
+      "permalink": "https://t.me/just_my_photos/580",
+      "timestamp": "2026-08-21T13:43:39.000Z",
+      "caption": "",
+      "publicId": "telegram/580-6",
+      "width": 800,
+      "height": 530
+    },
     {
       "id": 571,
       "permalink": "https://t.me/just_my_photos/571",
