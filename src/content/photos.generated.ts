@@ -10,7 +10,7 @@ import type { PhotoSnapshot } from '@/lib/photos'
  * Hand edits belong in photo-meta.ts, which the sync never touches.
  */
 export const photoSnapshot: PhotoSnapshot = {
-  "syncedAt": "2026-08-21T10:22:39.405Z",
+  "syncedAt": "2026-08-21T11:04:57.584Z",
   "channel": "just_my_photos",
   "photos": [
     {
@@ -102,6 +102,15 @@ export const photoSnapshot: PhotoSnapshot = {
       "publicId": "telegram/563-1",
       "width": 800,
       "height": 530
+    },
+    {
+      "id": 563,
+      "permalink": "https://t.me/just_my_photos/563",
+      "timestamp": "2026-08-03T07:49:36.000Z",
+      "caption": "",
+      "publicId": "telegram/563-2",
+      "width": 530,
+      "height": 800
     },
     {
       "id": 563,
@@ -3461,6 +3470,33 @@ export const photoSnapshot: PhotoSnapshot = {
       "height": 600
     },
     {
+      "id": 61,
+      "permalink": "https://t.me/just_my_photos/61",
+      "timestamp": "2019-03-09T20:52:18.000Z",
+      "caption": "",
+      "publicId": "telegram/61-0",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 59,
+      "permalink": "https://t.me/just_my_photos/59",
+      "timestamp": "2019-03-07T19:56:08.000Z",
+      "caption": "Spring 🌿",
+      "publicId": "telegram/59-0",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 57,
+      "permalink": "https://t.me/just_my_photos/57",
+      "timestamp": "2019-03-05T19:52:43.000Z",
+      "caption": "",
+      "publicId": "telegram/57-0",
+      "width": 800,
+      "height": 600
+    },
+    {
       "id": 56,
       "permalink": "https://t.me/just_my_photos/56",
       "timestamp": "2019-03-04T19:28:55.000Z",
@@ -3612,6 +3648,249 @@ export const photoSnapshot: PhotoSnapshot = {
       "publicId": "telegram/38-2",
       "width": 800,
       "height": 600
+    },
+    {
+      "id": 37,
+      "permalink": "https://t.me/just_my_photos/37",
+      "timestamp": "2019-02-21T19:19:12.000Z",
+      "caption": "Good Night ⭐️",
+      "publicId": "telegram/37-0",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 33,
+      "permalink": "https://t.me/just_my_photos/33",
+      "timestamp": "2019-02-21T07:23:57.000Z",
+      "caption": "The road to somewhere🚘",
+      "publicId": "telegram/33-0",
+      "width": 800,
+      "height": 592
+    },
+    {
+      "id": 33,
+      "permalink": "https://t.me/just_my_photos/33",
+      "timestamp": "2019-02-21T07:23:57.000Z",
+      "caption": "The road to somewhere🚘",
+      "publicId": "telegram/33-1",
+      "width": 800,
+      "height": 593
+    },
+    {
+      "id": 33,
+      "permalink": "https://t.me/just_my_photos/33",
+      "timestamp": "2019-02-21T07:23:57.000Z",
+      "caption": "The road to somewhere🚘",
+      "publicId": "telegram/33-2",
+      "width": 800,
+      "height": 592
+    },
+    {
+      "id": 28,
+      "permalink": "https://t.me/just_my_photos/28",
+      "timestamp": "2019-02-20T11:25:39.000Z",
+      "caption": "Pidhirtsi Castle🏰",
+      "publicId": "telegram/28-0",
+      "width": 800,
+      "height": 533
+    },
+    {
+      "id": 28,
+      "permalink": "https://t.me/just_my_photos/28",
+      "timestamp": "2019-02-20T11:25:39.000Z",
+      "caption": "Pidhirtsi Castle🏰",
+      "publicId": "telegram/28-1",
+      "width": 800,
+      "height": 533
+    },
+    {
+      "id": 28,
+      "permalink": "https://t.me/just_my_photos/28",
+      "timestamp": "2019-02-20T11:25:39.000Z",
+      "caption": "Pidhirtsi Castle🏰",
+      "publicId": "telegram/28-2",
+      "width": 800,
+      "height": 533
+    },
+    {
+      "id": 28,
+      "permalink": "https://t.me/just_my_photos/28",
+      "timestamp": "2019-02-20T11:25:39.000Z",
+      "caption": "Pidhirtsi Castle🏰",
+      "publicId": "telegram/28-3",
+      "width": 800,
+      "height": 533
+    },
+    {
+      "id": 28,
+      "permalink": "https://t.me/just_my_photos/28",
+      "timestamp": "2019-02-20T11:25:39.000Z",
+      "caption": "Pidhirtsi Castle🏰",
+      "publicId": "telegram/28-4",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 23,
+      "permalink": "https://t.me/just_my_photos/23",
+      "timestamp": "2019-02-20T05:36:43.000Z",
+      "caption": "The Carpathian Mountains🏞",
+      "publicId": "telegram/23-0",
+      "width": 800,
+      "height": 533
+    },
+    {
+      "id": 23,
+      "permalink": "https://t.me/just_my_photos/23",
+      "timestamp": "2019-02-20T05:36:43.000Z",
+      "caption": "The Carpathian Mountains🏞",
+      "publicId": "telegram/23-1",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 23,
+      "permalink": "https://t.me/just_my_photos/23",
+      "timestamp": "2019-02-20T05:36:43.000Z",
+      "caption": "The Carpathian Mountains🏞",
+      "publicId": "telegram/23-2",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 23,
+      "permalink": "https://t.me/just_my_photos/23",
+      "timestamp": "2019-02-20T05:36:43.000Z",
+      "caption": "The Carpathian Mountains🏞",
+      "publicId": "telegram/23-3",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 23,
+      "permalink": "https://t.me/just_my_photos/23",
+      "timestamp": "2019-02-20T05:36:43.000Z",
+      "caption": "The Carpathian Mountains🏞",
+      "publicId": "telegram/23-4",
+      "width": 800,
+      "height": 533
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-0",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-1",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-2",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-3",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-4",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-5",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-6",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-7",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 13,
+      "permalink": "https://t.me/just_my_photos/13",
+      "timestamp": "2019-02-19T19:07:35.000Z",
+      "caption": "And a little bit of my favorite monochrome🖤",
+      "publicId": "telegram/13-8",
+      "width": 800,
+      "height": 599
+    },
+    {
+      "id": 11,
+      "permalink": "https://t.me/just_my_photos/11",
+      "timestamp": "2019-02-19T17:25:12.000Z",
+      "caption": "",
+      "publicId": "telegram/11-0",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 11,
+      "permalink": "https://t.me/just_my_photos/11",
+      "timestamp": "2019-02-19T17:25:12.000Z",
+      "caption": "",
+      "publicId": "telegram/11-1",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 10,
+      "permalink": "https://t.me/just_my_photos/10",
+      "timestamp": "2019-02-19T17:24:33.000Z",
+      "caption": "🍁Autumn vs Winter ❄️",
+      "publicId": "telegram/10-0",
+      "width": 600,
+      "height": 800
+    },
+    {
+      "id": 3,
+      "permalink": "https://t.me/just_my_photos/3",
+      "timestamp": "2019-02-19T17:12:47.000Z",
+      "caption": "For beginning...",
+      "publicId": "telegram/3-0",
+      "width": 600,
+      "height": 800
     }
   ]
 }
