@@ -13,7 +13,8 @@
     "threads:exchange": "tsx scripts/threads-token.ts exchange",
     "threads:refresh": "tsx scripts/threads-token.ts refresh",
     "test:telegram": "tsx scripts/telegram-parse.test.ts",
-    "sync:photos": "tsx scripts/sync-telegram.ts"
+    "sync:photos": "tsx scripts/sync-telegram.ts",
+    "test:dedup": "tsx scripts/photo-dedup.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",

@@ -34,20 +34,44 @@
 
 import { readFile, writeFile } from 'node:fs/promises'
 import { access } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { parseChannelPage, type ParsedPost } from './telegram-parse'
-import { cloudName, configureCloudinary, uploadImage } from './cloudinary'
+import { decideAsset, type StoredSize } from './photo-dedup'
+import {
+  cloudName,
+  configureCloudinary,
+  deleteAssets,
+  listAssetIds,
+  uploadImage,
+} from './cloudinary'
 import type { Photo, PhotoSnapshot } from '../src/lib/photos'
 
 const CHANNEL = process.env.TELEGRAM_CHANNEL ?? 'just_my_photos'
 const OUT_DATA = 'src/content/photos.generated.ts'
+const OUT_HASHES = 'src/content/photo-hashes.generated.ts'
 const FOLDER = process.env.TELEGRAM_MEDIA_FOLDER ?? 'telegram'
 
-/** Re-upload everything, ignoring the snapshot cache. */
+/** Re-download and re-upload everything, ignoring both caches. */
 const FORCE = process.env.SYNC_FORCE === '1'
 
-/** Safety rails. A runaway loop here would download the whole channel twice. */
-const MAX_PAGES = Number(process.env.SYNC_MAX_PAGES ?? 40)
-const MAX_PHOTOS = Number(process.env.SYNC_MAX_PHOTOS ?? 400)
+/**
+ * Delete Cloudinary assets under FOLDER that the new snapshot does not
+ * reference. Opt-in, because it is the only destructive thing here.
+ */
+const PRUNE = process.env.SYNC_PRUNE === '1'
+
+/**
+ * No photo cap by default.
+ *
+ * It used to default to 400, and the channel has more than that. The walk goes
+ * newest-first, so the cap silently dropped the OLDEST photos — 27 of them,
+ * everything before message 38 — and said so only in a console warning nobody
+ * was reading. Truncating an archive by default is the wrong default.
+ */
+const MAX_PHOTOS = Number(process.env.SYNC_MAX_PHOTOS ?? 0) || Infinity
+
+/** Runaway guard on the pagination loop, not a content limit. */
+const MAX_PAGES = Number(process.env.SYNC_MAX_PAGES ?? 200)
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -138,9 +162,12 @@ async function collectPosts(): Promise<ParsedPost[]> {
 
     if (parsed.nextBefore === null || fresh.length === 0) break
     if (page === MAX_PAGES) {
-      console.warn(
-        `  ! stopped at the ${MAX_PAGES}-page cap; older posts were not fetched. ` +
-          `Raise SYNC_MAX_PAGES to go further back.`
+      // Not a warning. Telegram still has older pages, so continuing would
+      // write a snapshot missing the oldest photos — which is exactly the bug
+      // this run exists to fix, and a warning is what let it ship.
+      fail(
+        `hit the ${MAX_PAGES}-page guard with older pages still available. ` +
+          `Refusing to write a truncated snapshot. Raise SYNC_MAX_PAGES.`
       )
     }
     before = parsed.nextBefore
@@ -149,15 +176,31 @@ async function collectPosts(): Promise<ParsedPost[]> {
   return posts
 }
 
+interface Rehosted {
+  publicId: string
+  width: number
+  height: number
+  /** True when the bytes matched an image already stored under another id. */
+  deduped: boolean
+}
+
 /**
- * Fetches one image from Telegram and re-hosts it under a stable public id.
+ * Fetches one image from Telegram and re-hosts it under a stable public id,
+ * unless the same bytes are already stored — in which case it points at the
+ * existing asset and uploads nothing.
+ *
+ * Distinctness is by sha256 of the file, not by URL: Telegram's URLs are
+ * signed and differ per fetch even for identical images, which is what made
+ * the original implementation duplicate everything.
+ *
  * Returns null on a fetch failure so one dead image cannot fail the run.
  */
 async function rehost(
   url: string,
   postId: number,
-  index: number
-): Promise<{ publicId: string; width: number; height: number } | null> {
+  index: number,
+  hashes: Map<string, string>
+): Promise<Rehosted | null> {
   const publicId = publicIdFor(postId, index)
 
   let bytes: Buffer
@@ -173,12 +216,68 @@ async function rehost(
     return null
   }
 
+  const hash = createHash('sha256').update(bytes).digest('hex')
+  const decision = decideAsset(hash, publicId, hashes, uploadedDimensions)
+
+  if (decision.kind === 'reuse') {
+    return {
+      publicId: decision.publicId,
+      width: decision.width,
+      height: decision.height,
+      deduped: true,
+    }
+  }
+
   try {
-    return await uploadImage(bytes, publicId)
+    const uploaded = await uploadImage(bytes, publicId)
+    hashes.set(hash, uploaded.publicId)
+    uploadedDimensions.set(uploaded.publicId, uploaded)
+    return { ...uploaded, deduped: false }
   } catch (error) {
     console.warn(`  ! ${publicId}: upload failed — ${(error as Error).message}`)
     return null
   }
+}
+
+/** Known public id → size, from the snapshot plus whatever this run uploads. */
+const uploadedDimensions = new Map<string, StoredSize>()
+
+/** The committed content-hash map, or an empty one on first run. */
+async function loadHashes(): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  if (!(await exists(OUT_HASHES))) return map
+  try {
+    const module_ = (await import('../src/content/photo-hashes.generated')) as {
+      photoHashes?: Record<string, string>
+    }
+    for (const [hash, publicId] of Object.entries(module_.photoHashes ?? {})) {
+      map.set(hash, publicId)
+    }
+  } catch (error) {
+    console.warn(`  ! could not read ${OUT_HASHES} (${(error as Error).message})`)
+  }
+  return map
+}
+
+function renderHashes(hashes: Map<string, string>): string {
+  const sorted = Object.fromEntries(
+    [...hashes.entries()].sort(([a], [b]) => (a < b ? -1 : 1))
+  )
+  return `/**
+ * GENERATED FILE — do not edit by hand.
+ * Written by \`npm run sync:photos\`, and committed deliberately.
+ *
+ * Maps the sha256 of an image's bytes to the Cloudinary public id it is
+ * stored under. This is what makes the sync store DISTINCT images: the same
+ * photo posted twice gets two entries in the snapshot — both posts are real —
+ * but only one asset.
+ *
+ * Kept out of photos.generated.ts on purpose. Content hashes are a concern of
+ * the sync, not of the site, and nothing under src/lib or src/components
+ * reads this.
+ */
+export const photoHashes: Record<string, string> = ${JSON.stringify(sorted, null, 2)}
+`
 }
 
 function render(snapshot: PhotoSnapshot): string {
@@ -204,18 +303,26 @@ async function main(): Promise<void> {
   console.log(`→ cloudinary cloud: ${cloudName()}`)
 
   const known = await previouslyUploaded()
+  const hashes = await loadHashes()
   console.log(
-    `→ ${known.size} photos already uploaded${FORCE ? ' (ignored: SYNC_FORCE=1)' : ''}`
+    `→ ${known.size} photos already uploaded, ${hashes.size} content hashes known` +
+      `${FORCE ? ' (both ignored: SYNC_FORCE=1)' : ''}`
   )
+  for (const photo of known.values()) {
+    uploadedDimensions.set(photo.publicId, { width: photo.width, height: photo.height })
+  }
 
   console.log(`→ reading t.me/s/${CHANNEL}`)
   const posts = await collectPosts()
 
-  console.log('→ re-hosting photos')
+  const available = posts.reduce((sum, post) => sum + post.images.length, 0)
+  console.log(`→ re-hosting ${available} photos from ${posts.length} posts`)
+
   const photos: Photo[] = []
   let capped = false
   let uploaded = 0
   let cached = 0
+  let deduped = 0
 
   for (const post of posts) {
     for (const [index, image] of post.images.entries()) {
@@ -228,11 +335,12 @@ async function main(): Promise<void> {
       const hit = known.get(publicId)
 
       const media = hit
-        ? { publicId, width: hit.width, height: hit.height }
-        : await rehost(image.url, post.id, index)
+        ? { publicId: hit.publicId, width: hit.width, height: hit.height, deduped: false }
+        : await rehost(image.url, post.id, index, hashes)
 
       if (!media) continue
       if (hit) cached++
+      else if (media.deduped) deduped++
       else uploaded++
 
       photos.push({
@@ -240,7 +348,9 @@ async function main(): Promise<void> {
         permalink: post.permalink,
         timestamp: post.timestamp,
         caption: post.caption,
-        ...media,
+        publicId: media.publicId,
+        width: media.width,
+        height: media.height,
       })
     }
     if (capped) break
@@ -248,15 +358,39 @@ async function main(): Promise<void> {
 
   if (capped) {
     console.warn(
-      `  ! stopped at the ${MAX_PHOTOS}-photo cap. Older photos were not processed. ` +
-        `Raise SYNC_MAX_PHOTOS if you want the whole channel.`
+      `  ! stopped at the SYNC_MAX_PHOTOS=${MAX_PHOTOS} cap, with ${available} available. ` +
+        `The walk is newest-first, so what was dropped is the OLDEST photos. ` +
+        `Unset SYNC_MAX_PHOTOS to take the whole channel.`
     )
   }
 
-  console.log(`  ${uploaded} uploaded, ${cached} already in Cloudinary`)
+  console.log(
+    `  ${uploaded} uploaded, ${deduped} matched an image already stored, ` +
+      `${cached} unchanged`
+  )
 
   if (photos.length === 0) {
     fail('No photos parsed. Refusing to overwrite the snapshot with nothing.')
+  }
+
+  const distinct = new Set(photos.map((photo) => photo.publicId))
+  console.log(`  ${photos.length} photos → ${distinct.size} distinct assets`)
+
+  await writeFile(OUT_HASHES, renderHashes(hashes))
+
+  if (PRUNE) {
+    console.log(`→ pruning ${FOLDER}/`)
+    const stored = await listAssetIds(`${FOLDER}/`)
+    const orphans = stored.filter((id) => !distinct.has(id))
+    if (orphans.length === 0) {
+      console.log('  nothing to prune')
+    } else {
+      // Print before deleting. This is the only destructive step in the sync
+      // and the log is the only record of what it removed.
+      for (const id of orphans) console.log(`  - ${id}`)
+      const removed = await deleteAssets(orphans)
+      console.log(`  deleted ${removed} of ${orphans.length} unreferenced assets`)
+    }
   }
 
   photos.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id)

@@ -12,6 +12,15 @@ on:
     # 827 MB in the repository.
     - cron: '43 */6 * * *'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Re-download and re-hash every photo, ignoring both caches'
+        type: boolean
+        default: false
+      prune:
+        description: 'DELETE Cloudinary assets the new snapshot does not reference'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -39,6 +48,12 @@ jobs:
       - name: Verify the parser against the fixture
         run: npm run test:telegram
 
+      # The rule that decides whether an image is stored again. Pure, fast,
+      # and the thing most worth being sure about before a run that writes to
+      # Cloudinary.
+      - name: Verify the dedup rule
+        run: npm run test:dedup
+
       - name: Sync photos
         run: npm run sync:photos
         env:
@@ -46,6 +61,10 @@ jobs:
           # The secret never reaches the site build; delivery only needs the
           # public cloud name, which deploy.yml sets separately.
           CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+          # Both default to off, so the scheduled run is never destructive and
+          # never re-downloads the whole channel.
+          SYNC_FORCE: ${{ inputs.force && '1' || '0' }}
+          SYNC_PRUNE: ${{ inputs.prune && '1' || '0' }}
 
       - name: Commit if the channel changed
         run: |
@@ -55,9 +74,9 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Only the snapshot. Image bytes are in Cloudinary and
+          # Only the generated data. Image bytes are in Cloudinary and
           # /public/images/ is gitignored.
-          git add src/content/photos.generated.ts
+          git add src/content/photos.generated.ts src/content/photo-hashes.generated.ts
           # No [skip ci]: this push is exactly what should trigger
           # deploy.yml. ci.yml ignores main and the sync workflows are
           # schedule/dispatch only, so there is no loop to guard against.

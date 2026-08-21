@@ -122,3 +122,54 @@ export async function uploadImage(
 
   return { publicId: id, width, height }
 }
+
+/**
+ * Every asset id under a folder prefix. Paginated; Cloudinary caps a page at
+ * 500. Used only by the prune step, which needs to know what is there in
+ * order to spot what the snapshot no longer references.
+ */
+export async function listAssetIds(prefix: string): Promise<string[]> {
+  await configureCloudinary()
+  const client = api
+  if (!client) throw new Error('Cloudinary was not configured')
+
+  const ids: string[] = []
+  let cursor: string | undefined
+
+  do {
+    const page = await client.api.resources({
+      type: 'upload',
+      resource_type: 'image',
+      prefix,
+      max_results: 500,
+      next_cursor: cursor,
+    })
+    for (const asset of page.resources ?? []) {
+      if (asset.public_id) ids.push(String(asset.public_id))
+    }
+    cursor = page.next_cursor as string | undefined
+  } while (cursor)
+
+  return ids
+}
+
+/**
+ * Permanently deletes assets. Batched at 100, which is the API's limit.
+ *
+ * Only ever called with ids the caller has already checked against a freshly
+ * built snapshot — see the prune step in sync-telegram.ts, which is opt-in
+ * for that reason.
+ */
+export async function deleteAssets(publicIds: string[]): Promise<number> {
+  await configureCloudinary()
+  const client = api
+  if (!client) throw new Error('Cloudinary was not configured')
+
+  let deleted = 0
+  for (let i = 0; i < publicIds.length; i += 100) {
+    const batch = publicIds.slice(i, i + 100)
+    const result = await client.api.delete_resources(batch)
+    deleted += Object.keys(result.deleted ?? {}).length
+  }
+  return deleted
+}
