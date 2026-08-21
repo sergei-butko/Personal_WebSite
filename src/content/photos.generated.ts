@@ -1,4 +1,4 @@
-import type { PhotoSnapshot } from '@/lib/photos'
+import type { PhotoSnapshot } from '@/lib/photos/types'
 
 /**
  * GENERATED FILE — do not edit by hand.

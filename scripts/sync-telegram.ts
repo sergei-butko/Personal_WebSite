@@ -44,7 +44,7 @@ import {
   listAssetIds,
   uploadImage,
 } from './cloudinary'
-import type { Photo, PhotoSnapshot } from '../src/lib/photos'
+import type { Photo, PhotoSnapshot } from '../src/lib/photos/types'
 
 const CHANNEL = process.env.TELEGRAM_CHANNEL ?? 'just_my_photos'
 const OUT_DATA = 'src/content/photos.generated.ts'
@@ -273,7 +273,7 @@ function renderHashes(hashes: Map<string, string>): string {
  * but only one asset.
  *
  * Kept out of photos.generated.ts on purpose. Content hashes are a concern of
- * the sync, not of the site, and nothing under src/lib or src/components
+ * the sync, not of the site, and nothing under src/features or src/shared
  * reads this.
  */
 export const photoHashes: Record<string, string> = ${JSON.stringify(sorted, null, 2)}
@@ -281,7 +281,7 @@ export const photoHashes: Record<string, string> = ${JSON.stringify(sorted, null
 }
 
 function render(snapshot: PhotoSnapshot): string {
-  return `import type { PhotoSnapshot } from '@/lib/photos'
+  return `import type { PhotoSnapshot } from '@/lib/photos/types'
 
 /**
  * GENERATED FILE — do not edit by hand.

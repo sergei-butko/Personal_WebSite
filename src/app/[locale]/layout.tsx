@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import { locales, isLocale, type Locale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
-import { Header } from '@/components/layout/Header'
-import { Footer } from '@/components/layout/Footer'
+import { Header } from '@/components/layout/header'
+import { Footer } from '@/components/layout/footer'
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }))

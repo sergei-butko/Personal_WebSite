@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Photo } from '@/lib/photos'
-import { PhotoImage } from '@/components/ui/PhotoImage'
+import type { Photo } from '@/lib/photos/types'
+import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 
 export interface GalleryItem {
   photo: Photo
@@ -90,9 +90,10 @@ export function PhotoGallery({
               aria-label={`${openLabelPrefix} ${item.alt}`}
               className="block w-full overflow-hidden rounded-xl border border-edge transition hover:border-accent focus-visible:border-accent"
             >
-              <PhotoImage
-                photo={item.photo}
+              <CloudinaryImage
+                asset={item.photo}
                 alt={item.alt}
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
                 priority={index < 4}
                 className="aspect-square h-full w-full object-cover"
               />
@@ -115,8 +116,8 @@ export function PhotoGallery({
       >
         {current ? (
           <div className="flex flex-col gap-3">
-            <PhotoImage
-              photo={current.photo}
+            <CloudinaryImage
+              asset={current.photo}
               alt={current.alt}
               sizes="90vw"
               priority

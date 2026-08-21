@@ -4,17 +4,17 @@ import { notFound } from 'next/navigation'
 import { isLocale, localePath } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { profile } from '@/content/profile'
-import { links } from '@/lib/links'
-import { getPlatform } from '@/lib/platforms'
-import { PlatformIcon } from '@/components/ui/PlatformIcon'
-import { BentoGrid } from '@/components/ui/BentoGrid'
-import { Card } from '@/components/ui/Card'
-import { Eyebrow } from '@/components/ui/Chip'
+import { links, linkRel, linkTarget } from '@/lib/links'
+import { getPlatform } from '@/lib/links/platforms'
+import { PlatformIcon } from '@/components/links/platform-icon'
+import { BentoGrid } from '@/components/ui/bento-grid'
+import { Card } from '@/components/ui/card'
+import { Eyebrow } from '@/components/ui/eyebrow'
 import { threadsSnapshot } from '@/content/threads.generated'
 import { photoSnapshot } from '@/content/photos.generated'
 import { photoOverrides } from '@/content/photo-meta'
-import { resolveAlt } from '@/lib/photo-alt'
-import { PhotoImage } from '@/components/ui/PhotoImage'
+import { resolveAlt } from '@/lib/photos/alt'
+import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 
 export default async function HomePage({
   params,
@@ -118,8 +118,8 @@ export default async function HomePage({
                   href={localePath(locale, 'photos')}
                   className="overflow-hidden rounded-xl border border-edge"
                 >
-                  <PhotoImage
-                    photo={photo}
+                  <CloudinaryImage
+                    asset={photo}
                     alt={resolveAlt(
                       photo,
                       photoOverrides[photo.id],
@@ -152,8 +152,8 @@ export default async function HomePage({
                 <li key={link.href}>
                   <a
                     href={link.href}
-                    target={link.href.startsWith('mailto:') ? undefined : '_blank'}
-                    rel={`${link.identity ? 'me ' : ''}noopener noreferrer`.trim()}
+                    target={linkTarget(link)}
+                    rel={linkRel(link)}
                     title={link.label}
                     style={{ ['--brand']: brand.light } as CSSProperties}
                     className="flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1.5 transition hover:border-[var(--brand)]"

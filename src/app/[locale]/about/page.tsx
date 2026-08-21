@@ -1,7 +1,7 @@
-import { isLocale } from '@/lib/i18n'
 import { notFound } from 'next/navigation'
+import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
-import { Container, PageHeading } from '@/components/layout/Container'
+import { PlaceholderPage } from '@/components/layout/placeholder-page'
 
 export default async function AboutPage({
   params,
@@ -13,11 +13,10 @@ export default async function AboutPage({
   const dict = getDictionary(locale)
 
   return (
-    <Container>
-      <PageHeading title={dict.about.title} intro={dict.about.intro} />
-      <p className="rounded-[var(--radius-card)] border border-dashed border-edge p-6 text-sm text-muted">
-        {dict.common.placeholder}
-      </p>
-    </Container>
+    <PlaceholderPage
+      title={dict.about.title}
+      intro={dict.about.intro}
+      body={dict.common.placeholder}
+    />
   )
 }

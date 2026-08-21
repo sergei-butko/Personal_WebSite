@@ -33,27 +33,43 @@ npm run dev      # http://localhost:3000
 
 ```
 src/
-├── app/                  routing only — no content, no business logic
-│   ├── page.tsx          `/` locale detector
-│   ├── not-found.tsx     404
-│   └── [locale]/         every real page, generated for `en` and `uk`
+├── app/              routing only — a folder with page.tsx is a URL
+│   ├── page.tsx      `/` locale detector
+│   ├── not-found.tsx 404
+│   └── [locale]/     every real page, generated for `en` and `uk`
 ├── components/
-│   ├── layout/           Header, Footer, ThemeToggle, LocaleSwitcher
-│   ├── mdx/              element overrides handed to compiled posts
-│   ├── sections/         PostCard, PostList, TagFilter, FragranceCard
-│   └── ui/               Card, BentoGrid, Chip — dumb primitives
-├── content/              ← EDIT THIS. Everything you maintain by hand.
-│   ├── posts/            blog posts, <slug>.<locale>.mdx
-│   ├── i18n/en.ts        UI strings (English)
-│   ├── i18n/uk.ts        UI strings (Ukrainian)
-│   ├── profile.ts        name, headline, bio
-│   └── social.ts         every external link
-└── lib/                  types, i18n helpers, path helpers
+│   ├── blog/         post-card, post-list, tag-filter, fragrance-card
+│   ├── photos/       gallery, image
+│   ├── threads/      post-card, image
+│   ├── links/        platform-icon
+│   ├── layout/       header, footer, container, theme-toggle, locale-switcher
+│   └── ui/           card, bento-grid, chip — dumb primitives
+├── lib/
+│   ├── blog/         posts, frontmatter, mdx, slug, types
+│   ├── photos/       types, alt
+│   ├── threads/      types
+│   ├── links/        index, platforms
+│   └── i18n · media · paths · types
+└── content/          ← EDIT THIS. Everything you maintain by hand.
+    ├── posts/        blog posts, <slug>.<locale>.mdx
+    ├── i18n/en.ts    UI strings (English)
+    ├── i18n/uk.ts    UI strings (Ukrainian)
+    ├── links.json    every external link
+    ├── profile.ts    name, headline, bio
+    └── photo-meta.ts captions and alt text for mirrored photos
 ```
 
-The rule: **`content/` is data, `components/` is presentation, `app/` is routing.**
-Components never import from `content/` — pages pass data down. To change what
-the site says, you should only ever need to open `src/content/`.
+Same shape as Vercel's own open repos — `app/`, `components/`, `lib/` grouped by
+domain one level deep. Filenames are kebab-case, exports are PascalCase.
+
+The rule: **`content/` is data, `lib/` is logic, `components/` is presentation,
+`app/` is routing.** Components take data as props rather than importing it, so
+to change what the site says you should only ever need to open `src/content/`.
+(`components/layout/` is the one exception — the header and footer read the
+profile directly.)
+
+Not on the honour system: those boundaries are ESLint rules in
+`eslint.config.mjs`, so crossing one fails `npm run lint`.
 
 ---
 
@@ -113,7 +129,8 @@ Things worth knowing:
 misspelled key is a compile error rather than an English string leaking into the
 Ukrainian site.
 
-**Add a nav item** → one entry in `navItems` in `src/components/layout/Header.tsx`,
+**Add a nav item** → one entry in `navItems` in
+`src/components/layout/header.tsx`,
 one label in each `i18n` file, one folder under `src/app/[locale]/`.
 
 **Change the entire look** → `@theme` block at the top of `src/app/globals.css`.

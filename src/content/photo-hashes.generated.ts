@@ -8,7 +8,7 @@
  * but only one asset.
  *
  * Kept out of photos.generated.ts on purpose. Content hashes are a concern of
- * the sync, not of the site, and nothing under src/lib or src/components
+ * the sync, not of the site, and nothing under src/features or src/shared
  * reads this.
  */
 export const photoHashes: Record<string, string> = {

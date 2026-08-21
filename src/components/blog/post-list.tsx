@@ -1,6 +1,6 @@
 import type { Locale } from '@/lib/i18n'
-import type { PostMeta } from '@/lib/types'
-import { PostCard } from '@/components/sections/PostCard'
+import type { PostMeta } from '@/lib/blog/types'
+import { PostCard } from './post-card'
 
 interface PostListProps {
   posts: PostMeta[]

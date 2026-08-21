@@ -1,4 +1,4 @@
-import type { ThreadsSnapshot } from '@/lib/threads'
+import type { ThreadsSnapshot } from '@/lib/threads/types'
 
 /**
  * GENERATED FILE — do not edit by hand.

@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { localePath, type Locale } from '@/lib/i18n'
 import type { Dictionary } from '@/content/i18n'
 import { profile } from '@/content/profile'
-import { ThemeToggle } from '@/components/layout/ThemeToggle'
-import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
+import { LocaleSwitcher } from '@/components/layout/locale-switcher'
 
 /**
  * Single source of truth for navigation. Adding a route is one line here.
@@ -12,7 +12,7 @@ import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher'
  * are reachable by URL, they are just not advertised while there is nothing
  * published in them. Re-add a line to bring either back.
  */
-export const navItems = [
+const navItems = [
   { key: 'home', path: '' },
   { key: 'threads', path: 'threads' },
   { key: 'photos', path: 'photos' },
