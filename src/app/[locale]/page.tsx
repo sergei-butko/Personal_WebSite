@@ -14,7 +14,6 @@ import { threadsSnapshot } from '@/content/threads.generated'
 import { photoSnapshot } from '@/content/photos.generated'
 import { photoOverrides } from '@/content/photo-meta'
 import { resolveAlt } from '@/lib/photo-alt'
-import { basePath } from '@/lib/paths'
 import { PhotoImage } from '@/components/ui/PhotoImage'
 
 export default async function HomePage({
@@ -115,7 +114,7 @@ export default async function HomePage({
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
               {recentPhotos.map((photo) => (
                 <Link
-                  key={`${photo.id}-${photo.src}`}
+                  key={`${photo.id}-${photo.publicId}`}
                   href={localePath(locale, 'photos')}
                   className="overflow-hidden rounded-xl border border-edge"
                 >
@@ -127,7 +126,6 @@ export default async function HomePage({
                       locale,
                       dict.photos.genericAlt
                     )}
-                    basePath={basePath}
                     sizes="(max-width: 640px) 25vw, 120px"
                     className="aspect-square h-full w-full object-cover"
                   />

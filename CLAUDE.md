@@ -83,9 +83,17 @@ Components never import from `content/` — pages pass data down. Keep it that w
 - **Threads cannot be scraped** — `robots.txt` disallows it and it violates Meta's
   ToS. The mirror uses the official API (`threads_basic`). Blog posts are authored
   here as MDX; the site is canonical and Serhii cross-posts outward.
-- **Generated data files are committed, not gitignored** (`threads.generated.ts`, and
-  the Telegram equivalent when it lands). A failed sync then stops new content
-  appearing instead of breaking the build. Preserve this property.
+- **Generated data files are committed, not gitignored** (`threads.generated.ts`,
+  `photos.generated.ts`). A failed sync then stops new content appearing instead
+  of breaking the build. Preserve this property.
+- **Image bytes are never committed.** They live in Cloudinary; the repo holds
+  only public ids. `/public/images/` is gitignored. The first version of the
+  photo sync keyed filenames on `sha1(<telegram CDN url>)` — those URLs are
+  signed and rotate per fetch, so the cache never hit, every run re-encoded the
+  whole channel under new names, and nothing was deleted: 402 photos became
+  10,377 files and 827 MB across thirteen runs. **Any re-hosting key must derive
+  from a stable source id**, which is why public ids are `<postId>-<slot>`.
+  See `docs/RUNBOOK-CLOUDINARY.md`.
 
 ## State
 
@@ -116,5 +124,10 @@ time and verify each; don't fold them into feature work.
 
 `npm run typecheck && npm run lint && npm run format:check && npm run build`
 
-The build must be run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI.
+The build must be run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
+and `NEXT_PUBLIC_CLOUDINARY_CLOUD=<cloud>` once the photo snapshot is non-empty —
+`lib/media.ts` throws rather than emitting empty `src` attributes.
+
+Scripts must be **executed**, not just typechecked. `sync-threads.ts` passed
+typecheck and build for weeks while failing at runtime on every scheduled run.
 The full plan lives in Serhii's "Programming" project as `personal-website/plan.md`.

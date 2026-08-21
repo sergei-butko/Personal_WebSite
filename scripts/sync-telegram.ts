@@ -1,23 +1,30 @@
 /**
- * Mirrors a public Telegram channel's photos into the repo.
+ * Mirrors a public Telegram channel's photos into Cloudinary.
  *
  *   npm run sync:photos
  *
  * Reads t.me/s/<channel>, which is a plain public preview page — no API key,
- * no token, no bot. Walks backwards through history via ?before=, downloads
- * every photo, re-encodes to AVIF + WebP at several widths, and writes
- * src/content/photos.generated.ts.
+ * no token, no bot. Walks backwards through history via ?before=, uploads
+ * every photo to Cloudinary, and writes src/content/photos.generated.ts.
  *
  * Why it is built this way:
  *
- * - Images are DOWNLOADED. Telegram's telesco.pe URLs are signed and expire;
- *   linking them means silently broken images in a few weeks.
+ * - Images are RE-HOSTED, not linked. Telegram's telesco.pe URLs are signed
+ *   and expire; linking them means silently broken images in a few weeks.
+ * - Image bytes never touch the repository. Cloudinary stores the original and
+ *   derives every width and format on delivery, so there is no encode step,
+ *   no variant files, and nothing to commit but the snapshot below.
+ * - The public id is `telegram/<postId>-<slot>` — derived from Telegram's own
+ *   message id, which is stable. A re-upload therefore REPLACES the asset.
+ *   The version of this script that shipped before keyed on a sha1 of the
+ *   signed source URL, which rotates on every fetch: the cache never hit,
+ *   every run re-downloaded and re-encoded the whole channel under fresh
+ *   filenames, and nothing was ever deleted. Thirteen runs turned 402 photos
+ *   into 10,377 files and 827 MB. Keying on a stable id is the fix.
  * - The generated file is COMMITTED. If Telegram changes its markup or is
  *   unreachable, the site still builds from the last good snapshot.
  * - Nothing is written unless the run succeeds, and an empty result never
  *   overwrites a good snapshot.
- * - Already-processed images are skipped, so reruns are cheap and the cron
- *   does not re-encode the whole channel every six hours.
  * - photo-meta.ts is never touched. Hand-written captions and alt text are
  *   yours permanently.
  *
@@ -25,18 +32,18 @@
  * against a saved fixture, so a markup change fails loudly and locally.
  */
 
-import { createHash } from 'node:crypto'
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
-import path from 'node:path'
-import sharp from 'sharp'
+import { readFile, writeFile } from 'node:fs/promises'
+import { access } from 'node:fs/promises'
 import { parseChannelPage, type ParsedPost } from './telegram-parse'
-import type { Photo, PhotoSnapshot, PhotoVariant } from '../src/lib/photos'
+import { cloudName, configureCloudinary, uploadImage } from './cloudinary'
+import type { Photo, PhotoSnapshot } from '../src/lib/photos'
 
 const CHANNEL = process.env.TELEGRAM_CHANNEL ?? 'just_my_photos'
 const OUT_DATA = 'src/content/photos.generated.ts'
-const OUT_IMAGES = 'public/images/photos'
-const PUBLIC_PREFIX = '/images/photos'
-const WIDTHS = [400, 800, 1600]
+const FOLDER = process.env.TELEGRAM_MEDIA_FOLDER ?? 'telegram'
+
+/** Re-upload everything, ignoring the snapshot cache. */
+const FORCE = process.env.SYNC_FORCE === '1'
 
 /** Safety rails. A runaway loop here would download the whole channel twice. */
 const MAX_PAGES = Number(process.env.SYNC_MAX_PAGES ?? 40)
@@ -58,6 +65,39 @@ async function exists(file: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+function publicIdFor(postId: number, index: number): string {
+  return `${FOLDER}/${postId}-${index}`
+}
+
+/**
+ * Photos already uploaded, from the committed snapshot.
+ *
+ * This is the cache, and it works only because the public id is stable. Miss
+ * it and the run merely re-uploads to the same id — wasteful, never
+ * duplicating.
+ */
+async function previouslyUploaded(): Promise<Map<string, Photo>> {
+  const known = new Map<string, Photo>()
+  if (FORCE || !(await exists(OUT_DATA))) return known
+
+  try {
+    const module_ = (await import('../src/content/photos.generated')) as {
+      photoSnapshot?: PhotoSnapshot
+    }
+    for (const photo of module_.photoSnapshot?.photos ?? []) {
+      known.set(photo.publicId, photo)
+    }
+  } catch (error) {
+    // A snapshot in the old on-disk shape, or mid-migration, simply means no
+    // cache. Say so rather than dying.
+    console.warn(
+      `  ! could not read the previous snapshot as a cache ` +
+        `(${(error as Error).message}); every photo will be re-uploaded`
+    )
+  }
+  return known
 }
 
 async function fetchPage(before?: number): Promise<string> {
@@ -110,73 +150,35 @@ async function collectPosts(): Promise<ParsedPost[]> {
 }
 
 /**
- * Downloads one image and emits AVIF + WebP at every width up to the
- * original. Never upscales. A sidecar JSON records the result so reruns skip
- * the download and the re-encode entirely.
+ * Fetches one image from Telegram and re-hosts it under a stable public id.
+ * Returns null on a fetch failure so one dead image cannot fail the run.
  */
-async function processImage(url: string, postId: number, index: number) {
-  const hash = createHash('sha1').update(url).digest('hex').slice(0, 8)
-  const stem = `${postId}-${index}-${hash}`
-  const sidecar = path.join(OUT_IMAGES, `${stem}.json`)
+async function rehost(
+  url: string,
+  postId: number,
+  index: number
+): Promise<{ publicId: string; width: number; height: number } | null> {
+  const publicId = publicIdFor(postId, index)
 
-  if (await exists(sidecar)) {
-    return JSON.parse(await readFile(sidecar, 'utf8')) as {
-      src: string
-      webp: PhotoVariant[]
-      avif: PhotoVariant[]
-      width: number
-      height: number
-    }
-  }
-
-  let original: Buffer
+  let bytes: Buffer
   try {
     const res = await fetch(url, { headers: { 'user-agent': UA } })
     if (!res.ok) {
-      console.warn(`  ! ${stem}: HTTP ${res.status}, skipping`)
+      console.warn(`  ! ${publicId}: HTTP ${res.status} from Telegram, skipping`)
       return null
     }
-    original = Buffer.from(await res.arrayBuffer())
+    bytes = Buffer.from(await res.arrayBuffer())
   } catch (error) {
-    console.warn(`  ! ${stem}: ${(error as Error).message}, skipping`)
+    console.warn(`  ! ${publicId}: ${(error as Error).message}, skipping`)
     return null
   }
 
-  const meta = await sharp(original).metadata()
-  if (!meta.width || !meta.height) {
-    console.warn(`  ! ${stem}: unreadable dimensions, skipping`)
+  try {
+    return await uploadImage(bytes, publicId)
+  } catch (error) {
+    console.warn(`  ! ${publicId}: upload failed — ${(error as Error).message}`)
     return null
   }
-
-  const targets = WIDTHS.filter((w) => w < meta.width!)
-  targets.push(meta.width)
-
-  const webp: PhotoVariant[] = []
-  const avif: PhotoVariant[] = []
-  for (const width of targets) {
-    const resized = sharp(original).resize({ width, withoutEnlargement: true })
-    await resized
-      .clone()
-      .webp({ quality: 82 })
-      .toFile(path.join(OUT_IMAGES, `${stem}-${width}.webp`))
-    await resized
-      .clone()
-      .avif({ quality: 62 })
-      .toFile(path.join(OUT_IMAGES, `${stem}-${width}.avif`))
-    webp.push({ src: `${PUBLIC_PREFIX}/${stem}-${width}.webp`, width })
-    avif.push({ src: `${PUBLIC_PREFIX}/${stem}-${width}.avif`, width })
-  }
-
-  const largest = targets[targets.length - 1]!
-  const result = {
-    src: `${PUBLIC_PREFIX}/${stem}-${largest}.webp`,
-    webp,
-    avif,
-    width: largest,
-    height: Math.round(meta.height * (largest / meta.width)),
-  }
-  await writeFile(sidecar, JSON.stringify(result, null, 2))
-  return result
 }
 
 function render(snapshot: PhotoSnapshot): string {
@@ -186,6 +188,9 @@ function render(snapshot: PhotoSnapshot): string {
  * GENERATED FILE — do not edit by hand.
  * Written by \`npm run sync:photos\`, and committed deliberately.
  *
+ * publicId is a Cloudinary id, not a path. The image bytes live in Cloudinary;
+ * this file is the only thing about them that is in git.
+ *
  * Hand edits belong in photo-meta.ts, which the sync never touches.
  */
 export const photoSnapshot: PhotoSnapshot = ${JSON.stringify(snapshot, null, 2)}
@@ -193,14 +198,24 @@ export const photoSnapshot: PhotoSnapshot = ${JSON.stringify(snapshot, null, 2)}
 }
 
 async function main(): Promise<void> {
-  await mkdir(OUT_IMAGES, { recursive: true })
+  // Before any network work: a missing secret should cost one second, not a
+  // few hundred downloads.
+  await configureCloudinary()
+  console.log(`→ cloudinary cloud: ${cloudName()}`)
+
+  const known = await previouslyUploaded()
+  console.log(
+    `→ ${known.size} photos already uploaded${FORCE ? ' (ignored: SYNC_FORCE=1)' : ''}`
+  )
 
   console.log(`→ reading t.me/s/${CHANNEL}`)
   const posts = await collectPosts()
 
-  console.log('→ processing photos')
+  console.log('→ re-hosting photos')
   const photos: Photo[] = []
   let capped = false
+  let uploaded = 0
+  let cached = 0
 
   for (const post of posts) {
     for (const [index, image] of post.images.entries()) {
@@ -208,14 +223,24 @@ async function main(): Promise<void> {
         capped = true
         break
       }
-      const processed = await processImage(image.url, post.id, index)
-      if (!processed) continue
+
+      const publicId = publicIdFor(post.id, index)
+      const hit = known.get(publicId)
+
+      const media = hit
+        ? { publicId, width: hit.width, height: hit.height }
+        : await rehost(image.url, post.id, index)
+
+      if (!media) continue
+      if (hit) cached++
+      else uploaded++
+
       photos.push({
         id: post.id,
         permalink: post.permalink,
         timestamp: post.timestamp,
         caption: post.caption,
-        ...processed,
+        ...media,
       })
     }
     if (capped) break
@@ -227,6 +252,8 @@ async function main(): Promise<void> {
         `Raise SYNC_MAX_PHOTOS if you want the whole channel.`
     )
   }
+
+  console.log(`  ${uploaded} uploaded, ${cached} already in Cloudinary`)
 
   if (photos.length === 0) {
     fail('No photos parsed. Refusing to overwrite the snapshot with nothing.')
@@ -241,7 +268,7 @@ async function main(): Promise<void> {
   })
 
   // Ignore syncedAt when comparing, so an unchanged channel produces no diff
-  // and the six-hourly cron does not commit noise.
+  // and the cron does not commit noise.
   const previous = (await exists(OUT_DATA)) ? await readFile(OUT_DATA, 'utf8') : ''
   const strip = (s: string) => s.replace(/"syncedAt": "[^"]*"/, '')
 

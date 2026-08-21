@@ -30,14 +30,33 @@ export function isConfigured(): boolean {
 }
 
 /**
- * A delivery URL at a given width. Returns an empty string when Cloudinary is
- * not configured, so a missing env var shows as a broken image locally rather
- * than a URL pointing at "undefined" in production.
+ * Fails the build when content needs Cloudinary and the cloud name is absent.
+ *
+ * The previous version of this module returned '' for every URL when the env
+ * var was unset. That is exactly the failure this repo avoids everywhere else:
+ * it produces a site that builds green and ships 400 broken images. Callers
+ * that hold real content call this first, so a missing var stops CI instead.
+ */
+export function assertConfigured(context: string): void {
+  if (CLOUD_NAME) return
+  throw new Error(
+    `NEXT_PUBLIC_CLOUDINARY_CLOUD is not set, but ${context} needs it to build ` +
+      `image URLs. Set it in the environment (deploy.yml sets it in CI) or the ` +
+      `build would emit empty src attributes.`
+  )
+}
+
+/**
+ * A delivery URL at a given width.
+ *
+ * f_auto negotiates AVIF/WebP per browser and q_auto picks quality per image,
+ * so there is no local encoding step and no variant files. c_limit never
+ * upscales past the original.
  */
 export function mediaUrl(publicId: string, width: number): string {
-  if (!CLOUD_NAME) return ''
+  assertConfigured(`the image "${publicId}"`)
   const transform = `f_auto,q_auto,c_limit,w_${width}`
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transform}/${publicId}`
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transform}/${encodeURI(publicId)}`
 }
 
 export function mediaSrcSet(publicId: string, intrinsicWidth: number): string {

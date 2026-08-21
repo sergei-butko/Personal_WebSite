@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
-import { basePath } from '@/lib/paths'
 import { getDictionary } from '@/content/i18n'
 import { threadsSnapshot } from '@/content/threads.generated'
 import { isUnsynced } from '@/lib/threads'
@@ -42,7 +41,6 @@ export default async function ThreadsPage({
                 key={post.id}
                 post={post}
                 locale={locale}
-                basePath={basePath}
                 imageFallbackAlt={dict.threads.imageAlt}
               />
             ))}

@@ -36,6 +36,10 @@ jobs:
           # Project page: the site lives under /<repo-name>/.
           # Set to '' when a custom domain is added.
           NEXT_PUBLIC_BASE_PATH: /Personal_WebSite
+          # Public by design — it appears in every image URL the site serves.
+          # A repository VARIABLE, not a secret. The API key and secret live in
+          # secrets.CLOUDINARY_URL and are only ever used by the sync workflows.
+          NEXT_PUBLIC_CLOUDINARY_CLOUD: ${{ vars.CLOUDINARY_CLOUD }}
 
       - uses: actions/configure-pages@v6
 
