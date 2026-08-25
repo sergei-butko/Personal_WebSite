@@ -173,3 +173,62 @@ export async function deleteAssets(publicIds: string[]): Promise<number> {
   }
   return deleted
 }
+
+/**
+ * Uploads a JSON snapshot as a `raw` asset.
+ *
+ * The snapshots used to be committed .ts files. They are here now so the repo
+ * holds no generated content at all and a sync produces no commit — see
+ * docs/RUNBOOK-CLOUDINARY.md. The trade is that the site build fetches them
+ * over the network and fails loudly when it cannot, rather than falling back
+ * to a stale copy in git.
+ *
+ * overwrite + invalidate matter more here than for images: the build reads
+ * this back immediately after a sync, and a CDN serving the previous version
+ * would silently deploy stale content.
+ */
+export async function uploadJson(publicId: string, data: unknown): Promise<void> {
+  await configureCloudinary()
+  const client = api
+  if (!client) throw new Error('Cloudinary was not configured')
+
+  const bytes = Buffer.from(JSON.stringify(data, null, 2), 'utf8')
+
+  await new Promise<void>((resolve, reject) => {
+    const stream = client.uploader.upload_stream(
+      {
+        public_id: publicId,
+        overwrite: true,
+        invalidate: true,
+        resource_type: 'raw',
+      },
+      (error, uploaded) => {
+        if (error) return reject(new Error(error.message))
+        if (!uploaded) return reject(new Error(`${publicId}: upload returned nothing`))
+        resolve()
+      }
+    )
+    stream.end(bytes)
+  })
+}
+
+/**
+ * Reads a JSON snapshot back, bypassing the CDN cache.
+ *
+ * Returns null when the asset does not exist yet — a first run, which is not
+ * an error. Any other failure throws, because a sync that silently treats a
+ * fetch failure as "no previous state" would re-upload the whole channel.
+ */
+export async function fetchJson<T>(publicId: string): Promise<T | null> {
+  await configureCloudinary()
+  const url =
+    `https://res.cloudinary.com/${cloud}/raw/upload/${encodeURI(publicId)}` +
+    `?v=${Date.now()}`
+
+  const res = await fetch(url, { cache: 'no-store' })
+  if (res.status === 404) return null
+  if (!res.ok) {
+    throw new Error(`Could not read ${publicId} from Cloudinary: HTTP ${res.status}`)
+  }
+  return (await res.json()) as T
+}

@@ -1,15 +1,33 @@
 name: Sync Threads
 
+# Manual only, on purpose.
+#
+# This ran every six hours and pushed a "chore: sync Threads posts" commit to
+# main whenever the feed moved. Threads is not a feed anyone is waiting on, and
+# the cost — a main history made of bot commits, plus four pipeline runs a day
+# — bought nothing.
+#
+# Nothing is committed any more either: the snapshot is a JSON asset in
+# Cloudinary (data/threads.json), which the site build fetches. So main gets no
+# generated content and no sync commits at all.
+#
+# Re-running is safe. Public ids come from Meta's post id, so a repeat run
+# replaces assets in Cloudinary rather than adding copies, and a run that finds
+# no change uploads nothing.
+#
+# To pull new posts: Actions -> Sync Threads -> Run workflow.
 on:
-  schedule:
-    # Every 6 hours. Threads is not a news feed; polling harder buys nothing
-    # and burns rate limit.
-    - cron: '17 */6 * * *'
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Rebuild and publish the site when the sync finishes'
+        type: boolean
+        default: true
 
-# Needs to push the regenerated snapshot back to main.
+# No commit to push; the job only needs to dispatch the deploy.
 permissions:
-  contents: write
+  contents: read
+  actions: write
 
 concurrency:
   group: sync-threads
@@ -30,26 +48,49 @@ jobs:
         run: npm ci
 
       - name: Sync posts from Threads
+        id: sync
         env:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
-          # Images are re-hosted in Cloudinary, never committed.
+          # Images and the snapshot are both re-hosted in Cloudinary, never
+          # committed. The secret never reaches the site build; delivery only
+          # needs the public cloud name, which deploy.yml sets separately.
           CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
         run: npm run sync:threads
 
-      - name: Commit if the feed changed
+      - name: Deploy the site
+        # No commit is pushed, so nothing triggers deploy.yml on its own and
+        # the sync has to dispatch it.
+        #
+        # Always --ref the DEFAULT branch, never the branch this run happened
+        # to start from. deploy.yml publishes to production Pages, so
+        # dispatching it against a feature branch would put that branch on the
+        # live site — which the old design could not do, because deploy.yml
+        # only ever ran on push to main. The runbook tells you to sync from a
+        # branch before merging; that must not publish anything.
+        if: >-
+          success()
+          && inputs.deploy
+          && steps.sync.outputs.changed == 'true'
+          && github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if [[ -z "$(git status --porcelain)" ]]; then
-            echo "No change."
-            exit 0
+          gh workflow run deploy.yml --ref "$DEFAULT_BRANCH"
+          echo "Deploy dispatched against $DEFAULT_BRANCH."
+
+      - name: Explain why no deploy was dispatched
+        if: >-
+          success()
+          && !(inputs.deploy
+          && steps.sync.outputs.changed == 'true'
+          && github.ref_name == github.event.repository.default_branch)
+        run: |
+          if [[ "${{ inputs.deploy }}" != "true" ]]; then
+            echo "The deploy input was unticked. Cloudinary is updated; the site is not."
+          elif [[ "${{ steps.sync.outputs.changed }}" != "true" ]]; then
+            echo "Nothing changed, so there is nothing to publish."
+          else
+            echo "Ran on '${{ github.ref_name }}', not the default branch."
+            echo "Cloudinary is updated. Merge, then run Deploy to publish."
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Only the snapshot. Image bytes are in Cloudinary and
-          # /public/images/ is gitignored.
-          git add src/content/threads.generated.ts
-          # No [skip ci]: this push is exactly what should trigger
-          # deploy.yml. ci.yml ignores main and the sync workflows are
-          # schedule/dispatch only, so there is no loop to guard against.
-          git commit -m "chore: sync Threads posts"
-          git push
-          echo "Pushed — deploy.yml will pick this up."

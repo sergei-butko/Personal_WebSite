@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
-import { threadsSnapshot } from '@/content/threads.generated'
+import { loadThreadsSnapshot } from '@/lib/threads/snapshot'
 import { isUnsynced } from '@/lib/threads/types'
 import { ThreadsPostCard } from '@/components/threads/post-card'
 import { Container, PageHeading } from '@/components/layout/container'
@@ -15,6 +15,7 @@ export default async function ThreadsPage({
   if (!isLocale(locale)) notFound()
 
   const dict = getDictionary(locale)
+  const threadsSnapshot = await loadThreadsSnapshot()
   const { posts, username, syncedAt } = threadsSnapshot
 
   return (

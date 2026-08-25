@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
-import { photoSnapshot } from '@/content/photos.generated'
+import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
 import { photoOverrides } from '@/content/photo-meta'
 import { isUnsynced } from '@/lib/photos/types'
 import { resolveAlt, resolveCaption } from '@/lib/photos/alt'
@@ -17,6 +17,7 @@ export default async function PhotosPage({
   if (!isLocale(locale)) notFound()
 
   const dict = getDictionary(locale)
+  const photoSnapshot = await loadPhotoSnapshot()
   const { photos, channel, syncedAt } = photoSnapshot
 
   const items: GalleryItem[] = photos

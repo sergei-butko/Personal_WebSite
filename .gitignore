@@ -21,10 +21,15 @@ tsconfig.tsbuildinfo
 tg-sample.html
 
 # Image bytes are never committed. They live in Cloudinary, uploaded by the
-# sync scripts; only src/content/*.generated.ts is in git. This directory was
-# 827 MB of duplicated photos before the migration — the ignore keeps a stray
-# local run from putting it back.
+# sync scripts. This directory was 827 MB of duplicated photos before the
+# migration — the ignore keeps a stray local run from putting it back.
 /public/images/
+
+# Generated snapshots live in Cloudinary too (data/photos.json,
+# data/photo-hashes.json, data/threads.json), so a sync produces no commit and
+# main carries no generated content. These paths are ignored so an older
+# checkout or a stray script cannot reintroduce them.
+src/content/*.generated.ts
 
 # Personal working notes — must never reach a public repo.
 CLAUDE.local.md

@@ -5,7 +5,7 @@
  *
  * Reads t.me/s/<channel>, which is a plain public preview page — no API key,
  * no token, no bot. Walks backwards through history via ?before=, uploads
- * every photo to Cloudinary, and writes src/content/photos.generated.ts.
+ * every photo to Cloudinary, and writes data/photos.json there too.
  *
  * Why it is built this way:
  *
@@ -21,8 +21,10 @@
  *   every run re-downloaded and re-encoded the whole channel under fresh
  *   filenames, and nothing was ever deleted. Thirteen runs turned 402 photos
  *   into 10,377 files and 827 MB. Keying on a stable id is the fix.
- * - The generated file is COMMITTED. If Telegram changes its markup or is
- *   unreachable, the site still builds from the last good snapshot.
+ * - The snapshot is stored in CLOUDINARY, not in git, so a sync produces no
+ *   commit. If Telegram changes its markup or is unreachable, the last good
+ *   snapshot stays in place — but an unreachable Cloudinary fails the site
+ *   build. See src/lib/snapshot.ts for why that is the chosen failure mode.
  * - Nothing is written unless the run succeeds, and an empty result never
  *   overwrites a good snapshot.
  * - photo-meta.ts is never touched. Hand-written captions and alt text are
@@ -32,23 +34,24 @@
  * against a saved fixture, so a markup change fails loudly and locally.
  */
 
-import { readFile, writeFile } from 'node:fs/promises'
-import { access } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { parseChannelPage, type ParsedPost } from './telegram-parse'
 import { decideAsset, type StoredSize } from './photo-dedup'
+import { setOutput } from './github-output'
 import {
   cloudName,
   configureCloudinary,
   deleteAssets,
+  fetchJson,
   listAssetIds,
   uploadImage,
+  uploadJson,
 } from './cloudinary'
 import type { Photo, PhotoSnapshot } from '../src/lib/photos/types'
 
 const CHANNEL = process.env.TELEGRAM_CHANNEL ?? 'just_my_photos'
-const OUT_DATA = 'src/content/photos.generated.ts'
-const OUT_HASHES = 'src/content/photo-hashes.generated.ts'
+const OUT_DATA = 'data/photos.json'
+const OUT_HASHES = 'data/photo-hashes.json'
 const FOLDER = process.env.TELEGRAM_MEDIA_FOLDER ?? 'telegram'
 
 /** Re-download and re-upload everything, ignoring both caches. */
@@ -82,21 +85,12 @@ function fail(message: string): never {
   process.exit(1)
 }
 
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file)
-    return true
-  } catch {
-    return false
-  }
-}
-
 function publicIdFor(postId: number, index: number): string {
   return `${FOLDER}/${postId}-${index}`
 }
 
 /**
- * Photos already uploaded, from the committed snapshot.
+ * Photos already uploaded, from the snapshot in Cloudinary.
  *
  * This is the cache, and it works only because the public id is stable. Miss
  * it and the run merely re-uploads to the same id — wasteful, never
@@ -104,22 +98,11 @@ function publicIdFor(postId: number, index: number): string {
  */
 async function previouslyUploaded(): Promise<Map<string, Photo>> {
   const known = new Map<string, Photo>()
-  if (FORCE || !(await exists(OUT_DATA))) return known
+  if (FORCE) return known
 
-  try {
-    const module_ = (await import('../src/content/photos.generated')) as {
-      photoSnapshot?: PhotoSnapshot
-    }
-    for (const photo of module_.photoSnapshot?.photos ?? []) {
-      known.set(photo.publicId, photo)
-    }
-  } catch (error) {
-    // A snapshot in the old on-disk shape, or mid-migration, simply means no
-    // cache. Say so rather than dying.
-    console.warn(
-      `  ! could not read the previous snapshot as a cache ` +
-        `(${(error as Error).message}); every photo will be re-uploaded`
-    )
+  const snapshot = await fetchJson<PhotoSnapshot>(OUT_DATA)
+  for (const photo of snapshot?.photos ?? []) {
+    known.set(photo.publicId, photo)
   }
   return known
 }
@@ -245,55 +228,24 @@ const uploadedDimensions = new Map<string, StoredSize>()
 /** The committed content-hash map, or an empty one on first run. */
 async function loadHashes(): Promise<Map<string, string>> {
   const map = new Map<string, string>()
-  if (!(await exists(OUT_HASHES))) return map
-  try {
-    const module_ = (await import('../src/content/photo-hashes.generated')) as {
-      photoHashes?: Record<string, string>
-    }
-    for (const [hash, publicId] of Object.entries(module_.photoHashes ?? {})) {
-      map.set(hash, publicId)
-    }
-  } catch (error) {
-    console.warn(`  ! could not read ${OUT_HASHES} (${(error as Error).message})`)
+  const stored = await fetchJson<Record<string, string>>(OUT_HASHES)
+  for (const [hash, publicId] of Object.entries(stored ?? {})) {
+    map.set(hash, publicId)
   }
   return map
 }
 
-function renderHashes(hashes: Map<string, string>): string {
-  const sorted = Object.fromEntries(
-    [...hashes.entries()].sort(([a], [b]) => (a < b ? -1 : 1))
-  )
-  return `/**
- * GENERATED FILE — do not edit by hand.
- * Written by \`npm run sync:photos\`, and committed deliberately.
- *
- * Maps the sha256 of an image's bytes to the Cloudinary public id it is
- * stored under. This is what makes the sync store DISTINCT images: the same
- * photo posted twice gets two entries in the snapshot — both posts are real —
- * but only one asset.
- *
- * Kept out of photos.generated.ts on purpose. Content hashes are a concern of
- * the sync, not of the site, and nothing under src/features or src/shared
- * reads this.
- */
-export const photoHashes: Record<string, string> = ${JSON.stringify(sorted, null, 2)}
-`
-}
-
-function render(snapshot: PhotoSnapshot): string {
-  return `import type { PhotoSnapshot } from '@/lib/photos/types'
-
 /**
- * GENERATED FILE — do not edit by hand.
- * Written by \`npm run sync:photos\`, and committed deliberately.
+ * Maps the sha256 of an image's bytes to the Cloudinary public id it is stored
+ * under. This is what makes the sync store DISTINCT images: the same photo
+ * posted twice gets two entries in the snapshot — both posts are real — but
+ * only one asset.
  *
- * publicId is a Cloudinary id, not a path. The image bytes live in Cloudinary;
- * this file is the only thing about them that is in git.
- *
- * Hand edits belong in photo-meta.ts, which the sync never touches.
+ * Kept out of photos.json on purpose. Content hashes are a concern of the
+ * sync, not of the site, and nothing under src/ reads them.
  */
-export const photoSnapshot: PhotoSnapshot = ${JSON.stringify(snapshot, null, 2)}
-`
+function hashesToObject(hashes: Map<string, string>): Record<string, string> {
+  return Object.fromEntries([...hashes.entries()].sort(([a], [b]) => (a < b ? -1 : 1)))
 }
 
 async function main(): Promise<void> {
@@ -376,7 +328,7 @@ async function main(): Promise<void> {
   const distinct = new Set(photos.map((photo) => photo.publicId))
   console.log(`  ${photos.length} photos → ${distinct.size} distinct assets`)
 
-  await writeFile(OUT_HASHES, renderHashes(hashes))
+  await uploadJson(OUT_HASHES, hashesToObject(hashes))
 
   if (PRUNE) {
     console.log(`→ pruning ${FOLDER}/`)
@@ -395,24 +347,27 @@ async function main(): Promise<void> {
 
   photos.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id)
 
-  const next = render({
+  const next: PhotoSnapshot = {
     syncedAt: new Date().toISOString(),
     channel: CHANNEL,
     photos,
-  })
+  }
 
-  // Ignore syncedAt when comparing, so an unchanged channel produces no diff
-  // and the cron does not commit noise.
-  const previous = (await exists(OUT_DATA)) ? await readFile(OUT_DATA, 'utf8') : ''
-  const strip = (s: string) => s.replace(/"syncedAt": "[^"]*"/, '')
+  // Ignore syncedAt when comparing, so an unchanged channel does not churn the
+  // snapshot in Cloudinary and invalidate its CDN copy for nothing.
+  const previous = await fetchJson<PhotoSnapshot>(OUT_DATA)
+  const strip = (value: PhotoSnapshot | null) =>
+    value ? JSON.stringify({ ...value, syncedAt: '' }) : ''
 
   if (strip(next) === strip(previous)) {
     console.log(`✓ ${photos.length} photos, no change`)
+    await setOutput('changed', 'false')
     return
   }
 
-  await writeFile(OUT_DATA, next)
-  console.log(`✓ ${photos.length} photos written to ${OUT_DATA}`)
+  await uploadJson(OUT_DATA, next)
+  await setOutput('changed', 'true')
+  console.log(`✓ ${photos.length} photos written to ${OUT_DATA} in Cloudinary`)
 }
 
 main().catch((error: unknown) => {

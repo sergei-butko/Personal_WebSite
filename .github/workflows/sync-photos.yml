@@ -8,9 +8,12 @@ name: Sync Telegram photos
 # anyone is waiting on, so the cost — a noisy main history and a queue of
 # pipeline runs — bought nothing.
 #
+# Nothing is committed any more either: the snapshot is a JSON asset in
+# Cloudinary, so main gets no "chore: sync" commits at all.
+#
 # Nothing about the sync requires a schedule. It is idempotent: public ids come
 # from the Telegram message id, so a repeat run replaces the asset in Cloudinary
-# rather than adding a copy, and a run that finds no change commits nothing.
+# rather than adding a copy, and a run that finds no change uploads nothing.
 # (An earlier scheme hashed the signed source URL, which rotates per fetch;
 # thirteen runs left 10,377 files and 827 MB in the repository. That is fixed,
 # and is not why this is manual.)
@@ -28,9 +31,14 @@ on:
         description: 'DELETE Cloudinary assets the new snapshot does not reference'
         type: boolean
         default: false
+      deploy:
+        description: 'Rebuild and publish the site when the sync finishes'
+        type: boolean
+        default: true
 
 permissions:
-  contents: write
+  contents: read
+  actions: write
 
 concurrency:
   group: sync-photos
@@ -62,6 +70,7 @@ jobs:
         run: npm run test:dedup
 
       - name: Sync photos
+        id: sync
         run: npm run sync:photos
         env:
           # cloudinary://<api_key>:<api_secret>@<cloud_name>
@@ -73,21 +82,40 @@ jobs:
           SYNC_FORCE: ${{ inputs.force && '1' || '0' }}
           SYNC_PRUNE: ${{ inputs.prune && '1' || '0' }}
 
-      - name: Commit if the channel changed
+      - name: Deploy the site
+        # No commit is pushed, so nothing triggers deploy.yml on its own and
+        # the sync has to dispatch it.
+        #
+        # Always --ref the DEFAULT branch, never the branch this run happened
+        # to start from. deploy.yml publishes to production Pages, so
+        # dispatching it against a feature branch would put that branch on the
+        # live site — which the old design could not do, because deploy.yml
+        # only ever ran on push to main. The runbook tells you to sync from a
+        # branch before merging; that must not publish anything.
+        if: >-
+          success()
+          && inputs.deploy
+          && steps.sync.outputs.changed == 'true'
+          && github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if [[ -z "$(git status --porcelain)" ]]; then
-            echo "No change."
-            exit 0
+          gh workflow run deploy.yml --ref "$DEFAULT_BRANCH"
+          echo "Deploy dispatched against $DEFAULT_BRANCH."
+
+      - name: Explain why no deploy was dispatched
+        if: >-
+          success()
+          && !(inputs.deploy
+          && steps.sync.outputs.changed == 'true'
+          && github.ref_name == github.event.repository.default_branch)
+        run: |
+          if [[ "${{ inputs.deploy }}" != "true" ]]; then
+            echo "The deploy input was unticked. Cloudinary is updated; the site is not."
+          elif [[ "${{ steps.sync.outputs.changed }}" != "true" ]]; then
+            echo "Nothing changed, so there is nothing to publish."
+          else
+            echo "Ran on '${{ github.ref_name }}', not the default branch."
+            echo "Cloudinary is updated. Merge, then run Deploy to publish."
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Only the generated data. Image bytes are in Cloudinary and
-          # /public/images/ is gitignored.
-          git add src/content/photos.generated.ts src/content/photo-hashes.generated.ts
-          # No [skip ci]: this push is exactly what should trigger
-          # deploy.yml, and it is the whole point of running the sync by hand.
-          # ci.yml ignores main and this workflow is dispatch-only, so there is
-          # no loop to guard against.
-          git commit -m "chore: sync Telegram photos"
-          git push
-          echo "Pushed — deploy.yml will pick this up."

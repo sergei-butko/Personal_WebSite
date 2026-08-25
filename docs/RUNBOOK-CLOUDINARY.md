@@ -1,7 +1,8 @@
 # Moving images out of git
 
-Photos and Threads images are re-hosted in Cloudinary. Nothing but the
-generated snapshots is in the repository.
+Photos and Threads images are re-hosted in Cloudinary, and so are the
+generated snapshots that index them. Nothing generated is in the repository at
+all.
 
 Run these steps in order. Steps 1–4 are reversible. **Step 6 rewrites history
 and is not.**
@@ -54,11 +55,9 @@ NEXT_PUBLIC_CLOUDINARY_CLOUD=dxxxxxxxx
 
 ## 3. Populate Cloudinary from the branch
 
-**Do this before merging.** The migration ships an empty photo snapshot — see
-the comment in `src/content/photos.generated.ts` for why hand-writing the ids
-would be worse — so `main` would show an empty gallery in the window between
-merge and the first sync. Running the sync against the branch closes that
-window.
+**Do this before merging.** Until a sync has run, `data/photos.json` does not
+exist in Cloudinary, the loader treats the 404 as "never synced", and the
+gallery renders empty. Running the sync against the branch closes that window.
 
 Actions → **Sync Telegram photos** → **Run workflow** → select
 `feat/photos-cloudinary` → Run.
@@ -73,10 +72,10 @@ Expected output:
   ...
 → re-hosting photos
   400 uploaded, 0 already in Cloudinary
-✓ 400 photos written to src/content/photos.generated.ts
+✓ 400 photos written to data/photos.json in Cloudinary
 ```
 
-It commits the regenerated snapshot back to the branch. **This is the first
+It commits nothing; the snapshot goes to Cloudinary. **This is the first
 time the upload path runs anywhere** — it could not be tested from the
 development sandbox, which cannot reach `api.cloudinary.com`. Read the log
 rather than trusting the green tick.
@@ -174,8 +173,9 @@ before. The `.old` clone is the only copy of the pre-rewrite history.
 ## How it works afterwards
 
 `sync-telegram.ts` uploads each photo to `telegram/<postId>-<slot>` and writes
-only `src/content/photos.generated.ts`. `sync-threads.ts` does the same to
-`threads/<postId>-<slot>`. The public id is derived from a stable source id, so
+the snapshot to `data/photos.json`, in the same Cloudinary account.
+`sync-threads.ts` does the same to `threads/<postId>-<slot>` and
+`data/threads.json`. Neither writes to the repository. The public id is derived from a stable source id, so
 a re-run **replaces** an asset rather than adding one — which is precisely what
 the previous implementation got wrong.
 
@@ -189,7 +189,7 @@ script — nothing in the tree writes there any more.
 ### Distinctness
 
 Images are deduplicated by **sha256 of the file bytes**, recorded in
-`src/content/photo-hashes.generated.ts`. The same photo posted to the channel
+`data/photo-hashes.json` in Cloudinary. The same photo posted to the channel
 twice produces two entries in the snapshot — both posts are real and both
 appear in the gallery — but only one Cloudinary asset.
 
@@ -220,8 +220,9 @@ duplicates were found.
 
 Afterwards, leave both unticked. There is no schedule — the sync runs only when
 you start it — so this is also how you pull new photos day to day: Run workflow,
-nothing ticked. It commits only if the channel actually changed, and that commit
-is what triggers the deploy.
+nothing ticked. It uploads only if the channel actually changed, and then
+dispatches `deploy.yml` itself. Untick **deploy** to refresh Cloudinary without
+republishing the site.
 
 ### Re-uploading everything from a shell
 
@@ -239,3 +240,26 @@ or use `--env-file` when running by hand.
 The limit worth watching is monthly **transformations** — each new
 width/format combination counts once, then it is cached at the CDN. If the
 site ever gets real traffic, check **Dashboard → Usage** rather than guessing.
+
+---
+
+## Where the snapshots live
+
+| Asset                    | Written by     | Read by                                 |
+| ------------------------ | -------------- | --------------------------------------- |
+| `data/photos.json`       | `sync:photos`  | `lib/photos/snapshot.ts` at build time  |
+| `data/photo-hashes.json` | `sync:photos`  | `sync:photos` on the next run           |
+| `data/threads.json`      | `sync:threads` | `lib/threads/snapshot.ts` at build time |
+
+They are `raw` assets, publicly readable at
+`https://res.cloudinary.com/<cloud>/raw/upload/<id>`. That is fine — every byte
+in them is already public, being a mirror of a public channel and public posts.
+
+The build fetches them with a per-process cache-buster, because Cloudinary's
+CDN will otherwise serve the previous version of an overwritten raw asset for a
+while, and a deploy running seconds after a sync is exactly that race.
+
+**This is a build-time network dependency**, which the repo otherwise avoids.
+A Cloudinary outage means you cannot deploy — but the already-deployed site
+keeps serving, since it is static HTML on Pages. The alternative was committing
+the snapshots, which is what produced the sync commits this design removes.

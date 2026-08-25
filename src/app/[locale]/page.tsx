@@ -10,8 +10,8 @@ import { PlatformIcon } from '@/components/links/platform-icon'
 import { BentoGrid } from '@/components/ui/bento-grid'
 import { Card } from '@/components/ui/card'
 import { Eyebrow } from '@/components/ui/eyebrow'
-import { threadsSnapshot } from '@/content/threads.generated'
-import { photoSnapshot } from '@/content/photos.generated'
+import { loadThreadsSnapshot } from '@/lib/threads/snapshot'
+import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
 import { photoOverrides } from '@/content/photo-meta'
 import { resolveAlt } from '@/lib/photos/alt'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
@@ -25,6 +25,14 @@ export default async function HomePage({
   if (!isLocale(locale)) notFound()
 
   const dict = getDictionary(locale)
+
+  // Both snapshots come from Cloudinary at build time; fetch them together
+  // rather than serially.
+  const [threadsSnapshot, photoSnapshot] = await Promise.all([
+    loadThreadsSnapshot(),
+    loadPhotoSnapshot(),
+  ])
+
   const recentPhotos = photoSnapshot.photos
     .filter((photo) => !photoOverrides[photo.id]?.hidden)
     .slice(0, 12)

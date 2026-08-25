@@ -1,5 +1,5 @@
 /**
- * Pulls your own Threads posts and writes src/content/threads.generated.ts.
+ * Pulls your own Threads posts and writes data/threads.json to Cloudinary.
  *
  *   THREADS_ACCESS_TOKEN=... npm run sync:threads
  *
@@ -7,9 +7,10 @@
  *
  * - Images are DOWNLOADED, not hotlinked. Meta's media_url values are signed
  *   and expire; linking them means silently broken images in a few weeks.
- * - The generated file is COMMITTED. If this script fails, the site still
- *   builds from the last good snapshot. A broken sync is an annoyance, not
- *   an outage.
+ * - The snapshot is stored in CLOUDINARY, not in git, so a sync produces no
+ *   commit. The build fetches it. That means a broken sync leaves the last
+ *   good snapshot in place, but an unreachable Cloudinary fails the build —
+ *   see src/lib/snapshot.ts for why that is the chosen failure mode.
  * - Nothing is written unless the whole run succeeds. A partial snapshot is
  *   worse than a stale one.
  * - Already-downloaded images are skipped, so reruns are cheap.
@@ -17,8 +18,14 @@
  * Docs: https://developers.facebook.com/docs/threads/threads-media
  */
 
-import { readFile, writeFile, access } from 'node:fs/promises'
-import { cloudName, configureCloudinary, uploadImage } from './cloudinary'
+import {
+  cloudName,
+  configureCloudinary,
+  fetchJson,
+  uploadImage,
+  uploadJson,
+} from './cloudinary'
+import { setOutput } from './github-output'
 import type {
   ThreadsImage,
   ThreadsMediaType,
@@ -27,7 +34,7 @@ import type {
 } from '../src/lib/threads/types'
 
 const HOST = 'https://graph.threads.net/v1.0'
-const OUT_DATA = 'src/content/threads.generated.ts'
+const OUT_DATA = 'data/threads.json'
 const FOLDER = process.env.THREADS_MEDIA_FOLDER ?? 'threads'
 const PAGE_SIZE = 100
 
@@ -137,15 +144,6 @@ async function fetchAllPosts(): Promise<ApiPost[]> {
   return posts
 }
 
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file)
-    return true
-  } catch {
-    return false
-  }
-}
-
 /**
  * Re-hosts one Threads image in Cloudinary under a stable public id.
  *
@@ -227,21 +225,6 @@ async function normalise(post: ApiPost): Promise<ThreadsPost | null> {
   }
 }
 
-function render(snapshot: ThreadsSnapshot): string {
-  return `import type { ThreadsSnapshot } from '@/lib/threads/types'
-
-/**
- * GENERATED FILE — do not edit by hand.
- * Written by \`npm run sync:threads\`, and committed deliberately.
- *
- * Committing it means the site still builds when the Threads API is down,
- * rate-limited, or the token has expired. A failed sync stops new posts
- * from appearing; it never takes the site down.
- */
-export const threadsSnapshot: ThreadsSnapshot = ${JSON.stringify(snapshot, null, 2)}
-`
-}
-
 async function main(): Promise<void> {
   // Fails in the first second when the secret is missing, rather than after
   // a full paginated crawl of the API.
@@ -275,19 +258,21 @@ async function main(): Promise<void> {
     posts,
   }
 
-  // Compare ignoring syncedAt, so an unchanged feed produces no git diff
-  // and the workflow does not commit noise every six hours.
-  const next = render(snapshot)
-  const previous = (await exists(OUT_DATA)) ? await readFile(OUT_DATA, 'utf8') : ''
-  const strip = (s: string) => s.replace(/"syncedAt": "[^"]*"/, '')
+  // Compare ignoring syncedAt, so an unchanged feed does not churn the
+  // snapshot in Cloudinary and invalidate its CDN copy for nothing.
+  const previous = await fetchJson<ThreadsSnapshot>(OUT_DATA)
+  const strip = (value: ThreadsSnapshot | null) =>
+    value ? JSON.stringify({ ...value, syncedAt: '' }) : ''
 
-  if (strip(next) === strip(previous)) {
+  if (strip(snapshot) === strip(previous)) {
     console.log(`✓ ${posts.length} posts, no change`)
+    await setOutput('changed', 'false')
     return
   }
 
-  await writeFile(OUT_DATA, next)
-  console.log(`✓ ${posts.length} posts written to ${OUT_DATA}`)
+  await uploadJson(OUT_DATA, snapshot)
+  await setOutput('changed', 'true')
+  console.log(`✓ ${posts.length} posts written to ${OUT_DATA} in Cloudinary`)
 }
 
 // Not top-level await: tsx transpiles these to CJS (the package is not

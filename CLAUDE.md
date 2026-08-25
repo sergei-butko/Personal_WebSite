@@ -116,9 +116,16 @@ macOS's case-insensitive filesystem. Same-folder siblings import relatively
 - **Threads cannot be scraped** — `robots.txt` disallows it and it violates Meta's
   ToS. The mirror uses the official API (`threads_basic`). Blog posts are authored
   here as MDX; the site is canonical and Serhii cross-posts outward.
-- **Generated data files are committed, not gitignored** (`threads.generated.ts`,
-  `photos.generated.ts`). A failed sync then stops new content appearing instead
-  of breaking the build. Preserve this property.
+- **Generated snapshots live in Cloudinary, not in git.** `data/photos.json`,
+  `data/photo-hashes.json` and `data/threads.json` are `raw` assets written by
+  the syncs and fetched at build time by `src/lib/snapshot.ts`. They used to be
+  committed `.ts` files, so that a failed sync stopped new content appearing
+  rather than breaking the build. That property is **gone on purpose**: the
+  syncs now produce no commits, and the price is that the build fails when
+  Cloudinary is unreachable. It fails loudly, the same way `lib/media.ts` does
+  for a missing cloud name — a green build with an empty gallery is the worse
+  outcome. A 404 on a snapshot is not an error; it means that sync has never
+  run, and the page renders its unsynced state.
 - **Image bytes are never committed.** They live in Cloudinary; the repo holds
   only public ids. `/public/images/` is gitignored. The first version of the
   photo sync keyed filenames on `sha1(<telegram CDN url>)` — those URLs are
@@ -127,6 +134,13 @@ macOS's case-insensitive filesystem. Same-folder siblings import relatively
   10,377 files and 827 MB across thirteen runs. **Any re-hosting key must derive
   from a stable source id**, which is why public ids are `<postId>-<slot>`.
   See `docs/RUNBOOK-CLOUDINARY.md`.
+- **Both syncs are manual only** (`workflow_dispatch`). No schedules, no
+  `chore: sync` commits — a run uploads to Cloudinary and then dispatches
+  `deploy.yml` itself, because with nothing pushed there is no push event to
+  trigger a deploy. `refresh-threads-token.yml` stays on its weekly schedule:
+  it touches no content, and a Threads token that misses its 60-day window dies
+  permanently.
+
 - **Sync caps must not silently truncate.** `SYNC_MAX_PHOTOS` defaulted to 400
   against a larger channel; the walk is newest-first, so it dropped the oldest
   27 photos and reported it in a console warning nobody read. No photo cap
@@ -134,7 +148,8 @@ macOS's case-insensitive filesystem. Same-folder siblings import relatively
   snapshot. If a limit ever bounds output, it fails or it is impossible to
   miss — never a warning.
 - **Images are deduplicated by content hash** (sha256 of the bytes), mapped in
-  `photo-hashes.generated.ts`. Never by URL — signed URLs differ per fetch.
+  `data/photo-hashes.json` in Cloudinary. Never by URL — signed URLs differ per
+  fetch.
   `npm run test:dedup` pins the rule.
 
 ## State
@@ -167,8 +182,15 @@ time and verify each; don't fold them into feature work.
 `npm run typecheck && npm run lint && npm run format:check && npm run build`
 
 The build must be run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
-and `NEXT_PUBLIC_CLOUDINARY_CLOUD=<cloud>` once the photo snapshot is non-empty —
-`lib/media.ts` throws rather than emitting empty `src` attributes.
+and `NEXT_PUBLIC_CLOUDINARY_CLOUD=<cloud>` **always** — the build fetches its
+content snapshots from Cloudinary, so `lib/snapshot.ts` and `lib/media.ts` both
+throw without it rather than emitting an empty gallery. A local build therefore
+needs network access.
+
+`.env` is not read by `next build` the way you might expect, and sourcing it in
+a shell expands any `$` in the Cloudinary secret. Pass the cloud name
+explicitly, or use `node --env-file=.env` for scripts (never for `next build` —
+Turbopack workers reject `--env-file` in `NODE_OPTIONS`).
 
 Also run `npm run test:telegram` and `npm run test:dedup`.
 

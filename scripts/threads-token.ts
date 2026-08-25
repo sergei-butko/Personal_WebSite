@@ -19,6 +19,43 @@ interface TokenResponse {
   expires_in: number
 }
 
+/**
+ * Meta's error envelope. `message` alone is close to useless here — both a
+ * wrong client_secret and an already-long-lived token come back as the same
+ * flat "Invalid parameter". The code/subcode pair is what distinguishes them,
+ * so all of it gets printed.
+ */
+interface MetaError {
+  message?: string
+  type?: string
+  code?: number
+  error_subcode?: number
+  error_user_msg?: string
+  fbtrace_id?: string
+}
+
+/** Known code/subcode meanings, so the reader is not left googling. */
+function explain(error: MetaError): string {
+  if (error.code === 190) {
+    return (
+      'The token is expired, malformed, or from a different app. Short-lived ' +
+      'tokens last one hour — generate a fresh one and retry immediately.'
+    )
+  }
+  if (error.code === 100) {
+    return (
+      'Usually one of: (a) client_secret is the Facebook app secret rather ' +
+      'than the THREADS app secret — see step 3; (b) the token is already ' +
+      'long-lived, in which case skip the exchange and store it as-is; ' +
+      '(c) the token was truncated or copied with surrounding whitespace.'
+    )
+  }
+  if (error.code === 10 || error.code === 200) {
+    return 'threads_basic was not granted, or the tester invitation is unaccepted.'
+  }
+  return ''
+}
+
 function fail(message: string): never {
   console.error(`✗ ${message}`)
   process.exit(1)
@@ -33,9 +70,9 @@ async function call(url: URL): Promise<TokenResponse> {
   // into "Unexpected token '<'", which says nothing useful in a CI log. A
   // token that silently fails to refresh is the costliest failure here, so the
   // error has to be readable.
-  let body: TokenResponse & { error?: { message?: string } }
+  let body: TokenResponse & { error?: MetaError }
   try {
-    body = JSON.parse(text) as TokenResponse & { error?: { message?: string } }
+    body = JSON.parse(text) as TokenResponse & { error?: MetaError }
   } catch {
     fail(
       `Threads API ${res.status} returned non-JSON (${text.length} bytes): ` +
@@ -44,7 +81,23 @@ async function call(url: URL): Promise<TokenResponse> {
   }
 
   if (!res.ok || !body.access_token) {
-    fail(`Threads API ${res.status}: ${body.error?.message ?? JSON.stringify(body)}`)
+    const error = body.error
+    if (!error) fail(`Threads API ${res.status}: ${JSON.stringify(body)}`)
+
+    const parts = [`Threads API ${res.status}: ${error.message ?? 'unknown error'}`]
+    const codes = [
+      error.type,
+      error.code !== undefined ? `code ${error.code}` : undefined,
+      error.error_subcode !== undefined ? `subcode ${error.error_subcode}` : undefined,
+    ].filter(Boolean)
+    if (codes.length > 0) parts.push(`  (${codes.join(', ')})`)
+    if (error.error_user_msg) parts.push(`  ${error.error_user_msg}`)
+
+    const hint = explain(error)
+    if (hint) parts.push(`\n  Likely cause: ${hint}`)
+    if (error.fbtrace_id) parts.push(`\n  fbtrace_id: ${error.fbtrace_id}`)
+
+    fail(parts.join('\n'))
   }
   return body
 }
