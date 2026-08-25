@@ -20,21 +20,32 @@ Static export (`output: 'export'`) to GitHub Pages via Actions.
 
 ## Non-negotiable constraints
 
-**Static export means no server, ever.** No middleware, no redirects, no rewrites,
-no Server Actions, no route handlers reading the request, no ISR, no
-`next/image` optimisation. If a solution needs a server, it is the wrong
-solution here — do the work at build time instead.
+**The site still renders with no server.** `output: 'export'`, no middleware, no
+Server Actions, no route handlers, no ISR, no `next/image` optimisation. If a
+_page_ needs a server it is the wrong solution — do the work at build time.
 
-**`basePath` is `/Personal_WebSite`.** It comes from `NEXT_PUBLIC_BASE_PATH`, set in
-`deploy.yml`. `next/link` and `next/image` prefix it automatically; **raw `<a href>`,
-`<img src>`, and anything touching `window.location` do not** — those must go through
-`withBase()` in `src/lib/paths.ts`. This is the single easiest way to ship a broken
-link here. Moving to a custom domain = set that env var to `''` plus a `CNAME`; no
-code changes.
+**The one exception is `netlify/edge-functions/`, and it is not for rendering.**
+Two functions exist: one refuses `/admin/*` to anyone without a session, one
+handles sign-in and saves at `/api/*`. They exist because static hosting cannot
+refuse a request and because writing to Cloudinary needs a secret that must
+never reach a browser. Nothing they do renders a page. Do not reach for them to
+solve a content problem.
+
+**`basePath` is now empty.** Netlify serves from the root. It still comes from
+`NEXT_PUBLIC_BASE_PATH` (set to `""` in `netlify.toml`), so `withBase()` in
+`src/lib/paths.ts` remains the right way to build a raw `<a href>`, `<img src>`
+or anything touching `window.location` — a future move to a sub-path would
+otherwise break every one of them silently.
+
+**GitHub Pages is no longer the site.** Once the `NETLIFY_URL` repository
+variable is set, `deploy.yml` publishes a redirect stub there instead, so old
+links keep working. Unset, it still publishes the whole site — which is the
+state to leave it in while testing.
 
 **Bilingual EN + UK.** One route tree under `app/[locale]/` with
 `generateStaticParams()`. `/` is a client-side locale detector because static export
-cannot redirect.
+cannot redirect — and it stays that way; an edge function could do it now, but
+one exists to gate the editor, not to route pages.
 
 **There are two root layouts, not one, and that is deliberate.** `<html lang>` has
 to be the real locale, and a shared `app/layout.tsx` has no params, so it can only
@@ -191,11 +202,11 @@ time and verify each; don't fold them into feature work.
 
 `npm run typecheck && npm run lint && npm run format:check && npm run build`
 
-The build must be run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
-and `NEXT_PUBLIC_CLOUDINARY_CLOUD=<cloud>` **always** — the build fetches its
-content snapshots from Cloudinary, so `lib/snapshot.ts` and `lib/media.ts` both
-throw without it rather than emitting an empty gallery. A local build therefore
-needs network access.
+The build needs `NEXT_PUBLIC_CLOUDINARY_CLOUD=<cloud>` **always** — it fetches
+its content snapshots from Cloudinary, so `lib/snapshot.ts` and `lib/media.ts`
+both throw without it rather than emitting an empty gallery. A local build
+therefore needs network access. `NEXT_PUBLIC_BASE_PATH` is empty now and can be
+left unset locally.
 
 `.env` is not read by `next build` the way you might expect, and sourcing it in
 a shell expands any `$` in the Cloudinary secret. Pass the cloud name

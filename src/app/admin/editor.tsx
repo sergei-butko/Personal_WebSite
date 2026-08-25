@@ -1,13 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 /**
  * The editor.
  *
  * Reads come straight from Cloudinary's CDN — the snapshots are public raw
- * assets, so there is no reason to proxy them through the Worker. Only writes
- * need the Worker, because they need the API secret.
+ * assets, so there is no reason to proxy them. Only writes go to /api, because
+ * only writes need the Cloudinary secret.
+ *
+ * There is no token here, deliberately. The session is an httpOnly cookie the
+ * browser attaches to same-origin requests on its own, which no script on this
+ * page can read — including any script that should not be here.
  *
  * Saves send PATCHES, never the whole document: a sync may append a post while
  * this page is open, and sending everything back would erase it. Only fields
@@ -16,7 +20,6 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
  */
 
 const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD ?? ''
-const API = process.env.NEXT_PUBLIC_ADMIN_API ?? ''
 
 interface ThreadsPost {
   id: string
@@ -44,32 +47,6 @@ function thumb(publicId: string, width = 160): string {
   return `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto,c_limit,w_${width}/${encodeURI(publicId)}`
 }
 
-/**
- * Consume the token the OAuth round trip left in the fragment.
- *
- * Module scope, so it runs once on load and before the first render reads the
- * token — an effect would fire after, producing a flash of the signed-out
- * state. The fragment is stripped from the URL immediately so the token is not
- * left sitting in the address bar or in history.
- */
-if (typeof window !== 'undefined') {
-  const match = /token=([^&]+)/.exec(window.location.hash)
-  if (match?.[1]) {
-    sessionStorage.setItem('admin-token', decodeURIComponent(match[1]))
-    history.replaceState(null, '', window.location.pathname)
-  }
-}
-
-/**
- * sessionStorage is a browser API the prerender cannot see, so it is read
- * through useSyncExternalStore: the server snapshot is null and the client
- * takes over at hydration, with no mismatch and no setState in an effect.
- * Nothing else writes the key, so the subscription never has to fire.
- */
-const subscribeToNothing = () => () => {}
-const readToken = () =>
-  typeof window === 'undefined' ? null : sessionStorage.getItem('admin-token')
-
 async function loadSnapshot<T>(name: string): Promise<T | null> {
   const response = await fetch(
     `https://res.cloudinary.com/${CLOUD}/raw/upload/data/${name}.json?v=${Date.now()}`
@@ -80,7 +57,6 @@ async function loadSnapshot<T>(name: string): Promise<T | null> {
 }
 
 export function Editor() {
-  const token = useSyncExternalStore(subscribeToNothing, readToken, () => null)
   const [login, setLogin] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('threads')
   const [posts, setPosts] = useState<ThreadsPost[]>([])
@@ -101,12 +77,11 @@ export function Editor() {
   >({})
 
   useEffect(() => {
-    if (!token || !API) return
-    void fetch(`${API}/session`, { headers: { Authorization: `Bearer ${token}` } })
+    void fetch('/api/session')
       .then((r) => (r.ok ? r.json() : null))
       .then((body: { login?: string } | null) => setLogin(body?.login ?? null))
       .catch(() => setLogin(null))
-  }, [token])
+  }, [])
 
   useEffect(() => {
     if (!CLOUD) return
@@ -124,7 +99,7 @@ export function Editor() {
   const dirtyCount = Object.keys(postEdits).length + Object.keys(photoEdits).length
 
   const save = useCallback(async () => {
-    if (!token || dirtyCount === 0) return
+    if (dirtyCount === 0) return
     setSaving(true)
     setError(null)
     setStatus(null)
@@ -135,9 +110,9 @@ export function Editor() {
         ),
         photos: photoEdits,
       }
-      const response = await fetch(`${API}/content`, {
+      const response = await fetch('/api/content', {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       const result = (await response.json()) as Record<string, { applied?: number }> & {
@@ -158,7 +133,7 @@ export function Editor() {
     } finally {
       setSaving(false)
     }
-  }, [token, dirtyCount, postEdits, photoEdits])
+  }, [dirtyCount, postEdits, photoEdits])
 
   const visiblePosts = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -175,13 +150,12 @@ export function Editor() {
       : photos
   }, [photos, query])
 
-  if (!API || !CLOUD) {
+  if (!CLOUD) {
     return (
       <Shell>
         <p className="text-sm text-muted">
-          Not configured. This page needs <Code>NEXT_PUBLIC_ADMIN_API</Code> and{' '}
-          <Code>NEXT_PUBLIC_CLOUDINARY_CLOUD</Code> at build time. See{' '}
-          <Code>workers/admin-api/README.md</Code>.
+          Not configured. This page needs <Code>NEXT_PUBLIC_CLOUDINARY_CLOUD</Code> at
+          build time. See <Code>netlify/README.md</Code>.
         </p>
       </Shell>
     )
@@ -193,19 +167,15 @@ export function Editor() {
         <p className="mb-4 text-sm text-muted">
           Editing writes to the live content store. Sign in to continue.
         </p>
+        {/* Not next/link: /api/* is an edge function, and a client-side
+            navigation would never reach the server. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
-          href={`${API}/auth/login?redirect=${encodeURIComponent(
-            typeof window === 'undefined' ? '' : window.location.href.split('#')[0]!
-          )}`}
+          href="/api/auth/login?redirect=%2Fadmin%2F"
           className="inline-block rounded-[var(--radius-card)] border border-edge bg-surface px-4 py-2 text-sm transition hover:border-accent"
         >
           Sign in with GitHub
         </a>
-        {token ? (
-          <p className="mt-3 text-xs text-muted">
-            A previous session was rejected — it may have expired.
-          </p>
-        ) : null}
       </Shell>
     )
   }
@@ -235,7 +205,12 @@ export function Editor() {
           className="min-w-40 flex-1 rounded-[var(--radius-card)] border border-edge bg-surface px-3 py-1.5 text-sm"
         />
 
-        <span className="font-mono text-[10.5px] text-muted">@{login}</span>
+        <span className="font-mono text-[10.5px] text-muted">
+          @{login} · {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/api/auth/logout" className="transition hover:text-ink">
+            sign out
+          </a>
+        </span>
         <button
           type="button"
           onClick={() => void save()}

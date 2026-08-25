@@ -45,6 +45,23 @@ jobs:
           # request itself. Unset simply means /admin renders "not configured".
           NEXT_PUBLIC_ADMIN_API: ${{ vars.ADMIN_API }}
 
+      # Once NETLIFY_URL is set, GitHub Pages stops being the site and becomes
+      # a redirect to it, so links people already have keep working. Until it
+      # is set, this is a no-op and Pages still serves the full site.
+      - name: Replace with a redirect stub if the site has moved
+        if: vars.NETLIFY_URL != ''
+        env:
+          SITE_URL: ${{ vars.NETLIFY_URL }}
+        run: |
+          set -euo pipefail
+          rm -rf out
+          mkdir -p out
+          sed "s|SITE_URL|${SITE_URL}|g" .github/pages-stub/index.html > out/index.html
+          # Same page for every path: a project page cannot rewrite, so a deep
+          # link like /en/photos/ has to land somewhere rather than 404.
+          cp out/index.html out/404.html
+          echo "Pages will publish a redirect to ${SITE_URL}."
+
       - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v5

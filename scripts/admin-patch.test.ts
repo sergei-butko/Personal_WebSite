@@ -6,7 +6,7 @@
  * reasoning as photo-dedup.test.ts.
  */
 
-import { patchPhotos, patchThreads } from '../workers/admin-api/src/patch'
+import { patchPhotos, patchThreads } from '../netlify/lib/patch.ts'
 
 let failures = 0
 function check(label: string, actual: unknown, expected: unknown): void {
