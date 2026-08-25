@@ -31,5 +31,10 @@ tg-sample.html
 # checkout or a stray script cannot reintroduce them.
 src/content/*.generated.ts
 
+# Working copy for `npm run content:pull` / `content:push`. The canonical copy
+# is in Cloudinary; this is a scratch checkout of it and must not be committed,
+# or the repo would drift from the store the build actually reads.
+/content-local/
+
 # Personal working notes — must never reach a public repo.
 CLAUDE.local.md

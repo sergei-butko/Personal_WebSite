@@ -3,8 +3,23 @@
 The site is a static export on GitHub Pages: no server, no database, no
 runtime auth. Everything below is built within that constraint.
 
-**Status:** links directory and Cloudinary media layer shipped. The rest is
-specified here and not yet built.
+**Status: not being built. Kept as a record.**
+
+A `/admin` editor was built in August 2026 and removed again in the same week —
+first as a Cloudflare Worker, then ported to Netlify, then rolled back. Content
+is edited locally instead: `npm run content:pull`, edit the JSON, `npm run
+content:push`. See CLAUDE.md.
+
+Two things below are also now false, and are the reason the Sveltia design
+could not be used. Editable content is **not** in the repo any more — the
+snapshots live in Cloudinary, which Sveltia cannot edit — and **Git Gateway was
+deprecated**, which is what the GitHub backend depended on.
+
+The album, music-embed and post-card sections are still useful thinking and are
+untouched. The original status line follows.
+
+**Original status:** links directory and Cloudinary media layer shipped. The
+rest is specified here and not yet built.
 
 ---
 
