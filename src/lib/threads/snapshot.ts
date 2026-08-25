@@ -14,6 +14,13 @@ const PUBLIC_ID = 'data/threads.json'
  * before (REPOST_FACADE, AUDIO) and a new one arriving should render as an
  * ordinary post, not fail the build.
  */
+const imageSchema = z.object({
+  publicId: z.string().min(1),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  alt: z.string(),
+})
+
 const schema: z.ZodType<ThreadsSnapshot> = z.object({
   syncedAt: z.string().min(1),
   username: z.string().min(1),
@@ -34,6 +41,15 @@ const schema: z.ZodType<ThreadsSnapshot> = z.object({
       ),
       isQuotePost: z.boolean(),
       hasReplies: z.boolean(),
+      // Absent on most posts: only two-part reviews carry one.
+      followUp: z
+        .object({
+          id: z.string().min(1),
+          timestamp: z.string().min(1),
+          text: z.string(),
+          images: z.array(imageSchema),
+        })
+        .optional(),
     })
   ),
 }) as z.ZodType<ThreadsSnapshot>

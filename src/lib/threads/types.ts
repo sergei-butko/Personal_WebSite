@@ -26,6 +26,24 @@ export interface ThreadsImage {
   alt: string
 }
 
+/**
+ * A self-reply the author posted under their own thread.
+ *
+ * Perfumery reviews here are written as two parts: the post, then one
+ * follow-up comment carrying the rest. Threads shows them as separate items,
+ * so mirroring only the parent would drop half the writing. Only the FIRST
+ * reply, and only when its author is the account owner — a stranger's reply is
+ * their words, not content to republish under Serhii's name.
+ */
+export interface ThreadsFollowUp {
+  /** Media id of the reply. Stable, and the key for its Cloudinary assets. */
+  id: string
+  /** ISO 8601 UTC. */
+  timestamp: string
+  text: string
+  images: ThreadsImage[]
+}
+
 export interface ThreadsPost {
   id: string
   /** Canonical URL on threads.com. Always link back; it is the source. */
@@ -38,6 +56,11 @@ export interface ThreadsPost {
   images: ThreadsImage[]
   isQuotePost: boolean
   hasReplies: boolean
+  /**
+   * The author's own first reply, when there is one. Absent means either no
+   * replies, or a first reply written by somebody else.
+   */
+  followUp?: ThreadsFollowUp
 }
 
 /** Shape of src/content/threads.generated.ts. */

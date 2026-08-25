@@ -27,6 +27,7 @@ import {
 } from './cloudinary'
 import { setOutput } from './github-output'
 import type {
+  ThreadsFollowUp,
   ThreadsImage,
   ThreadsMediaType,
   ThreadsPost,
@@ -50,6 +51,34 @@ const FIELDS = [
   'has_replies',
   'children{id,media_type,media_url,alt_text}',
 ].join(',')
+
+/**
+ * Fields requested for a reply. Deliberately conservative — every name here is
+ * one the media object already documents. An unknown field is not ignored by
+ * Meta; it fails the whole request with "nonexisting field", which would take
+ * the sync down for every post at once.
+ */
+const REPLY_FIELDS = [
+  'id',
+  'text',
+  'timestamp',
+  'username',
+  'media_type',
+  'media_url',
+  'alt_text',
+  'children{id,media_type,media_url,alt_text}',
+].join(',')
+
+interface ApiReply {
+  id: string
+  text?: string
+  timestamp?: string
+  username?: string
+  media_type?: string
+  media_url?: string
+  alt_text?: string
+  children?: { data?: ApiChild[] }
+}
 
 interface ApiChild {
   id: string
@@ -188,29 +217,164 @@ async function rehost(
   }
 }
 
-async function normalise(post: ApiPost): Promise<ThreadsPost | null> {
+/**
+ * The author's own first reply to one of their own posts, or null.
+ *
+ * Threads returns replies from everyone, in no promised order, so this sorts
+ * by timestamp and takes the earliest — then keeps it only if the author is
+ * the account owner. Somebody else's reply is their words; republishing it
+ * under Serhii's byline would be wrong regardless of how useful it is.
+ *
+ * `getJson` exits the process on an API error, which is right for a missing
+ * permission (every post would fail identically) but wrong for one dead post.
+ * So this calls fetch directly and distinguishes the two.
+ */
+async function fetchFirstOwnReply(
+  postId: string,
+  username: string
+): Promise<ApiReply | null> {
+  const url = new URL(`${HOST}/${postId}/replies`)
+  url.searchParams.set('fields', REPLY_FIELDS)
+  url.searchParams.set('limit', '25')
+  url.searchParams.set('access_token', token!)
+
+  const res = await fetch(url)
+  const text = await res.text()
+
+  let body: { data?: ApiReply[]; error?: { message?: string; code?: number } }
+  try {
+    body = JSON.parse(text) as typeof body
+  } catch {
+    console.warn(`  ! replies for ${postId}: non-JSON response, skipping`)
+    return null
+  }
+
+  if (!res.ok) {
+    const error = body.error ?? {}
+    const message = error.message ?? `HTTP ${res.status}`
+
+    // A permission or token problem is not a per-post hiccup: it will repeat
+    // for all 126 posts and leave a snapshot silently missing every follow-up.
+    // Stop, and say exactly what to do about it.
+    const isAuth =
+      error.code === 190 ||
+      error.code === 10 ||
+      error.code === 200 ||
+      /permission|scope|access token/i.test(message)
+
+    if (isAuth) {
+      fail(
+        `Reading replies failed: ${message}\n` +
+          `  The replies edge needs the threads_read_replies permission, which\n` +
+          `  threads_basic alone does not cover. Add it under Use cases ->\n` +
+          `  Access the Threads API -> Customise, then GENERATE A NEW TOKEN —\n` +
+          `  permissions are baked in at generation, so the existing token will\n` +
+          `  keep failing. See docs/SETUP-THREADS.md.`
+      )
+    }
+
+    console.warn(`  ! replies for ${postId}: ${message}, skipping`)
+    return null
+  }
+
+  const replies = (body.data ?? []).filter((reply) => reply.timestamp)
+  if (replies.length === 0) return null
+
+  replies.sort((a, b) => (a.timestamp ?? '').localeCompare(b.timestamp ?? ''))
+  const first = replies[0]
+  if (!first) return null
+
+  // Without an author there is no way to tell your reply from a stranger's,
+  // and guessing would republish someone else's words under your byline. If
+  // the field is missing the request shape is wrong, not the data — every
+  // post would silently yield no follow-up, which is the failure this repo
+  // keeps paying for. Stop instead.
+  if (first.username === undefined) {
+    fail(
+      `The replies edge returned no "username" for reply ${first.id}.\n` +
+        `  Without it a reply of yours cannot be told from anyone else's, and\n` +
+        `  attaching one regardless would republish a stranger's words. Meta has\n` +
+        `  probably renamed or dropped the field — check REPLY_FIELDS against\n` +
+        `  https://developers.facebook.com/docs/threads/reply-management`
+    )
+  }
+
+  // Meta returns usernames without the @, but be forgiving about it.
+  const author = first.username.replace(/^@/, '').toLowerCase()
+  if (author !== username.replace(/^@/, '').toLowerCase()) return null
+
+  return first
+}
+
+/** Videos skipped this run, for one summary line instead of scary warnings. */
+let skippedVideos = 0
+
+/**
+ * Image sources on a post or reply. Carousels use children; singles do not.
+ *
+ * Only IMAGE children are taken. A carousel can mix in video, and the uploader
+ * is resource_type: 'image' — so before this filter every video was downloaded
+ * in full and then rejected by Cloudinary as "Invalid image file", which read
+ * like a fault rather than a decision. Video is out of scope for the mirror;
+ * a video-only post keeps its text and its permalink.
+ */
+function imageSources(item: ApiPost | ApiReply): Array<{ url: string; alt: string }> {
+  const sources: Array<{ url: string; alt: string }> = []
+  const children = item.children?.data ?? []
+
+  if (children.length > 0) {
+    for (const child of children) {
+      if (!child.media_url) continue
+      if (child.media_type !== 'IMAGE') {
+        skippedVideos += 1
+        continue
+      }
+      sources.push({ url: child.media_url, alt: child.alt_text ?? '' })
+    }
+  } else if (item.media_url && item.media_type === 'IMAGE') {
+    sources.push({ url: item.media_url, alt: item.alt_text ?? '' })
+  } else if (item.media_url) {
+    skippedVideos += 1
+  }
+  return sources
+}
+
+async function rehostAll(
+  sources: Array<{ url: string; alt: string }>,
+  mediaId: string
+): Promise<ThreadsImage[]> {
+  const images: ThreadsImage[] = []
+  for (const [index, source] of sources.entries()) {
+    const image = await rehost(source.url, mediaId, index, source.alt)
+    if (image) images.push(image)
+  }
+  return images
+}
+
+async function normalise(
+  post: ApiPost,
+  followUpReply: ApiReply | undefined
+): Promise<ThreadsPost | null> {
   if (!post.permalink || !post.timestamp) {
     console.warn(`  ! post ${post.id}: missing permalink or timestamp, skipping`)
     return null
   }
 
-  // Carousels expose their images as children; single-image posts do not.
-  const sources: Array<{ url: string; alt: string }> = []
-  const children = post.children?.data ?? []
+  const images = await rehostAll(imageSources(post), post.id)
 
-  if (children.length > 0) {
-    for (const child of children) {
-      if (child.media_url)
-        sources.push({ url: child.media_url, alt: child.alt_text ?? '' })
+  let followUp: ThreadsFollowUp | undefined
+  if (followUpReply) {
+    const followUpImages = await rehostAll(imageSources(followUpReply), followUpReply.id)
+    const text = (followUpReply.text ?? '').trim()
+    // A reply with neither words nor pictures adds nothing to the card.
+    if (text || followUpImages.length > 0) {
+      followUp = {
+        id: followUpReply.id,
+        timestamp: new Date(followUpReply.timestamp ?? post.timestamp).toISOString(),
+        text,
+        images: followUpImages,
+      }
     }
-  } else if (post.media_url && post.media_type === 'IMAGE') {
-    sources.push({ url: post.media_url, alt: post.alt_text ?? '' })
-  }
-
-  const images: ThreadsImage[] = []
-  for (const [index, source] of sources.entries()) {
-    const image = await rehost(source.url, post.id, index, source.alt)
-    if (image) images.push(image)
   }
 
   return {
@@ -222,6 +386,7 @@ async function normalise(post: ApiPost): Promise<ThreadsPost | null> {
     images,
     isQuotePost: Boolean(post.is_quote_post),
     hasReplies: Boolean(post.has_replies),
+    ...(followUp ? { followUp } : {}),
   }
 }
 
@@ -238,11 +403,44 @@ async function main(): Promise<void> {
   console.log('→ fetching posts')
   const raw = await fetchAllPosts()
 
+  // Reviews here are written as a post plus one follow-up comment, so the
+  // comment carries half the writing. Only posts that HAVE replies are asked
+  // about — `has_replies` comes free with the post, and skipping the rest
+  // saves an API call each.
+  console.log('→ collecting follow-up comments')
+  const followUps = new Map<string, ApiReply>()
+  const candidates = raw.filter((post) => post.has_replies)
+
+  for (const post of candidates) {
+    const reply = await fetchFirstOwnReply(post.id, username)
+    if (reply) followUps.set(post.id, reply)
+  }
+  console.log(
+    `  ${followUps.size} of ${candidates.length} posts with replies have one of your own first`
+  )
+
+  // A self-reply is itself a post, so it comes back from /me/threads too.
+  // Left alone it would render as its own card AND as its parent's follow-up.
+  // Attaching it wins; the standalone copy goes.
+  const attached = new Set([...followUps.values()].map((reply) => reply.id))
+  const topLevel = raw.filter((post) => !attached.has(post.id))
+  if (topLevel.length !== raw.length) {
+    console.log(
+      `  ${raw.length - topLevel.length} of those were also listed as their own posts; folded in`
+    )
+  }
+
   console.log('→ processing media')
   const posts: ThreadsPost[] = []
-  for (const post of raw) {
-    const normalised = await normalise(post)
+  for (const post of topLevel) {
+    const normalised = await normalise(post, followUps.get(post.id))
     if (normalised) posts.push(normalised)
+  }
+
+  if (skippedVideos > 0) {
+    console.log(
+      `  ${skippedVideos} non-image attachments skipped (video is not mirrored)`
+    )
   }
 
   // Newest first, and stable — the API order is not guaranteed.

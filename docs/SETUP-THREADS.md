@@ -54,8 +54,12 @@ Keep the secret in your password manager. You need it once, in step 5.
 ## 4. Get a short-lived token
 
 App dashboard → **Use cases → Access the Threads API → Customise** →
-make sure **`threads_basic`** is added. That's the only permission needed for
-reading. Don't add publishing permissions you won't use.
+make sure both of these are added:
+
+- **`threads_basic`** — required by every endpoint.
+- **`threads_read_replies`** — required to read the replies edge. The sync uses
+  it to pick up the follow-up comment on two-part reviews; without it those
+  posts mirror as their first half only.
 
 On the same screen, fill in **Redirect Callback URLs** if it is empty — any
 URL you control will do (`https://sergei-butko.github.io/Personal_WebSite/` is
