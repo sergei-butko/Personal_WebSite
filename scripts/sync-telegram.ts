@@ -248,6 +248,25 @@ function hashesToObject(hashes: Map<string, string>): Record<string, string> {
   return Object.fromEntries([...hashes.entries()].sort(([a], [b]) => (a < b ? -1 : 1)))
 }
 
+/**
+ * The newest timestamp already stored, or null when nothing is.
+ *
+ * The snapshot is the canonical, hand-editable copy of the gallery, so a sync
+ * must never rewrite a photo it has already captured — a caption or alt text
+ * written by hand would be silently reverted on the next run. Only posts
+ * strictly newer than this cursor are taken.
+ *
+ * Consequences, all intended: an edited caption on Telegram does not update
+ * here, a deleted post stays, and a backdated post would be missed.
+ */
+function newestStored(photos: Array<{ timestamp: string }>): string | null {
+  let newest: string | null = null
+  for (const photo of photos) {
+    if (!newest || photo.timestamp > newest) newest = photo.timestamp
+  }
+  return newest
+}
+
 async function main(): Promise<void> {
   // Before any network work: a missing secret should cost one second, not a
   // few hundred downloads.
@@ -264,8 +283,28 @@ async function main(): Promise<void> {
     uploadedDimensions.set(photo.publicId, { width: photo.width, height: photo.height })
   }
 
+  // The stored snapshot is the source of truth, not a mirror to regenerate.
+  const storedSnapshot = await fetchJson<PhotoSnapshot>(OUT_DATA)
+  const stored = storedSnapshot?.photos ?? []
+  const cursor = newestStored(stored)
+  console.log(
+    cursor
+      ? `→ ${stored.length} photos already stored, newest ${cursor}`
+      : '→ nothing stored yet, taking the whole channel'
+  )
+
   console.log(`→ reading t.me/s/${CHANNEL}`)
-  const posts = await collectPosts()
+  const fetched = await collectPosts()
+
+  const storedIds = new Set(stored.map((photo) => photo.publicId))
+  const posts = fetched.filter((post) => !cursor || post.timestamp > cursor)
+  console.log(`  ${posts.length} new of ${fetched.length} posts fetched`)
+
+  if (posts.length === 0) {
+    console.log(`✓ ${stored.length} photos, nothing new`)
+    await setOutput('changed', 'false')
+    return
+  }
 
   const available = posts.reduce((sum, post) => sum + post.images.length, 0)
   console.log(`→ re-hosting ${available} photos from ${posts.length} posts`)
@@ -284,6 +323,7 @@ async function main(): Promise<void> {
       }
 
       const publicId = publicIdFor(post.id, index)
+      if (storedIds.has(publicId)) continue
       const hit = known.get(publicId)
 
       const media = hit
@@ -300,6 +340,9 @@ async function main(): Promise<void> {
         permalink: post.permalink,
         timestamp: post.timestamp,
         caption: post.caption,
+        // Empty until written. Editable in the snapshot, which is why
+        // content/photo-meta.ts no longer exists.
+        alt: {},
         publicId: media.publicId,
         width: media.width,
         height: media.height,
@@ -322,18 +365,28 @@ async function main(): Promise<void> {
   )
 
   if (photos.length === 0) {
-    fail('No photos parsed. Refusing to overwrite the snapshot with nothing.')
+    console.log(`✓ ${stored.length} photos, nothing new`)
+    await setOutput('changed', 'false')
+    return
   }
 
-  const distinct = new Set(photos.map((photo) => photo.publicId))
-  console.log(`  ${photos.length} photos → ${distinct.size} distinct assets`)
+  // APPEND. Stored photos pass through untouched, captions and alt text
+  // included.
+  const merged = [...stored, ...photos]
+  merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id)
+
+  // Built from the MERGED set, never from this run's photos alone. Prune
+  // deletes whatever the set does not name, so scoping it to the new photos
+  // would delete the Cloudinary asset behind every photo already on the site.
+  const distinct = new Set(merged.map((photo) => photo.publicId))
+  console.log(`  ${merged.length} photos → ${distinct.size} distinct assets`)
 
   await uploadJson(OUT_HASHES, hashesToObject(hashes))
 
   if (PRUNE) {
     console.log(`→ pruning ${FOLDER}/`)
-    const stored = await listAssetIds(`${FOLDER}/`)
-    const orphans = stored.filter((id) => !distinct.has(id))
+    const assets = await listAssetIds(`${FOLDER}/`)
+    const orphans = assets.filter((id) => !distinct.has(id))
     if (orphans.length === 0) {
       console.log('  nothing to prune')
     } else {
@@ -345,29 +398,17 @@ async function main(): Promise<void> {
     }
   }
 
-  photos.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id)
-
   const next: PhotoSnapshot = {
     syncedAt: new Date().toISOString(),
     channel: CHANNEL,
-    photos,
-  }
-
-  // Ignore syncedAt when comparing, so an unchanged channel does not churn the
-  // snapshot in Cloudinary and invalidate its CDN copy for nothing.
-  const previous = await fetchJson<PhotoSnapshot>(OUT_DATA)
-  const strip = (value: PhotoSnapshot | null) =>
-    value ? JSON.stringify({ ...value, syncedAt: '' }) : ''
-
-  if (strip(next) === strip(previous)) {
-    console.log(`✓ ${photos.length} photos, no change`)
-    await setOutput('changed', 'false')
-    return
+    photos: merged,
   }
 
   await uploadJson(OUT_DATA, next)
   await setOutput('changed', 'true')
-  console.log(`✓ ${photos.length} photos written to ${OUT_DATA} in Cloudinary`)
+  console.log(
+    `✓ ${photos.length} new photo(s) appended; ${merged.length} total in ${OUT_DATA}`
+  )
 }
 
 main().catch((error: unknown) => {

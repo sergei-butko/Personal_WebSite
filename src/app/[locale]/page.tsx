@@ -12,7 +12,6 @@ import { Card } from '@/components/ui/card'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { loadThreadsSnapshot } from '@/lib/threads/snapshot'
 import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
-import { photoOverrides } from '@/content/photo-meta'
 import { resolveAlt } from '@/lib/photos/alt'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 
@@ -33,9 +32,7 @@ export default async function HomePage({
     loadPhotoSnapshot(),
   ])
 
-  const recentPhotos = photoSnapshot.photos
-    .filter((photo) => !photoOverrides[photo.id]?.hidden)
-    .slice(0, 12)
+  const recentPhotos = photoSnapshot.photos.filter((photo) => !photo.hidden).slice(0, 12)
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
@@ -128,12 +125,7 @@ export default async function HomePage({
                 >
                   <CloudinaryImage
                     asset={photo}
-                    alt={resolveAlt(
-                      photo,
-                      photoOverrides[photo.id],
-                      locale,
-                      dict.photos.genericAlt
-                    )}
+                    alt={resolveAlt(photo, locale, dict.photos.genericAlt)}
                     sizes="(max-width: 640px) 25vw, 120px"
                     className="aspect-square h-full w-full object-cover"
                   />

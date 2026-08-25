@@ -30,10 +30,16 @@ const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD ?? ''
 /**
  * One cache-buster per build process, not per request.
  *
- * Cloudinary's CDN will happily serve the previous version of an overwritten
- * raw asset for a while. `invalidate: true` on upload usually beats it, but a
- * deploy that runs seconds after a sync is exactly the race where "usually"
- * is not good enough, and shipping a stale gallery is silent.
+ * It helps and it is NOT what makes this correct. Cloudinary raw delivery is
+ * eventually consistent, and a query string does not defeat it — measured on
+ * this account, an overwrite took about four seconds to become visible through
+ * a busted URL, and a deleted asset was still served.
+ *
+ * What makes it correct is upstream: `scripts/cloudinary.ts` does not report a
+ * sync as finished until the CDN actually serves the new bytes, so by the time
+ * a deploy is dispatched there is nothing stale left to fetch. The build has no
+ * Cloudinary credentials and so cannot use the strongly-consistent Admin API
+ * route the Worker takes; it does not need to.
  */
 const VERSION = Date.now().toString(36)
 

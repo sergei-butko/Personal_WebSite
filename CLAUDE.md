@@ -141,6 +141,16 @@ macOS's case-insensitive filesystem. Same-folder siblings import relatively
   it touches no content, and a Threads token that misses its 60-day window dies
   permanently.
 
+- **Cloudinary raw delivery is eventually consistent.** An overwrite took ~4s
+  to become visible on this account, and a `?v=<now>` cache-buster does not
+  defeat it — a deleted asset was still served from cache. Two consequences,
+  both handled, neither obvious: `scripts/cloudinary.ts` does not report a sync
+  finished until the CDN serves the new bytes (otherwise the deploy it
+  dispatches builds the previous snapshot), and the Worker reads through the
+  Admin API for a version-pinned URL (otherwise its read-modify-write silently
+  destroys whatever it could not see). Never trust a plain raw URL for
+  read-after-write.
+
 - **Sync caps must not silently truncate.** `SYNC_MAX_PHOTOS` defaulted to 400
   against a larger channel; the walk is newest-first, so it dropped the oldest
   27 photos and reported it in a console warning nobody read. No photo cap
@@ -192,7 +202,7 @@ a shell expands any `$` in the Cloudinary secret. Pass the cloud name
 explicitly, or use `node --env-file=.env` for scripts (never for `next build` —
 Turbopack workers reject `--env-file` in `NODE_OPTIONS`).
 
-Also run `npm run test:telegram` and `npm run test:dedup`.
+Also run `npm run test:telegram`, `npm run test:dedup` and `npm run test:admin`.
 
 Scripts must be **executed**, not just typechecked. `sync-threads.ts` passed
 typecheck and build for weeks while failing at runtime on every scheduled run.

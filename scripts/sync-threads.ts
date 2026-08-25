@@ -27,7 +27,6 @@ import {
 } from './cloudinary'
 import { setOutput } from './github-output'
 import type {
-  ThreadsFollowUp,
   ThreadsImage,
   ThreadsMediaType,
   ThreadsPost,
@@ -361,20 +360,17 @@ async function normalise(
   }
 
   const images = await rehostAll(imageSources(post), post.id)
+  let text = (post.text ?? '').trim()
 
-  let followUp: ThreadsFollowUp | undefined
+  // A review is written on Threads as a post plus one follow-up comment. On
+  // this site it is ONE post: the halves are joined here, at capture time, and
+  // nothing downstream ever sees the seam. A blank line between them keeps the
+  // paragraph break the author wrote.
   if (followUpReply) {
+    const followUpText = (followUpReply.text ?? '').trim()
     const followUpImages = await rehostAll(imageSources(followUpReply), followUpReply.id)
-    const text = (followUpReply.text ?? '').trim()
-    // A reply with neither words nor pictures adds nothing to the card.
-    if (text || followUpImages.length > 0) {
-      followUp = {
-        id: followUpReply.id,
-        timestamp: new Date(followUpReply.timestamp ?? post.timestamp).toISOString(),
-        text,
-        images: followUpImages,
-      }
-    }
+    if (followUpText) text = text ? `${text}\n\n${followUpText}` : followUpText
+    images.push(...followUpImages)
   }
 
   return {
@@ -382,12 +378,31 @@ async function normalise(
     permalink: post.permalink,
     timestamp: new Date(post.timestamp).toISOString(),
     mediaType: (post.media_type ?? 'TEXT_POST') as ThreadsMediaType,
-    text: (post.text ?? '').trim(),
+    text,
     images,
     isQuotePost: Boolean(post.is_quote_post),
-    hasReplies: Boolean(post.has_replies),
-    ...(followUp ? { followUp } : {}),
   }
+}
+
+/**
+ * The newest timestamp already stored, or null when nothing is.
+ *
+ * This is the whole of the incremental rule. The snapshot is the canonical,
+ * hand-editable copy of the site's posts, so a sync must never rewrite a post
+ * it has already captured — an edit made here would be silently reverted on
+ * the next run. Only posts strictly newer than this cursor are taken.
+ *
+ * Consequences worth knowing, all of them intended:
+ * - Editing a post on Threads after it syncs does not update the site.
+ * - Deleting a post on Threads does not remove it from the site.
+ * - Backdated posts (rare) would fall below the cursor and be missed.
+ */
+function newestStored(posts: Array<{ timestamp: string }>): string | null {
+  let newest: string | null = null
+  for (const post of posts) {
+    if (!newest || post.timestamp > newest) newest = post.timestamp
+  }
+  return newest
 }
 
 async function main(): Promise<void> {
@@ -400,8 +415,31 @@ async function main(): Promise<void> {
   const username = await fetchUsername()
   console.log(`  @${username}`)
 
+  // The stored snapshot is the source of truth, not a mirror to regenerate.
+  const stored = (await fetchJson<ThreadsSnapshot>(OUT_DATA))?.posts ?? []
+  const cursor = newestStored(stored)
+  console.log(
+    cursor
+      ? `→ ${stored.length} posts already stored, newest ${cursor}`
+      : '→ nothing stored yet, taking the whole feed'
+  )
+
   console.log('→ fetching posts')
-  const raw = await fetchAllPosts()
+  const fetched = await fetchAllPosts()
+
+  const storedIds = new Set(stored.map((post) => post.id))
+  const raw = fetched.filter((post) => {
+    if (!post.timestamp) return false
+    if (storedIds.has(post.id)) return false
+    return !cursor || new Date(post.timestamp).toISOString() > cursor
+  })
+  console.log(`  ${raw.length} new of ${fetched.length} fetched`)
+
+  if (raw.length === 0) {
+    console.log(`✓ ${stored.length} posts, nothing new`)
+    await setOutput('changed', 'false')
+    return
+  }
 
   // Reviews here are written as a post plus one follow-up comment, so the
   // comment carries half the writing. Only posts that HAVE replies are asked
@@ -443,34 +481,25 @@ async function main(): Promise<void> {
     )
   }
 
-  // Newest first, and stable — the API order is not guaranteed.
-  posts.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-
   if (posts.length === 0) {
-    fail('No usable posts returned. Refusing to overwrite the snapshot with nothing.')
+    fail('Every new post failed to normalise. Refusing to touch the snapshot.')
   }
+
+  // APPEND. Stored posts are passed through untouched, edits and all.
+  const merged = [...stored, ...posts]
+  merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 
   const snapshot: ThreadsSnapshot = {
     syncedAt: new Date().toISOString(),
     username,
-    posts,
-  }
-
-  // Compare ignoring syncedAt, so an unchanged feed does not churn the
-  // snapshot in Cloudinary and invalidate its CDN copy for nothing.
-  const previous = await fetchJson<ThreadsSnapshot>(OUT_DATA)
-  const strip = (value: ThreadsSnapshot | null) =>
-    value ? JSON.stringify({ ...value, syncedAt: '' }) : ''
-
-  if (strip(snapshot) === strip(previous)) {
-    console.log(`✓ ${posts.length} posts, no change`)
-    await setOutput('changed', 'false')
-    return
+    posts: merged,
   }
 
   await uploadJson(OUT_DATA, snapshot)
   await setOutput('changed', 'true')
-  console.log(`✓ ${posts.length} posts written to ${OUT_DATA} in Cloudinary`)
+  console.log(
+    `✓ ${posts.length} new post(s) appended; ${merged.length} total in ${OUT_DATA}`
+  )
 }
 
 // Not top-level await: tsx transpiles these to CJS (the package is not

@@ -13,16 +13,37 @@
  * so a re-sync overwrites in place rather than accumulating.
  */
 
+/**
+ * One photo as it appears on this site.
+ *
+ * Every field below is EDITABLE. The snapshot in Cloudinary is the canonical
+ * copy, not a mirror the sync regenerates — a sync only appends photos newer
+ * than the newest one already stored, so edits survive. Editing `timestamp`
+ * is the one thing to avoid: it is the high-water mark the next sync reads.
+ *
+ * These fields replace the old content/photo-meta.ts overrides, which lived in
+ * the code and so could not be edited anywhere but an editor with a checkout.
+ */
 export interface Photo {
-  /** Telegram message id. Stable, and the key for manual overrides. */
+  /** Telegram message id. Several photos of one post share it. */
   id: number
   /** Canonical URL of the post on Telegram. */
   permalink: string
-  /** ISO 8601 UTC, from the post's <time datetime>. */
+  /** ISO 8601 UTC. Doubles as the incremental-sync cursor. */
   timestamp: string
-  /** Caption as written, in whatever language. Often empty. */
+  /** Caption as posted, in whatever language. Often empty. Editable. */
   caption: string
-  /** Cloudinary public id, e.g. "telegram/571-0". Not a URL, and not a path. */
+  /**
+   * Alt text per locale. Empty until written.
+   *
+   * This matters more here than anywhere else on the site: the channel
+   * captions almost nothing and, unlike a Threads post, there is no adjacent
+   * body text carrying the meaning — the image IS the content.
+   */
+  alt: Partial<Record<'en' | 'uk', string>>
+  /** Keep this one out of the gallery without deleting it. */
+  hidden?: boolean
+  /** Cloudinary public id, e.g. "telegram/571-0". Not a URL, not a path. */
   publicId: string
   /** Intrinsic size, so the grid can reserve space before the image loads. */
   width: number
@@ -36,20 +57,6 @@ export interface PhotoSnapshot {
   channel: string
   /** Newest first. */
   photos: Photo[]
-}
-
-/**
- * Per-photo overrides, edited by hand. Telegram captions arrive in one
- * language and cannot be translated automatically, and most posts have no
- * caption at all — so alt text has to come from somewhere.
- */
-export interface PhotoOverride {
-  /** Replaces the Telegram caption, per locale. */
-  caption?: Partial<Record<'en' | 'uk', string>>
-  /** Alt text, per locale. Falls back to caption, then to a generic label. */
-  alt?: Partial<Record<'en' | 'uk', string>>
-  /** Keep this one out of the gallery entirely. */
-  hidden?: boolean
 }
 
 export function isUnsynced(snapshot: PhotoSnapshot): boolean {

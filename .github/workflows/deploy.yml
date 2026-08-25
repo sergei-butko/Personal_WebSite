@@ -40,6 +40,10 @@ jobs:
           # A repository VARIABLE, not a secret. The API key and secret live in
           # secrets.CLOUDINARY_URL and are only ever used by the sync workflows.
           NEXT_PUBLIC_CLOUDINARY_CLOUD: ${{ vars.CLOUDINARY_CLOUD }}
+          # The /admin write API — workers/admin-api. A repository VARIABLE,
+          # not a secret: it is only a URL, and the Worker authorises every
+          # request itself. Unset simply means /admin renders "not configured".
+          NEXT_PUBLIC_ADMIN_API: ${{ vars.ADMIN_API }}
 
       - uses: actions/configure-pages@v6
 

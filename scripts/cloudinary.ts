@@ -192,7 +192,7 @@ export async function uploadJson(publicId: string, data: unknown): Promise<void>
   const client = api
   if (!client) throw new Error('Cloudinary was not configured')
 
-  const bytes = Buffer.from(JSON.stringify(data, null, 2), 'utf8')
+  const body = JSON.stringify(data, null, 2)
 
   await new Promise<void>((resolve, reject) => {
     const stream = client.uploader.upload_stream(
@@ -208,8 +208,47 @@ export async function uploadJson(publicId: string, data: unknown): Promise<void>
         resolve()
       }
     )
-    stream.end(bytes)
+    stream.end(Buffer.from(body, 'utf8'))
   })
+
+  await waitUntilVisible(publicId, body)
+}
+
+/**
+ * Blocks until the delivery CDN actually serves what was just written.
+ *
+ * Cloudinary raw delivery is eventually consistent. Measured on this account,
+ * an overwrite took about four seconds to appear, and a `?v=<now>` cache-buster
+ * did not defeat it — a deleted asset was still served from cache too.
+ *
+ * That is a real problem, because a sync dispatches the deploy the moment it
+ * finishes: a build starting inside that window fetches the PREVIOUS snapshot
+ * and publishes it, with nothing anywhere reporting a fault. The next sync
+ * reading a stale snapshot is worse still — it would append to an old document
+ * and drop whatever came between.
+ *
+ * So "the sync succeeded" is defined as "the new content is visible", not
+ * "the upload returned 200". If it never converges, that is a hard failure:
+ * a silent wrong-content deploy is the thing being prevented.
+ */
+async function waitUntilVisible(publicId: string, expected: string): Promise<void> {
+  const deadline = Date.now() + 60_000
+  let delay = 500
+
+  for (;;) {
+    const seen = await fetchJson<unknown>(publicId)
+    if (seen !== null && JSON.stringify(seen, null, 2) === expected) return
+
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `${publicId} was uploaded but the CDN was still serving the old copy 60s ` +
+          `later. Refusing to report success: a deploy started now would publish ` +
+          `stale content. Re-run the sync.`
+      )
+    }
+    await new Promise((resolve) => setTimeout(resolve, delay))
+    delay = Math.min(delay * 2, 5_000)
+  }
 }
 
 /**

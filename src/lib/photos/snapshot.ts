@@ -19,6 +19,9 @@ const schema: z.ZodType<PhotoSnapshot> = z.object({
       permalink: z.string().min(1),
       timestamp: z.string().min(1),
       caption: z.string(),
+      // Editable, and absent on everything the sync has not been told about.
+      alt: z.object({ en: z.string().optional(), uk: z.string().optional() }).default({}),
+      hidden: z.boolean().optional(),
       publicId: z.string().min(1),
       width: z.number().positive(),
       height: z.number().positive(),

@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
-import { photoOverrides } from '@/content/photo-meta'
 import { isUnsynced } from '@/lib/photos/types'
 import { resolveAlt, resolveCaption } from '@/lib/photos/alt'
 import { PhotoGallery, type GalleryItem } from '@/components/photos/gallery'
@@ -21,11 +20,11 @@ export default async function PhotosPage({
   const { photos, channel, syncedAt } = photoSnapshot
 
   const items: GalleryItem[] = photos
-    .filter((photo) => !photoOverrides[photo.id]?.hidden)
+    .filter((photo) => !photo.hidden)
     .map((photo) => ({
       photo,
-      alt: resolveAlt(photo, photoOverrides[photo.id], locale, dict.photos.genericAlt),
-      caption: resolveCaption(photo, photoOverrides[photo.id], locale),
+      alt: resolveAlt(photo, locale, dict.photos.genericAlt),
+      caption: resolveCaption(photo),
     }))
 
   return (

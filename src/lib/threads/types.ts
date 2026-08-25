@@ -27,40 +27,31 @@ export interface ThreadsImage {
 }
 
 /**
- * A self-reply the author posted under their own thread.
+ * One post as it appears on this site — NOT as it appears on Threads.
  *
- * Perfumery reviews here are written as two parts: the post, then one
- * follow-up comment carrying the rest. Threads shows them as separate items,
- * so mirroring only the parent would drop half the writing. Only the FIRST
- * reply, and only when its author is the account owner — a stranger's reply is
- * their words, not content to republish under Serhii's name.
+ * A perfumery review is written there as a post plus one follow-up comment.
+ * Here the two are a single post: the sync joins the text and concatenates the
+ * images at capture time, and nothing downstream knows there were ever two
+ * pieces.
+ *
+ * Every field below is EDITABLE. The snapshot in Cloudinary is the canonical
+ * copy, not a mirror that the sync regenerates — a sync only ever appends
+ * posts newer than the newest one already stored, so edits made here are never
+ * overwritten. Editing `timestamp` is the one thing to avoid: it is the
+ * high-water mark the next sync reads.
  */
-export interface ThreadsFollowUp {
-  /** Media id of the reply. Stable, and the key for its Cloudinary assets. */
-  id: string
-  /** ISO 8601 UTC. */
-  timestamp: string
-  text: string
-  images: ThreadsImage[]
-}
-
 export interface ThreadsPost {
   id: string
   /** Canonical URL on threads.com. Always link back; it is the source. */
   permalink: string
-  /** ISO 8601 UTC. */
+  /** ISO 8601 UTC, from the source. Doubles as the incremental-sync cursor. */
   timestamp: string
   mediaType: ThreadsMediaType
-  /** Post body. Empty for image-only posts. */
+  /** Post body, with the follow-up comment already joined on. Editable. */
   text: string
+  /** Post images followed by the follow-up's, in that order. Editable. */
   images: ThreadsImage[]
   isQuotePost: boolean
-  hasReplies: boolean
-  /**
-   * The author's own first reply, when there is one. Absent means either no
-   * replies, or a first reply written by somebody else.
-   */
-  followUp?: ThreadsFollowUp
 }
 
 /** Shape of src/content/threads.generated.ts. */

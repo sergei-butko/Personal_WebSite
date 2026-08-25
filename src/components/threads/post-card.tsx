@@ -99,27 +99,6 @@ export function ThreadsPostCard({
         className="mt-3"
       />
 
-      {/*
-        The second half of a two-part review. Marked off with a rule and a
-        left border rather than a label, because a label would need copy in
-        both languages and the continuation reads perfectly well without one.
-      */}
-      {post.followUp ? (
-        <div className="mt-4 border-t border-edge pt-4 pl-3 border-l-2 border-l-accent/40">
-          {post.followUp.text ? (
-            <p className="text-[14px] leading-relaxed whitespace-pre-line">
-              {post.followUp.text}
-            </p>
-          ) : null}
-          <ImageGrid
-            images={post.followUp.images}
-            hasText={Boolean(post.followUp.text)}
-            fallbackAlt={imageFallbackAlt}
-            className={post.followUp.text ? 'mt-3' : ''}
-          />
-        </div>
-      ) : null}
-
       <p className="mt-3 font-mono text-[10.5px] text-muted">
         <a
           href={post.permalink}

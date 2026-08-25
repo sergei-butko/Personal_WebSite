@@ -31,25 +31,8 @@ const schema: z.ZodType<ThreadsSnapshot> = z.object({
       timestamp: z.string().min(1),
       mediaType: z.string().min(1),
       text: z.string(),
-      images: z.array(
-        z.object({
-          publicId: z.string().min(1),
-          width: z.number().positive(),
-          height: z.number().positive(),
-          alt: z.string(),
-        })
-      ),
+      images: z.array(imageSchema),
       isQuotePost: z.boolean(),
-      hasReplies: z.boolean(),
-      // Absent on most posts: only two-part reviews carry one.
-      followUp: z
-        .object({
-          id: z.string().min(1),
-          timestamp: z.string().min(1),
-          text: z.string(),
-          images: z.array(imageSchema),
-        })
-        .optional(),
     })
   ),
 }) as z.ZodType<ThreadsSnapshot>
