@@ -26,14 +26,14 @@
   {
     "platform": "instagram",
     "label": "Instagram",
-    "href": "https://www.instagram.com/",
+    "href": "https://www.instagram.com/sergei_butko",
     "primary": false,
     "identity": true
   },
   {
     "platform": "applemusic",
     "label": "Apple Music",
-    "href": "https://music.apple.com/",
+    "href": "https://music.apple.com/profile/sergei_butko",
     "note": { "en": "What the photos were taken to", "uk": "Те, під що знімалося" },
     "primary": false,
     "identity": false
@@ -41,14 +41,14 @@
   {
     "platform": "x",
     "label": "X",
-    "href": "https://x.com/",
+    "href": "https://x.com/sergei_butko_",
     "primary": false,
     "identity": true
   },
   {
     "platform": "facebook",
     "label": "Facebook",
-    "href": "https://www.facebook.com/",
+    "href": "https://www.facebook.com/sergei.butko24",
     "primary": false,
     "identity": true
   },

@@ -60,6 +60,13 @@ export const en = {
     close: 'Close',
     genericAlt: 'Photo from the Just Photos channel',
     syncedAt: 'synced',
+    viewAll: 'All photos',
+    viewByPost: 'By post',
+    byPostIntro: 'Grouped the way they were posted.',
+    previous: 'Previous photo',
+    next: 'Next photo',
+    countOne: 'photo',
+    countMany: 'photos',
   },
   threads: {
     title: 'Threads',

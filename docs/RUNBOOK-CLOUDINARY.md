@@ -4,8 +4,19 @@ Photos and Threads images are re-hosted in Cloudinary, and so are the
 generated snapshots that index them. Nothing generated is in the repository at
 all.
 
-Run these steps in order. Steps 1–4 are reversible. **Step 6 rewrites history
-and is not.**
+> **The migration below is done. Steps 1–6 are a record, not a procedure.**
+>
+> It ran in August 2026. `public/images/` is gone from history, the credentials
+> exist, and both syncs write to Cloudinary. **Do not run step 6 again** — it is
+> a `git filter-repo` history rewrite followed by a force-push, and re-running
+> it against the current history would rewrite every commit made since for no
+> reason. Step 1 is still worth reading if the Cloudinary credentials ever need
+> to be recreated or rotated.
+>
+> The live, day-to-day part of this document starts at
+> [How it works afterwards](#how-it-works-afterwards) — that is the section to
+> read for pulling the channel, the `force` and `prune` inputs, and where the
+> snapshots live.
 
 ---
 

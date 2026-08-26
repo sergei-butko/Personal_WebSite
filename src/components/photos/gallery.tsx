@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { Photo } from '@/lib/photos/types'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
+import { Lightbox } from '@/components/photos/lightbox'
 
 export interface GalleryItem {
   photo: Photo
@@ -11,60 +12,43 @@ export interface GalleryItem {
 }
 
 /**
- * Masonry-ish grid with a lightbox.
- *
- * Uses a native <dialog>: the browser gives modal semantics, focus trapping
- * and Escape-to-close for free, which a hand-rolled overlay usually gets
- * wrong.
+ * The gallery roll — every photo in the channel, newest first, one flat grid.
  *
  * Each tile is a real <a> to the post on Telegram, and JS intercepts the
  * click to open the lightbox instead. So with JS the gallery is a lightbox,
  * and without it every photo is still a working link — rather than a dead
  * <button> that silently does nothing.
+ *
+ * The dialog itself lives in Lightbox, shared with the "by post" view.
  */
 export function PhotoGallery({
   items,
   closeLabel,
   openLabelPrefix,
   viewOnTelegram,
+  previousLabel,
+  nextLabel,
 }: {
   items: GalleryItem[]
   closeLabel: string
   openLabelPrefix: string
   viewOnTelegram: string
+  previousLabel: string
+  nextLabel: string
 }) {
   const [open, setOpen] = useState<number | null>(null)
-  const dialogRef = useRef<HTMLDialogElement>(null)
 
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    if (open !== null && !dialog.open) dialog.showModal()
-    if (open === null && dialog.open) dialog.close()
-  }, [open])
-
-  const step = useCallback(
-    (delta: number) => {
-      setOpen((current) => {
-        if (current === null) return current
-        const next = current + delta
-        return next < 0 || next >= items.length ? current : next
-      })
-    },
-    [items.length]
-  )
-
-  useEffect(() => {
-    if (open === null) return
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'ArrowRight') step(1)
-      if (event.key === 'ArrowLeft') step(-1)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, step])
+  const close = useCallback(() => setOpen(null), [])
 
   const current = open === null ? null : items[open]
+
+  // Undefined at each end, which disables the button and no-ops the arrow key.
+  const prev =
+    open !== null && open > 0 ? () => setOpen((index) => (index ?? 0) - 1) : undefined
+  const next =
+    open !== null && open < items.length - 1
+      ? () => setOpen((index) => (index ?? 0) + 1)
+      : undefined
 
   return (
     <>
@@ -102,50 +86,18 @@ export function PhotoGallery({
         ))}
       </ul>
 
-      <dialog
-        ref={dialogRef}
-        onClose={() => setOpen(null)}
-        onClick={(event) => {
-          // Clicking the backdrop closes; clicking the image itself does not.
-          if (event.target === dialogRef.current) setOpen(null)
-        }}
-        // m-auto is load-bearing: <dialog> centres itself via `margin: auto`, and
-        // Tailwind's preflight zeroes margins on every element, which pins it to
-        // the top-left corner.
-        className="m-auto max-h-[90dvh] max-w-[90vw] rounded-2xl border border-edge bg-surface p-3 text-ink backdrop:bg-black/70"
-      >
-        {current ? (
-          <div className="flex flex-col gap-3">
-            <CloudinaryImage
-              asset={current.photo}
-              alt={current.alt}
-              sizes="90vw"
-              priority
-              className="max-h-[75dvh] w-auto max-w-full rounded-xl object-contain"
-            />
-            <div className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
-              <span className="text-muted">{current.caption}</span>
-              <span className="flex items-center gap-3">
-                <a
-                  href={current.photo.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-[11px] text-muted transition hover:text-ink"
-                >
-                  {viewOnTelegram}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setOpen(null)}
-                  className="rounded-md border border-edge px-3 py-1 transition hover:border-accent"
-                >
-                  {closeLabel}
-                </button>
-              </span>
-            </div>
-          </div>
-        ) : null}
-      </dialog>
+      <Lightbox
+        photo={current?.photo ?? null}
+        alt={current?.alt ?? ''}
+        caption={current?.caption ?? ''}
+        onClose={close}
+        onPrev={prev}
+        onNext={next}
+        closeLabel={closeLabel}
+        viewOnTelegram={viewOnTelegram}
+        previousLabel={previousLabel}
+        nextLabel={nextLabel}
+      />
     </>
   )
 }

@@ -62,6 +62,14 @@ export const uk: Dictionary = {
     close: 'Закрити',
     genericAlt: 'Фото з каналу Just Photos',
     syncedAt: 'синхронізовано',
+    viewAll: 'Усі фото',
+    viewByPost: 'За дописами',
+    byPostIntro: 'Згруповані так, як їх було опубліковано.',
+    previous: 'Попереднє фото',
+    next: 'Наступне фото',
+    // "фото" does not decline, so one label covers every count.
+    countOne: 'фото',
+    countMany: 'фото',
   },
   threads: {
     title: 'Threads',
