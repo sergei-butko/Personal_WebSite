@@ -20,8 +20,8 @@ export interface GalleryStrings {
   previousLabel: string
   nextLabel: string
   perRowLabel: string
-  fewerPerRow: string
-  morePerRow: string
+  zoomIn: string
+  zoomOut: string
   pinchHint: string
 }
 
@@ -82,8 +82,8 @@ export function PhotoGallery({
         <DensityControl
           density={density}
           legend={strings.perRowLabel}
-          fewerLabel={strings.fewerPerRow}
-          moreLabel={strings.morePerRow}
+          zoomInLabel={strings.zoomIn}
+          zoomOutLabel={strings.zoomOut}
           pinchHint={strings.pinchHint}
         />
       </div>

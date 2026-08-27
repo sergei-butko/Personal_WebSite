@@ -26,9 +26,18 @@ export interface DensityRange {
 
 export interface Density {
   columns: number
-  /** Undefined at each end, which disables the button. */
-  decrease?: (() => void) | undefined
-  increase?: (() => void) | undefined
+  min: number
+  max: number
+  /**
+   * Fewer columns, so BIGGER tiles. Named for the visual result rather than
+   * the arithmetic: the control's `+` calls this one, and reading it as
+   * "increase the columns" is the mistake waiting to be made here.
+   */
+  zoomIn?: (() => void) | undefined
+  /** More columns, so smaller tiles. The control's `−`. */
+  zoomOut?: (() => void) | undefined
+  /** Jump straight to a count. The slider's path; the buttons step. */
+  setColumns: (columns: number) => void
   /** Attach to the grid element to enable pinch. */
   attachGrid: (node: HTMLElement | null) => void
 }
@@ -195,10 +204,20 @@ export function useDensity(key: string, range: DensityRange): Density {
     }
   }, [grid, step])
 
+  const setColumns = useCallback(
+    (next: number) => write(key, clamp(next, range)),
+    [key, range]
+  )
+
   return {
     columns,
-    decrease: columns > range.min ? () => step(-1) : undefined,
-    increase: columns < range.max ? () => step(1) : undefined,
+    min: range.min,
+    max: range.max,
+    // Undefined at each end, which disables the button. zoomIn removes a
+    // column and is therefore bounded by min, not max.
+    zoomIn: columns > range.min ? () => step(-1) : undefined,
+    zoomOut: columns < range.max ? () => step(1) : undefined,
+    setColumns,
     attachGrid: setGrid,
   }
 }

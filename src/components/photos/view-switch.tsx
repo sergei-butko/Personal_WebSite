@@ -37,7 +37,7 @@ export function PhotoViewSwitch({
   ]
 
   return (
-    <div className="mb-6 inline-flex rounded-full border border-edge bg-surface p-1">
+    <div className="inline-flex rounded-full border border-edge bg-surface p-1">
       {tabs.map((tab) => {
         const active = tab.view === current
         return (

@@ -3,69 +3,92 @@
 import type { Density } from './use-density'
 
 /**
- * The zoom control: fewer or more tiles across.
+ * The zoom control: − smaller, a slider, + bigger.
  *
- * Deliberately not a slider. There are four positions, a slider's thumb is the
- * hardest target on the page at this size, and a range input cannot be read by
- * keyboard users as "4 of 5" without extra labelling anyway. Two buttons and a
- * count say the same thing and are reachable with Tab.
+ * ## The arithmetic runs backwards and the control hides that
  *
- * The count is a live region because that is the only feedback a screen reader
- * gets — the visible change is four hundred images reflowing, which is
- * invisible to it.
+ * `+` REMOVES a column. It has to: the thing a visitor is adjusting is how big
+ * the pictures are, and everyone has learned from every map and every photo
+ * viewer that `+` means bigger. The column count is an implementation detail of
+ * that, and it happens to move the other way. Labelling the buttons after the
+ * columns — which the first version did, with a number between them — meant
+ * pressing `+` made everything smaller, which reads as a bug.
+ *
+ * So the count is gone from the face of the control. It survives as the
+ * slider's `aria-valuetext`, which is where a screen reader looks anyway and
+ * where it does not have to be explained.
+ *
+ * ## Why a slider AND two buttons
+ *
+ * They are not redundant at four positions. The buttons are the precise, always
+ * reachable path — one press, one step, keyboard-operable without a drag. The
+ * slider is the fast path to the far end, and it shows where you are in the
+ * range, which two buttons cannot. A range input rather than a hand-built
+ * track, so dragging, arrow keys, Home/End and screen-reader announcement all
+ * come from the platform.
+ *
+ * The slider is INVERTED against the column count for the same reason as the
+ * buttons: left is small, right is big, so its value is `min + max - columns`.
  */
 export function DensityControl({
   density,
   legend,
-  fewerLabel,
-  moreLabel,
+  zoomInLabel,
+  zoomOutLabel,
   pinchHint,
 }: {
   density: Density
-  /** Names what is being counted: photos per row, or posts per row. */
+  /** Names what is being counted, e.g. "Photos per row". Screen readers only. */
   legend: string
-  fewerLabel: string
-  moreLabel: string
+  zoomInLabel: string
+  zoomOutLabel: string
   pinchHint: string
 }) {
-  const { columns, decrease, increase } = density
+  const { columns, min, max, zoomIn, zoomOut, setColumns } = density
+
+  // Left = smallest tiles = the most columns. See the note above.
+  const sliderValue = min + max - columns
+  const filled = max === min ? 0 : ((sliderValue - min) / (max - min)) * 100
 
   return (
     <div className="flex items-center gap-3">
       <div
         role="group"
         aria-label={legend}
-        className="inline-flex items-center rounded-full border border-edge bg-surface p-1"
+        className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface px-1.5 py-1"
       >
-        {/*
-         * Minus REMOVES columns, so it makes the pictures bigger. Labelling
-         * these "zoom in / zoom out" was tempting and wrong: the buttons act on
-         * the row, and the arithmetic runs the other way from the visual size.
-         */}
         <button
           type="button"
-          onClick={decrease}
-          disabled={!decrease}
-          aria-label={fewerLabel}
-          className="flex size-7 items-center justify-center rounded-full text-muted transition hover:bg-chip hover:text-ink disabled:opacity-35 disabled:hover:bg-transparent"
+          onClick={zoomOut}
+          disabled={!zoomOut}
+          aria-label={zoomOutLabel}
+          className="flex size-6 items-center justify-center rounded-full text-muted transition hover:bg-chip hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <MinusIcon />
         </button>
 
-        <span
-          aria-live="polite"
-          className="min-w-9 text-center font-mono text-[11px] text-muted tabular-nums"
-        >
-          {columns}
-          <span className="sr-only"> {legend}</span>
-        </span>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={1}
+          value={sliderValue}
+          onChange={(event) => setColumns(min + max - Number(event.target.value))}
+          aria-label={legend}
+          // The number is not on screen any more, so this is the only place a
+          // screen reader can learn it. Without it the slider announces "3",
+          // which here would mean the opposite of what it says.
+          aria-valuetext={`${columns} ${legend}`}
+          className="density-scrub h-1 w-16"
+          style={{ ['--filled' as string]: `${filled}%` }}
+        />
 
         <button
           type="button"
-          onClick={increase}
-          disabled={!increase}
-          aria-label={moreLabel}
-          className="flex size-7 items-center justify-center rounded-full text-muted transition hover:bg-chip hover:text-ink disabled:opacity-35 disabled:hover:bg-transparent"
+          onClick={zoomIn}
+          disabled={!zoomIn}
+          aria-label={zoomInLabel}
+          className="flex size-6 items-center justify-center rounded-full text-muted transition hover:bg-chip hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <PlusIcon />
         </button>
@@ -88,10 +111,10 @@ function MinusIcon() {
     <svg
       viewBox="0 0 16 16"
       aria-hidden="true"
-      className="size-3.5"
+      className="size-3"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.75"
+      strokeWidth="2"
       strokeLinecap="round"
     >
       <path d="M3.5 8h9" />
@@ -104,10 +127,10 @@ function PlusIcon() {
     <svg
       viewBox="0 0 16 16"
       aria-hidden="true"
-      className="size-3.5"
+      className="size-3"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.75"
+      strokeWidth="2"
       strokeLinecap="round"
     >
       <path d="M8 3.5v9M3.5 8h9" />

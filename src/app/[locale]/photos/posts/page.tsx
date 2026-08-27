@@ -11,7 +11,7 @@ import { PostGallery, type PostGroup } from '@/components/photos/post-gallery'
 import { PhotoViewSwitch } from '@/components/photos/view-switch'
 import { ChannelButton } from '@/components/photos/channel-button'
 import { PhotosEmpty, SyncedNote } from '@/components/photos/notices'
-import { Container, PageHeading } from '@/components/layout/container'
+import { Container } from '@/components/layout/container'
 
 /**
  * The same photos as ../, grouped back into the Telegram posts they were
@@ -51,17 +51,25 @@ export default async function PhotosByPostPage({
 
   return (
     <Container>
-      <PageHeading
-        title={dict.photos.title}
-        action={<ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />}
-      />
+      {/*
+       * No visible heading. The page is titled in the tab, in the nav, and by
+       * the pictures themselves; a large word "Photos" above a grid of photos
+       * only pushed the grid down. The h1 stays for the document outline —
+       * removing it outright would leave the page with no heading at all,
+       * which is a real loss for anyone navigating by headings rather than a
+       * cosmetic one.
+       */}
+      <h1 className="sr-only">{dict.photos.title}</h1>
 
-      <PhotoViewSwitch
-        locale={locale}
-        current="posts"
-        allLabel={dict.photos.viewAll}
-        byPostLabel={dict.photos.viewByPost}
-      />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <PhotoViewSwitch
+          locale={locale}
+          current="posts"
+          allLabel={dict.photos.viewAll}
+          byPostLabel={dict.photos.viewByPost}
+        />
+        <ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />
+      </div>
 
       {isUnsynced(photoSnapshot) || groups.length === 0 ? (
         <PhotosEmpty
@@ -82,8 +90,8 @@ export default async function PhotosByPostPage({
               countOne: dict.photos.countOne,
               countMany: dict.photos.countMany,
               perRowLabel: dict.photos.perRowPosts,
-              fewerPerRow: dict.photos.fewerPerRow,
-              morePerRow: dict.photos.morePerRow,
+              zoomIn: dict.photos.zoomIn,
+              zoomOut: dict.photos.zoomOut,
               pinchHint: dict.photos.pinchHint,
               play: dict.photos.play,
               pause: dict.photos.pause,

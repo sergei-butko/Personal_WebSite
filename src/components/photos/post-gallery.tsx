@@ -32,8 +32,8 @@ export interface PostGalleryStrings {
   countOne: string
   countMany: string
   perRowLabel: string
-  fewerPerRow: string
-  morePerRow: string
+  zoomIn: string
+  zoomOut: string
   pinchHint: string
   play: string
   pause: string
@@ -107,8 +107,8 @@ export function PostGallery({
         <DensityControl
           density={density}
           legend={strings.perRowLabel}
-          fewerLabel={strings.fewerPerRow}
-          moreLabel={strings.morePerRow}
+          zoomInLabel={strings.zoomIn}
+          zoomOutLabel={strings.zoomOut}
           pinchHint={strings.pinchHint}
         />
       </div>
@@ -178,6 +178,20 @@ function PostCard({
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface">
+      {/*
+       * The post's text sits ABOVE its photos, as it does on Telegram — the
+       * caption is what the album is a response to, and reading it after the
+       * pictures inverts the order it was written in. The cost is that a row of
+       * cards no longer has its collages on one line when captions differ in
+       * length; the cards themselves stay the same height, and this channel
+       * captions few enough posts that the raggedness is rare.
+       */}
+      {group.caption ? (
+        <p className="line-clamp-3 px-3 pt-3 pb-2.5 text-[13.5px] leading-relaxed whitespace-pre-line">
+          {group.caption}
+        </p>
+      ) : null}
+
       {/*
        * Fixed ratio, so the collage occupies the same area on every card
        * regardless of what is in it. gap-px over an `edge` background draws the
@@ -249,19 +263,8 @@ function PostCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2.5 p-3">
-        {/*
-         * Clamped rather than given a fixed height: most posts in this channel
-         * have no caption at all, and reserving four lines on every card for
-         * the few that do would make the mosaic mostly empty space.
-         */}
-        {group.caption ? (
-          <p className="line-clamp-4 text-[13.5px] leading-relaxed whitespace-pre-line">
-            {group.caption}
-          </p>
-        ) : null}
-
-        {/* mt-auto pins the footer to the bottom, so the meta rows line up
-            across a row of cards even when the captions do not. */}
+        {/* mt-auto pins the footer down, so the meta lines agree across a row
+            of cards even when the captions above the photos do not. */}
         <div className="mt-auto flex flex-col gap-2.5">
           {group.audio ? (
             <AudioPlayer
@@ -274,23 +277,38 @@ function PostCard({
             />
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-            <p className="font-mono text-[10.5px] text-muted">
-              <time dateTime={group.timestamp}>{group.dateTime}</time>
-              <span aria-hidden="true"> · </span>
+          {/*
+           * The whole meta line IS the link out to Telegram. It replaced a
+           * bordered pill that said "View on Telegram" — at three or four cards
+           * across, that button was the heaviest thing on a card whose subject
+           * is a photograph, and it repeated on every one of 235 of them.
+           *
+           * The visible text is the date and the count, so the destination is
+           * carried by an sr-only span rather than left to be inferred: a link
+           * named "21 Aug 2026, 13:45 · 5 photos" tells a screen-reader user
+           * nothing about where it goes. The arrow is decorative and fades in
+           * on hover and on keyboard focus — focus-within, so the affordance is
+           * not mouse-only.
+           */}
+          <a
+            href={group.permalink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group/meta inline-flex flex-wrap items-center gap-x-1.5 font-mono text-[10.5px] text-muted underline-offset-2 transition hover:text-ink hover:underline focus-visible:text-ink focus-visible:underline"
+          >
+            <time dateTime={group.timestamp}>{group.dateTime}</time>
+            <span aria-hidden="true">·</span>
+            <span>
               {count} {count === 1 ? strings.countOne : strings.countMany}
-            </p>
-
-            <a
-              href={group.permalink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-edge px-2.5 py-1 text-[11px] font-medium text-muted transition hover:border-accent hover:text-ink"
+            </span>
+            <span
+              aria-hidden="true"
+              className="opacity-0 transition group-hover/meta:opacity-100 group-focus-visible/meta:opacity-100"
             >
-              {strings.viewOnTelegram}
-              <span aria-hidden="true">↗</span>
-            </a>
-          </div>
+              ↗
+            </span>
+            <span className="sr-only">{strings.viewOnTelegram}</span>
+          </a>
         </div>
       </div>
     </article>

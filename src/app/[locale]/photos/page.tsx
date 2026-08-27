@@ -8,7 +8,7 @@ import { PhotoGallery, type GalleryItem } from '@/components/photos/gallery'
 import { PhotoViewSwitch } from '@/components/photos/view-switch'
 import { ChannelButton } from '@/components/photos/channel-button'
 import { PhotosEmpty, SyncedNote } from '@/components/photos/notices'
-import { Container, PageHeading } from '@/components/layout/container'
+import { Container } from '@/components/layout/container'
 
 /** The gallery roll: every photo, newest first. See ./posts for the grouped view. */
 export default async function PhotosPage({
@@ -33,19 +33,25 @@ export default async function PhotosPage({
 
   return (
     <Container>
-      {/* No standfirst: the grid below says "these are photos from Telegram"
-          more directly than a sentence about it can, and the button says where. */}
-      <PageHeading
-        title={dict.photos.title}
-        action={<ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />}
-      />
+      {/*
+       * No visible heading. The page is titled in the tab, in the nav, and by
+       * the pictures themselves; a large word "Photos" above a grid of photos
+       * only pushed the grid down. The h1 stays for the document outline —
+       * removing it outright would leave the page with no heading at all,
+       * which is a real loss for anyone navigating by headings rather than a
+       * cosmetic one.
+       */}
+      <h1 className="sr-only">{dict.photos.title}</h1>
 
-      <PhotoViewSwitch
-        locale={locale}
-        current="all"
-        allLabel={dict.photos.viewAll}
-        byPostLabel={dict.photos.viewByPost}
-      />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <PhotoViewSwitch
+          locale={locale}
+          current="all"
+          allLabel={dict.photos.viewAll}
+          byPostLabel={dict.photos.viewByPost}
+        />
+        <ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />
+      </div>
 
       {isUnsynced(photoSnapshot) || items.length === 0 ? (
         <PhotosEmpty
@@ -64,8 +70,8 @@ export default async function PhotosPage({
               previousLabel: dict.photos.previous,
               nextLabel: dict.photos.next,
               perRowLabel: dict.photos.perRowPhotos,
-              fewerPerRow: dict.photos.fewerPerRow,
-              morePerRow: dict.photos.morePerRow,
+              zoomIn: dict.photos.zoomIn,
+              zoomOut: dict.photos.zoomOut,
               pinchHint: dict.photos.pinchHint,
             }}
           />

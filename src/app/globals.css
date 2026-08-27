@@ -265,7 +265,8 @@
  * a second element behind the input, which is the usual trick and does not
  * survive the thumb being dragged past it.
  */
-.audio-scrub {
+.audio-scrub,
+.density-scrub {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
@@ -310,6 +311,55 @@
   border: none;
   border-radius: 999px;
   background: var(--color-accent);
+}
+
+/*
+ * The zoom slider in the photo views' density control.
+ *
+ * Same two-engine problem as .audio-scrub above — WebKit and Firefox expose
+ * the track and thumb under different pseudo-elements and neither tolerates
+ * the other's selector in a shared rule — but a muted fill rather than the
+ * accent, because this sits inside a chrome control rather than being the
+ * subject of one.
+ */
+.density-scrub::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-muted) var(--filled, 0%),
+    var(--color-edge) var(--filled, 0%)
+  );
+}
+
+.density-scrub::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-muted) var(--filled, 0%),
+    var(--color-edge) var(--filled, 0%)
+  );
+}
+
+.density-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  /* Track 3px, thumb 10px: lift by half the difference to centre it. */
+  margin-top: -3.5px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-ink);
+}
+
+.density-scrub::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
