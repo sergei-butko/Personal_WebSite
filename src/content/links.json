@@ -12,10 +12,6 @@
     "label": "Threads",
     "handle": "@sergei_butko",
     "href": "https://www.threads.com/@sergei_butko",
-    "note": {
-      "en": "Perfumery notes, as they occur to me",
-      "uk": "Нотатки про парфумерію"
-    },
     "footer": true,
     "identity": true
   },
@@ -24,7 +20,7 @@
     "label": "Telegram",
     "handle": "@sergei_butko",
     "href": "https://t.me/sergei_butko",
-    "note": { "en": "Me, directly", "uk": "Написати мені особисто" },
+    "directory": false,
     "footer": true,
     "identity": true
   },
@@ -37,13 +33,9 @@
   },
   {
     "platform": "telegram",
-    "label": "Just Photos",
+    "label": "Telegram",
     "handle": "@just_my_photos",
     "href": "https://t.me/just_my_photos",
-    "note": {
-      "en": "Just Photos — нічого зайвого",
-      "uk": "Just Photos — нічого зайвого"
-    },
     "footer": false,
     "identity": true
   },
@@ -51,7 +43,6 @@
     "platform": "applemusic",
     "label": "Apple Music",
     "href": "https://music.apple.com/profile/sergei_butko",
-    "note": { "en": "What the photos were taken to", "uk": "Те, під що знімалося" },
     "footer": false,
     "identity": false
   },

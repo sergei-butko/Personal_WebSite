@@ -7,10 +7,10 @@
  * which is gitignored. The API secret is never needed at build time and never
  * reaches the browser: the site only ever uses the public cloud name.
  *
- * Uploads are SIGNED, not unsigned. Unsigned presets exist for browser uploads
- * where no secret can be shipped — that is the /admin CMS's case, not this one
- * — and they cannot overwrite an existing public id, which is exactly the
- * property these syncs depend on.
+ * Uploads are SIGNED, not unsigned. Unsigned presets exist for uploads from a
+ * browser, where no secret can be shipped; these scripts run on a machine that
+ * has one. And an unsigned preset cannot overwrite an existing public id,
+ * which is exactly the property these syncs depend on.
  *
  * The SDK is imported LAZILY, on purpose. It parses CLOUDINARY_URL at require
  * time and throws a raw stack trace from inside its own config module if the
