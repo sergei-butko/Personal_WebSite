@@ -17,13 +17,9 @@ export const uk: Dictionary = {
     moreWriting: 'Інші дописи',
     photos: 'Фото',
     photosSynced: 'синхронізовано з Telegram',
-    collection: 'Колекція',
-    bottles: 'флаконів у каталозі',
-    postsWritten: 'написаних дописів',
     dayJob: 'Основна робота',
     dayJobTitle: 'DevOps-інженер',
-    dayJobBody:
-      'Хмарні платформи, CI/CD та інфраструктура як код. Резюме і проєкти — тут.',
+    dayJobBody: 'Хмарні платформи, CI/CD та інфраструктура як код.',
     threads: 'З Threads',
     threadsAll: 'Усі дописи',
   },
@@ -85,8 +81,6 @@ export const uk: Dictionary = {
   links: {
     title: 'Посилання',
     intro: 'Усе, де мене можна знайти, в одному місці.',
-    homeLabel: 'Деінде',
-    all: 'Усі посилання',
   },
   common: {
     placeholder: 'Ця сторінка — заготовка. Справжній вміст зʼявиться пізніше.',

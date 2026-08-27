@@ -1,5 +1,13 @@
 [
   {
+    "platform": "instagram",
+    "label": "Instagram",
+    "handle": "@sergei_butko",
+    "href": "https://www.instagram.com/sergei_butko",
+    "footer": true,
+    "identity": true
+  },
+  {
     "platform": "threads",
     "label": "Threads",
     "handle": "@sergei_butko",
@@ -8,26 +16,35 @@
       "en": "Perfumery notes, as they occur to me",
       "uk": "Нотатки про парфумерію"
     },
-    "primary": true,
+    "footer": true,
     "identity": true
   },
   {
     "platform": "telegram",
     "label": "Telegram",
+    "handle": "@sergei_butko",
+    "href": "https://t.me/sergei_butko",
+    "note": { "en": "Me, directly", "uk": "Написати мені особисто" },
+    "footer": true,
+    "identity": true
+  },
+  {
+    "platform": "email",
+    "label": "Email",
+    "href": "mailto:sergei.butko24@gmail.com",
+    "footer": true,
+    "identity": false
+  },
+  {
+    "platform": "telegram",
+    "label": "Just Photos",
     "handle": "@just_my_photos",
     "href": "https://t.me/just_my_photos",
     "note": {
       "en": "Just Photos — нічого зайвого",
       "uk": "Just Photos — нічого зайвого"
     },
-    "primary": true,
-    "identity": true
-  },
-  {
-    "platform": "instagram",
-    "label": "Instagram",
-    "href": "https://www.instagram.com/sergei_butko",
-    "primary": false,
+    "footer": false,
     "identity": true
   },
   {
@@ -35,21 +52,21 @@
     "label": "Apple Music",
     "href": "https://music.apple.com/profile/sergei_butko",
     "note": { "en": "What the photos were taken to", "uk": "Те, під що знімалося" },
-    "primary": false,
+    "footer": false,
     "identity": false
   },
   {
     "platform": "x",
     "label": "X",
     "href": "https://x.com/sergei_butko_",
-    "primary": false,
+    "footer": false,
     "identity": true
   },
   {
     "platform": "facebook",
     "label": "Facebook",
     "href": "https://www.facebook.com/sergei.butko24",
-    "primary": false,
+    "footer": false,
     "identity": true
   },
   {
@@ -57,14 +74,7 @@
     "label": "GitHub",
     "handle": "sergei-butko",
     "href": "https://github.com/sergei-butko",
-    "primary": true,
+    "footer": false,
     "identity": true
-  },
-  {
-    "platform": "email",
-    "label": "Email",
-    "href": "mailto:sergei.butko24@gmail.com",
-    "primary": true,
-    "identity": false
   }
 ]

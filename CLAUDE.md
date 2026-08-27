@@ -246,8 +246,14 @@ content is Serhii's to supply:
 - `/about` and `/cv` are in the nav and need real prose behind them.
 - `profile.ts` is placeholder copy, and it renders on every page through the
   header and footer.
-- Seed posts are all `draft: true` and unverified — fabricated placeholder
-  prose, not Serhii's writing.
+- `src/content/posts/` is empty. Six fabricated `draft: true` seed posts were
+  deleted on 2026-08-27: drafts are stripped whenever `NODE_ENV=production`, so
+  they had never reached the live site — mock data nobody could read. The blog
+  builds fine empty; both `[slug]` and `tag/[tag]` emit a sentinel param
+  because `output: 'export'` rejects an empty `generateStaticParams`. The
+  frontmatter contract now lives only in `lib/blog/frontmatter.ts` — read it
+  before writing the first real post, and note that a post existing in one
+  language only is a supported case, not a mistake.
 
 **Pending Dependabot majors: ESLint 10 and TypeScript 7. Both were tried on
 2026-08-27 and both are blocked upstream — by the same lagging ESLint plugin

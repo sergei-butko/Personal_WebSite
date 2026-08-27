@@ -14,7 +14,11 @@ export function PlatformIcon({
 }: {
   platform: string | undefined
   className?: string
-  /** Overrides the brand colour — used on brand-coloured backgrounds. */
+  /**
+   * Overrides the brand colour — used on brand-coloured backgrounds, and as
+   * `currentColor` wherever the mark should be monochrome and inherit the
+   * link's own colour, as it does in the footer.
+   */
   forceColor?: string
 }) {
   const { path, light, dark, label } = getPlatform(platform)

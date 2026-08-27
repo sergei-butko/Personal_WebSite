@@ -14,13 +14,9 @@ export const en = {
     moreWriting: 'More writing',
     photos: 'Photos',
     photosSynced: 'synced from Telegram',
-    collection: 'Collection',
-    bottles: 'bottles catalogued',
-    postsWritten: 'posts written',
     dayJob: 'The day job',
     dayJobTitle: 'DevOps Engineer',
-    dayJobBody:
-      'Cloud platforms, CI/CD, and infrastructure as code. CV and projects live over here.',
+    dayJobBody: 'Cloud platforms, CI/CD, and infrastructure as code.',
     threads: 'From Threads',
     threadsAll: 'All posts',
   },
@@ -82,8 +78,6 @@ export const en = {
   links: {
     title: 'Links',
     intro: 'Everywhere I am, in one place.',
-    homeLabel: 'Elsewhere',
-    all: 'All links',
   },
   common: {
     placeholder: 'This page is a placeholder — real content arrives in a later phase.',

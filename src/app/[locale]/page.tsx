@@ -1,11 +1,8 @@
-import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { isLocale, localePath } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { profile } from '@/content/profile'
-import { links, linkRel, linkTarget } from '@/lib/links'
-import { getPlatform } from '@/lib/links/platforms'
 import { PlatformIcon } from '@/components/links/platform-icon'
 import { BentoGrid } from '@/components/ui/bento-grid'
 import { Card } from '@/components/ui/card'
@@ -97,16 +94,23 @@ export default async function HomePage({
         </Card>
 
         {/*
-         * Row 2 — a quarter-width slot Serhii has not decided on yet. The
-         * collection count is a placeholder that at least says something true;
-         * swapping it is one card.
+         * Row 2 — the day job, one quarter, straight to the CV. Mirrors the
+         * About tile opposite it: whole card is the link, arrow pinned to the
+         * bottom, so the two quarter tiles read as a pair.
          */}
         <Card>
-          <Eyebrow>{dict.home.collection}</Eyebrow>
-          <p className="text-3xl leading-none font-semibold tracking-tight text-accent">
-            &mdash;
-          </p>
-          <p className="mt-1 text-xs text-muted">{dict.home.bottles}</p>
+          <Link href={localePath(locale, 'cv')} className="flex h-full flex-col">
+            <Eyebrow>{dict.home.dayJob}</Eyebrow>
+            <span className="block text-[15px] font-semibold">
+              {dict.home.dayJobTitle}
+            </span>
+            <span className="mt-1 block text-[13px] text-muted">
+              {dict.home.dayJobBody}
+            </span>
+            <span className="mt-auto pt-3 text-[11px] text-accent">
+              {dict.nav.cv} &rarr;
+            </span>
+          </Link>
         </Card>
 
         {/* Row 2 — the Telegram channel, three quarters. */}
@@ -140,54 +144,6 @@ export default async function HomePage({
               {dict.photos.title} &rarr;
             </Link>
           </p>
-        </Card>
-
-        {/* Row 3 — unchanged: links directory and the day job. */}
-        <Card className="sm:col-span-2">
-          <Eyebrow>{dict.links.homeLabel}</Eyebrow>
-          <ul className="flex flex-wrap gap-2">
-            {links.map((link) => {
-              const brand = getPlatform(link.platform)
-              return (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    target={linkTarget(link)}
-                    rel={linkRel(link)}
-                    title={link.label}
-                    style={{ ['--brand']: brand.light } as CSSProperties}
-                    className="flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1.5 transition hover:border-[var(--brand)]"
-                  >
-                    <PlatformIcon platform={link.platform} className="h-4 w-4" />
-                    <span className="text-[11px] font-medium text-muted">
-                      {link.label}
-                    </span>
-                  </a>
-                </li>
-              )
-            })}
-          </ul>
-          <p className="mt-3 text-[11px]">
-            <Link href={localePath(locale, 'links')} className="text-accent">
-              {dict.links.all} &rarr;
-            </Link>
-          </p>
-        </Card>
-
-        <Card className="sm:col-span-2">
-          <Eyebrow>{dict.home.dayJob}</Eyebrow>
-          <h2 className="text-[15px] font-semibold">
-            <Link href={localePath(locale, 'cv')}>
-              {dict.home.dayJobTitle}{' '}
-              <span
-                aria-hidden="true"
-                className="inline-block transition group-hover:translate-x-1"
-              >
-                &rarr;
-              </span>
-            </Link>
-          </h2>
-          <p className="mt-1 text-[13px] text-muted">{dict.home.dayJobBody}</p>
         </Card>
       </BentoGrid>
     </main>

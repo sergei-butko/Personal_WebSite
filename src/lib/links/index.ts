@@ -24,8 +24,14 @@ const linkSchema = z.object({
   href: z.string().url(),
   /** Optional one-liner shown under the label. */
   note: localized.partial().optional(),
-  /** Surfaced on the home card and in the hero, not just the links page. */
-  primary: z.boolean().default(false),
+  /**
+   * Repeated in the site footer as a bare monochrome mark, on every page.
+   * Was `primary`, which claimed to feed "the home card and the hero" — the
+   * home links card is gone and there is no hero, so the flag now names the
+   * one place that actually reads it. Keep this list short: four marks fit
+   * the footer without wrapping on a phone.
+   */
+  footer: z.boolean().default(false),
   /** rel="me" marks a verified identity link — good for the fediverse and SEO. */
   identity: z.boolean().default(false),
 })
@@ -47,8 +53,8 @@ function load(): Link[] {
 
 export const links: Link[] = load()
 
-/** For the hero and the footer, where space is tight. */
-export const primaryLinks: Link[] = links.filter((link) => link.primary)
+/** The footer row, in `links.json` order. */
+export const footerLinks: Link[] = links.filter((link) => link.footer)
 
 /**
  * `rel` for an outbound link.

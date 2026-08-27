@@ -1,6 +1,19 @@
-import { primaryLinks, linkRel, linkTarget } from '@/lib/links'
+import { footerLinks, linkRel, linkTarget } from '@/lib/links'
+import { PlatformIcon } from '@/components/links/platform-icon'
 import { profile } from '@/content/profile'
 
+/**
+ * The marks are monochrome — `currentColor` rather than each platform's brand
+ * hue — because the footer carries four of them side by side on every page of
+ * the site. Brand colours belong on the links page, where each card is the
+ * subject; repeated in chrome they read as a toolbar. Colour is left to say
+ * one thing here: hover.
+ *
+ * The mark alone is the whole link, so the label has to reach a screen reader
+ * some other way. `PlatformIcon` renders its `<svg>` `aria-hidden`, which
+ * takes its `<title>` out of the tree with it — hence `aria-label` on the
+ * anchor. `title` is for the sighted hover.
+ */
 export function Footer() {
   return (
     <footer className="mt-16 border-t border-edge">
@@ -8,16 +21,22 @@ export function Footer() {
         <p>
           &copy; {new Date().getFullYear()} {profile.name}
         </p>
-        <ul className="flex flex-wrap gap-4">
-          {primaryLinks.map((link) => (
+        <ul className="flex flex-wrap items-center gap-5">
+          {footerLinks.map((link) => (
             <li key={link.href}>
               <a
                 href={link.href}
                 target={linkTarget(link)}
                 rel={linkRel(link)}
-                className="transition hover:text-ink"
+                aria-label={link.label}
+                title={link.handle ?? link.label}
+                className="block text-muted transition hover:text-ink"
               >
-                {link.label}
+                <PlatformIcon
+                  platform={link.platform}
+                  forceColor="currentColor"
+                  className="h-5 w-5"
+                />
               </a>
             </li>
           ))}
