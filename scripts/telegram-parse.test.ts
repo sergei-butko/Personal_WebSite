@@ -12,6 +12,12 @@ import path from 'node:path'
 import { pairAudio, parseChannelPage } from './telegram-parse'
 
 const FIXTURE = path.join(import.meta.dirname, '__fixtures__', 'channel-page.html')
+/** A second real page, saved because the first one captions nothing at all. */
+const CAPTIONS = path.join(
+  import.meta.dirname,
+  '__fixtures__',
+  'channel-page-captions.html'
+)
 
 let failures = 0
 
@@ -119,6 +125,33 @@ async function main(): Promise<void> {
     'a second song after the same album does not displace the first',
     pairAudio([...page.posts, { ...page.posts[1]!, id: 555 }]).get(547)?.id,
     554
+  )
+
+  // Captions, against a second saved page — the fixture above has none, which
+  // is how a caption bug survived 103 posts unnoticed.
+  const captioned = parseChannelPage(await readFile(CAPTIONS, 'utf8'))
+  const withText = captioned.posts.filter((p) => p.caption)
+  checkThat(
+    'the captions fixture actually has captions',
+    withText.length > 5,
+    `only ${withText.length} — refresh the fixture, it is not testing anything`
+  )
+  check(
+    'a <br/> in a caption becomes a newline',
+    captioned.posts.find((p) => p.id === 316)?.caption,
+    "I see a line of cars\nAnd they're all painted black"
+  )
+  checkThat(
+    'no caption welds two lines into one word',
+    // The signature of the bug: cheerio's .text() concatenates across <br/>,
+    // so a lowercase letter ends up butted against an uppercase one.
+    withText.every((p) => !/[a-zа-яіїєґ][A-ZА-ЯІЇЄҐ]/u.test(p.caption)),
+    'a caption looks like two lines run together'
+  )
+  checkThat(
+    'captions are trimmed at the ends but not the middle',
+    withText.every((p) => p.caption === p.caption.trim()),
+    'a caption kept leading or trailing whitespace'
   )
 
   console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`)

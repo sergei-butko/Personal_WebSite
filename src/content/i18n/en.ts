@@ -70,7 +70,6 @@ export const en = {
     pause: 'Pause',
     seek: 'Seek',
     listenOnTelegram: 'Listen on Telegram',
-    morePhotos: 'more photos in this post',
   },
   threads: {
     title: 'Threads',

@@ -2,89 +2,69 @@
  * Laying an album out inside a fixed-size card.
  *
  * The by-post view is a grid of cards that must all be the same size, and the
- * albums behind them run from one photo to ten. A naive grid of squares makes
- * a one-photo post a lonely tile in a large empty box and a ten-photo post a
- * wall of thumbnails — two shapes, in the same row, neither reading as the
- * same kind of thing.
+ * albums behind them run from one photo to ten. A naive grid of squares makes a
+ * one-photo post a lonely tile in a large empty box and a ten-photo post a wall
+ * of thumbnails — two shapes, in the same row, neither reading as the same kind
+ * of thing.
  *
- * So every card gets the same media area and the album is fitted into it,
- * Telegram-album style: the layout changes with the count, the area does not.
+ * So every card gets the same media area and the album is fitted into it: the
+ * layout changes with the count, the area does not.
  *
- * ## Why six columns for everything
+ * ## Every photo is shown
  *
- * Six is the smallest number divisible by both 2 and 3, so a pair, a triple, a
- * quad and a sextet all land on whole-column boundaries of one grid. One
- * `grid-template-columns` for every case is what keeps the gutters identical
- * across cards — a per-count column count makes the gaps visibly different
- * from card to card, which is exactly the unevenness this is here to avoid.
+ * An earlier version capped this at six tiles and badged the rest as `+N`,
+ * because seven and eight cannot tile a *fixed-column* grid without leaving a
+ * hole. That constraint was self-inflicted. Rows are laid out independently
+ * here — each row is its own flex line whose tiles share the width evenly — so
+ * a row of three and a row of four sit under each other with no common divisor
+ * needed, and no count is unrepresentable. The card shows the whole album.
  *
- * ## Why never more than six tiles
- *
- * Seven and eight do not tile a rectangle without a hole, and a nine-up of
- * thumbnails at a quarter of the page width is unreadable anyway. Above six,
- * the sixth tile carries a `+N` badge and the rest are reached in the lightbox.
- * Every layout below therefore fills its area completely — no card ever shows
- * a gap where a photo should be.
- *
- * Pure and dependency-free, so the rule is pinned by a test rather than by
- * looking at a page.
+ * The cost is real and worth stating: at ten photos in a card a quarter of the
+ * page wide, each tile is small. That is the trade the `+N` badge was avoiding,
+ * and showing the post as it was actually published is worth more than tile
+ * size — the lightbox is still there for looking closely.
  */
 
-/** Column count every layout is expressed in. See the note above. */
-export const COLLAGE_COLUMNS = 6
-
-/** One tile's footprint, in grid columns and rows. */
-export interface CollageTile {
-  colSpan: number
-  rowSpan: number
-}
-
+/** Tiles per row, top to bottom. Every entry is at least 1. */
 export interface CollageLayout {
-  /** Rows the media area is divided into — one or two. */
-  rows: number
-  /** Tiles to render, in order. Never more than the album holds. */
-  tiles: CollageTile[]
-  /** Photos beyond the last tile, for the `+N` badge. Zero when none. */
-  overflow: number
+  rows: number[]
 }
 
-const wide: CollageTile = { colSpan: COLLAGE_COLUMNS, rowSpan: 1 }
-const half: CollageTile = { colSpan: 3, rowSpan: 1 }
-const third: CollageTile = { colSpan: 2, rowSpan: 1 }
+/**
+ * How many rows an album of `count` photos is split across.
+ *
+ * Up to three across in a single row: four abreast in one line is a strip, and
+ * the eye reads it as a filmstrip rather than a group. Past that the album
+ * grows downward, four per row at most, which keeps a tile from falling below
+ * roughly a thumbnail's useful size on the narrowest card the grid produces.
+ */
+function rowCount(count: number): number {
+  if (count <= 3) return 1
+  if (count <= 8) return 2
+  return Math.ceil(count / 4)
+}
 
 /**
  * The layout for an album of `count` photos.
  *
+ * Rows are as even as they can be, with the extra photos going to the TOP rows.
+ * Front-loading matters: Telegram albums lead with the picture the author chose
+ * first, and a heavier top row keeps that one larger than the ones under it.
+ *
  * A count of zero cannot happen — groupByPost only ever emits posts that have
- * photos — but returning an empty layout rather than throwing keeps a bad
- * hand-edit of the snapshot from taking the whole page down over one post.
+ * photos — but returning an empty layout rather than throwing keeps a bad hand
+ * edit of the snapshot from taking the whole page down over one post.
  */
 export function collageFor(count: number): CollageLayout {
-  if (count <= 0) return { rows: 1, tiles: [], overflow: 0 }
+  if (count <= 0) return { rows: [] }
 
-  if (count === 1) return { rows: 1, tiles: [wide], overflow: 0 }
-  if (count === 2) return { rows: 1, tiles: [half, half], overflow: 0 }
-
-  // One large photo with two stacked beside it: three equal tiles across would
-  // be a thin strip, and a post of three is usually one picture and two details.
-  if (count === 3) {
-    return {
-      rows: 2,
-      tiles: [{ colSpan: 4, rowSpan: 2 }, third, third],
-      overflow: 0,
-    }
-  }
-
-  if (count === 4) return { rows: 2, tiles: [half, half, half, half], overflow: 0 }
-
-  // Two over three — the only way five fills a rectangle at all.
-  if (count === 5) {
-    return { rows: 2, tiles: [half, half, third, third, third], overflow: 0 }
-  }
+  const total = rowCount(count)
+  const base = Math.floor(count / total)
+  const remainder = count % total
 
   return {
-    rows: 2,
-    tiles: [third, third, third, third, third, third],
-    overflow: count - 6,
+    rows: Array.from({ length: total }, (_, index) =>
+      index < remainder ? base + 1 : base
+    ),
   }
 }

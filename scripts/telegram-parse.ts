@@ -58,6 +58,33 @@ const PX = (style: string, prop: string): number | undefined => {
   return match ? Math.round(Number(match[1])) : undefined
 }
 
+/**
+ * A post's text, with its line breaks intact.
+ *
+ * Telegram writes a caption's newlines as `<br/>`, and cheerio's `.text()`
+ * concatenates around them — which welds the lines together with no separator
+ * at all. "I see a line of cars<br/>And they're all painted black" came out as
+ * "I see a line of carsAnd they're all painted black", and 103 captions were
+ * stored that way before anyone read one closely.
+ *
+ * So the breaks are turned into real newlines first. The node is cloned because
+ * replaceWith mutates, and the caller still needs the original to read the
+ * audio card and the photos off.
+ */
+function captionOf(node: ReturnType<cheerio.CheerioAPI>): string {
+  const text = node.find('.tgme_widget_message_text').first()
+  if (text.length === 0) return ''
+
+  const clone = text.clone()
+  clone.find('br').replaceWith('\n')
+  // Trim the ends but never the interior: a blank line between paragraphs is
+  // the author's, and `whitespace-pre-line` in the card renders it.
+  return clone
+    .text()
+    .replace(/[ \t]+$/gm, '')
+    .trim()
+}
+
 export function parseChannelPage(html: string): ParsedPage {
   const $ = cheerio.load(html)
   const posts: ParsedPost[] = []
@@ -114,7 +141,7 @@ export function parseChannelPage(html: string): ParsedPage {
       id,
       permalink: `https://t.me/${handle}/${id}`,
       timestamp: new Date(timestamp).toISOString(),
-      caption: node.find('.tgme_widget_message_text').first().text().trim(),
+      caption: captionOf(node),
       images,
       ...(audio ? { audio } : {}),
     })

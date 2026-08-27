@@ -16,5 +16,11 @@ src/content/photos.generated.ts
 src/content/threads.generated.ts
 src/content/photo-hashes.generated.ts
 
+# Saved verbatim from t.me, and that is the point of them. Prettier rewrites
+# HTML whitespace, and telegram-parse.ts reads text nodes — the caption parser
+# turns `<br/>` into a newline and trims around it. Reformatting a fixture could
+# change what the parser sees and quietly invalidate the test it exists to feed.
+scripts/__fixtures__
+
 # Personal notes, untracked.
 CLAUDE.local.md

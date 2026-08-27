@@ -313,6 +313,25 @@ async function rehostAudio(
 const uploadedDimensions = new Map<string, StoredSize>()
 
 /**
+ * Whether two captions are the same words with different whitespace.
+ *
+ * This is the whole safety guarantee of the caption repair below. Telegram
+ * writes newlines as `<br/>`, cheerio's `.text()` dropped them, and 103
+ * captions were stored with their lines welded together. Re-parsing fixes new
+ * posts; the stored ones need rewriting, and rewriting a stored caption is
+ * exactly the thing this sync promises never to do, because captions are hand
+ * editable.
+ *
+ * So the repair only fires when the stored text and the freshly parsed text are
+ * identical once ALL whitespace is removed — same characters, same order, only
+ * the breaks differ. A hand-edited caption differs by more than whitespace and
+ * is therefore untouchable by construction, not by care.
+ */
+function sameButForWhitespace(a: string, b: string): boolean {
+  return a.replace(/\s+/gu, '') === b.replace(/\s+/gu, '')
+}
+
+/**
  * Songs already re-hosted, keyed by the audio post's message id.
  *
  * Read off the photo rows because that is where the snapshot keeps them —
@@ -445,19 +464,41 @@ async function main(): Promise<void> {
     )
   }
 
-  // Additive only: a row that already names a track keeps it.
+  // Freshly parsed captions, for the whitespace-only repair below.
+  const freshCaptions = new Map(fetched.map((post) => [post.id, post.caption]))
+
+  // Additive only, with one exception: a caption whose stored text differs from
+  // the live one by whitespace alone is rewritten, which is how the lost line
+  // breaks get restored. See sameButForWhitespace.
   let backfilled = 0
+  let repaired = 0
   const carried = stored.map((photo) => {
     const track = photo.audio ? undefined : audioByAlbum.get(photo.id)
-    if (!track) return photo
-    backfilled++
-    return { ...photo, audio: track }
+
+    const fresh = freshCaptions.get(photo.id)
+    const fixable =
+      fresh !== undefined &&
+      fresh !== photo.caption &&
+      sameButForWhitespace(fresh, photo.caption)
+
+    if (!track && !fixable) return photo
+    if (track) backfilled++
+    if (fixable) repaired++
+
+    return {
+      ...photo,
+      ...(track ? { audio: track } : {}),
+      ...(fixable ? { caption: fresh } : {}),
+    }
   })
   if (backfilled > 0) {
     console.log(`  ${backfilled} stored photo row(s) gained the song of their post`)
   }
+  if (repaired > 0) {
+    console.log(`  ${repaired} stored caption(s) had their line breaks restored`)
+  }
 
-  if (posts.length === 0 && backfilled === 0) {
+  if (posts.length === 0 && backfilled === 0 && repaired === 0) {
     console.log(`✓ ${stored.length} photos, nothing new`)
     await setOutput('changed', 'false')
     return
@@ -525,7 +566,7 @@ async function main(): Promise<void> {
       `${cached} unchanged`
   )
 
-  if (photos.length === 0 && backfilled === 0) {
+  if (photos.length === 0 && backfilled === 0 && repaired === 0) {
     console.log(`✓ ${stored.length} photos, nothing new`)
     await setOutput('changed', 'false')
     return
@@ -547,7 +588,8 @@ async function main(): Promise<void> {
     const songs = merged.filter((photo) => photo.audio).length
     console.log(
       `✓ dry run: ${photos.length} new photo(s), ${backfilled} row(s) given a song, ` +
-        `${merged.length} total, ${songs} carrying a track. Nothing written.`
+        `${repaired} caption(s) repaired, ${merged.length} total, ${songs} ` +
+        `carrying a track. Nothing written.`
     )
     await setOutput('changed', 'false')
     return
@@ -584,8 +626,8 @@ async function main(): Promise<void> {
   await uploadJson(OUT_DATA, next)
   await setOutput('changed', 'true')
   console.log(
-    `✓ ${photos.length} new photo(s) appended, ${backfilled} row(s) given a song; ` +
-      `${merged.length} total in ${OUT_DATA}`
+    `✓ ${photos.length} new photo(s) appended, ${backfilled} row(s) given a song, ` +
+      `${repaired} caption(s) repaired; ${merged.length} total in ${OUT_DATA}`
   )
 }
 

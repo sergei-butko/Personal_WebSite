@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import type { Photo, PostAudio } from '@/lib/photos/types'
-import { COLLAGE_COLUMNS, collageFor } from '@/lib/photos/collage'
+import { collageFor } from '@/lib/photos/collage'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 import { Lightbox } from '@/components/photos/lightbox'
 import { AudioPlayer } from '@/components/photos/audio-player'
@@ -39,7 +39,6 @@ export interface PostGalleryStrings {
   pause: string
   seek: string
   listenOnTelegram: string
-  morePhotos: string
 }
 
 /** Which photo is open, addressed by post and by position inside it. */
@@ -181,83 +180,75 @@ function PostCard({
       {/*
        * The post's text sits ABOVE its photos, as it does on Telegram — the
        * caption is what the album is a response to, and reading it after the
-       * pictures inverts the order it was written in. The cost is that a row of
-       * cards no longer has its collages on one line when captions differ in
-       * length; the cards themselves stay the same height, and this channel
-       * captions few enough posts that the raggedness is rare.
+       * pictures inverts the order it was written in.
+       *
+       * The slot is ALWAYS rendered, empty or not, and always the same height.
+       * Rendering it only when there is a caption made every card in a row
+       * start its photos at a different height, which read as a misalignment
+       * rather than as a difference in content — and most posts in this channel
+       * have no caption, so the ragged edge was the common case.
+       *
+       * Three lines: `min-h` in `em` rather than a pixel height, so it tracks
+       * the font size, and `line-clamp-3` caps the other end. Both numbers have
+       * to agree — a clamp of 3 over a reserve of 2 would still jump.
        */}
-      {group.caption ? (
-        <p className="line-clamp-3 px-3 pt-3 pb-2.5 text-[13.5px] leading-relaxed whitespace-pre-line">
-          {group.caption}
-        </p>
-      ) : null}
+      <p className="line-clamp-3 min-h-[4.875em] px-3 pt-3 pb-2.5 text-[13.5px] leading-relaxed whitespace-pre-line">
+        {group.caption}
+      </p>
 
       {/*
        * Fixed ratio, so the collage occupies the same area on every card
-       * regardless of what is in it. gap-px over an `edge` background draws the
-       * hairlines between tiles without a border on each one, which would
-       * double up where two tiles meet.
+       * regardless of what is in it. Rows split the height evenly and tiles
+       * split their row's width evenly, which is what lets a row of four sit
+       * under a row of three without the two needing a common divisor — the
+       * constraint that used to cap this at six tiles and a `+N` badge.
+       *
+       * gap-px over an `edge` background draws the hairlines between tiles
+       * without a border on each one, which would double up where two meet.
        */}
-      <div
-        className="grid aspect-[4/3] gap-px bg-edge"
-        style={{
-          gridTemplateColumns: `repeat(${COLLAGE_COLUMNS}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
-        }}
-      >
-        {layout.tiles.map((tile, index) => {
-          const item = group.items[index]
-          if (!item) return null
-          const last = index === layout.tiles.length - 1
+      <div className="flex aspect-[4/3] flex-col gap-px bg-edge">
+        {layout.rows.map((tilesInRow, rowIndex) => {
+          const before = layout.rows.slice(0, rowIndex).reduce((sum, n) => sum + n, 0)
           return (
-            <a
-              key={item.photo.publicId}
-              href={item.photo.permalink}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => {
-                // Modified clicks still open Telegram in a new tab.
-                if (
-                  event.metaKey ||
-                  event.ctrlKey ||
-                  event.shiftKey ||
-                  event.button !== 0
+            <div key={rowIndex} className="flex min-h-0 flex-1 gap-px">
+              {group.items.slice(before, before + tilesInRow).map((item, offset) => {
+                const index = before + offset
+                return (
+                  <a
+                    key={item.photo.publicId}
+                    href={item.photo.permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(event) => {
+                      // Modified clicks still open Telegram in a new tab.
+                      if (
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey ||
+                        event.button !== 0
+                      )
+                        return
+                      event.preventDefault()
+                      onOpen(index)
+                    }}
+                    aria-label={`${strings.openLabelPrefix} ${item.alt}`}
+                    // min-w-0 with the absolutely-positioned image below: without
+                    // both, a tile's intrinsic image size becomes its minimum, and
+                    // the flex line grows past the container's 4:3 — cards holding
+                    // portrait photos came out taller than cards holding landscape.
+                    className="group relative block min-w-0 flex-1 overflow-hidden bg-canvas"
+                  >
+                    <CloudinaryImage
+                      asset={item.photo}
+                      alt={item.alt}
+                      sizes={tileSizes(columns, tilesInRow)}
+                      priority={priority && index === 0}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                    />
+                  </a>
                 )
-                  return
-                event.preventDefault()
-                onOpen(index)
-              }}
-              aria-label={`${strings.openLabelPrefix} ${item.alt}`}
-              // min-h-0 with the absolutely-positioned image below: without
-              // both, a tile's intrinsic image height counts as its minimum,
-              // the 1fr rows grow past the container's 4:3, and cards holding
-              // portrait photos come out taller than cards holding landscape.
-              className="group relative block min-h-0 min-w-0 overflow-hidden bg-canvas"
-              style={{
-                gridColumn: `span ${tile.colSpan}`,
-                gridRow: `span ${tile.rowSpan}`,
-              }}
-            >
-              <CloudinaryImage
-                asset={item.photo}
-                alt={item.alt}
-                sizes={tileSizes(columns, tile.colSpan)}
-                priority={priority && index === 0}
-                className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-              />
-
-              {/*
-               * The rest of the album, on the last tile. It is a count, not a
-               * button — the tile it sits on already opens the lightbox at that
-               * photo, and the arrow keys walk to the ones behind the badge.
-               */}
-              {last && layout.overflow > 0 ? (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg font-semibold text-white">
-                  +{layout.overflow}
-                  <span className="sr-only"> {strings.morePhotos}</span>
-                </span>
-              ) : null}
-            </a>
+              })}
+            </div>
           )
         })}
       </div>
@@ -319,14 +310,13 @@ function PostCard({
  * A `sizes` estimate for one collage tile.
  *
  * Three factors multiply: the container is capped at 1024px, the row holds
- * `columns` cards, and the tile takes `colSpan` of the card's six columns. Only
- * an estimate — `sizes` picks which file to download, and being a little
- * generous costs bandwidth once while being too small costs a blurry photo
- * permanently.
+ * `columns` cards, and the tile takes one of `tilesInRow` slots across its
+ * card. Only an estimate — `sizes` picks which file to download, and being a
+ * little generous costs bandwidth once, while being too small costs a blurry
+ * photo permanently.
  */
-function tileSizes(columns: number, colSpan: number): string {
-  const share = colSpan / COLLAGE_COLUMNS
-  const narrow = Math.round(100 * share)
-  const wide = Math.round((1024 / columns) * share)
+function tileSizes(columns: number, tilesInRow: number): string {
+  const narrow = Math.round(100 / columns / tilesInRow)
+  const wide = Math.round(1024 / columns / tilesInRow)
   return `(max-width: 640px) ${narrow}vw, ${wide}px`
 }

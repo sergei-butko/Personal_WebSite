@@ -73,7 +73,6 @@ export const uk: Dictionary = {
     pause: 'Пауза',
     seek: 'Перемотати',
     listenOnTelegram: 'Послухати в Telegram',
-    morePhotos: 'ще фото в цьому дописі',
   },
   threads: {
     title: 'Threads',

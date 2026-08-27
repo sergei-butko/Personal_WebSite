@@ -3,13 +3,14 @@
  *
  *   npm run test:collage
  *
- * The property worth pinning is not which tile goes where — it is that every
- * layout fills its rectangle exactly. A layout that leaves a hole, or overflows
- * its rows, looks like a rendering bug in one card out of two hundred and is
- * invisible in a screenshot of the other one hundred and ninety-nine.
+ * The property worth pinning is not which tile goes where — it is that the
+ * layout accounts for EVERY photo and never emits an empty row. A dropped
+ * photo, or a row of zero tiles collapsing to a hairline, looks like a
+ * rendering bug in one card out of two hundred and is invisible in a screenshot
+ * of the other one hundred and ninety-nine.
  */
 
-import { COLLAGE_COLUMNS, collageFor } from '../src/lib/photos/collage'
+import { collageFor } from '../src/lib/photos/collage'
 
 let failures = 0
 
@@ -27,58 +28,50 @@ function checkThat(label: string, condition: boolean, detail = ''): void {
   console.log(`${condition ? '✓' : '✗'} ${label}${condition ? '' : ` — ${detail}`}`)
 }
 
-// A Telegram album holds at most ten, but the snapshot is hand-editable and the
+// A Telegram album holds at most ten, but the snapshot is hand-editable, so the
 // rule should hold past that rather than only up to it.
-const COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25]
+const COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 25]
 
 function main(): void {
   for (const count of COUNTS) {
-    const { rows, tiles, overflow } = collageFor(count)
-    const area = tiles.reduce((sum, tile) => sum + tile.colSpan * tile.rowSpan, 0)
+    const { rows } = collageFor(count)
+    const placed = rows.reduce((sum, n) => sum + n, 0)
 
     checkThat(
-      `${count} photos: the tiles fill the card exactly`,
-      area === COLLAGE_COLUMNS * rows,
-      `covered ${area} of ${COLLAGE_COLUMNS * rows} cells`
+      `${count} photos: every photo is placed`,
+      placed === count,
+      `laid out ${placed} of ${count}`
     )
     checkThat(
-      `${count} photos: no tile is taller than the card`,
-      tiles.every((tile) => tile.rowSpan <= rows),
-      'a tile spans more rows than the layout has'
+      `${count} photos: no empty row`,
+      rows.every((n) => n >= 1),
+      `rows were ${JSON.stringify(rows)}`
     )
     checkThat(
-      `${count} photos: no tile is wider than the card`,
-      tiles.every((tile) => tile.colSpan <= COLLAGE_COLUMNS),
-      'a tile spans more columns than the grid has'
+      `${count} photos: rows differ by at most one tile`,
+      Math.max(...rows) - Math.min(...rows) <= 1,
+      `rows were ${JSON.stringify(rows)} — an uneven split reads as a mistake`
     )
     checkThat(
-      `${count} photos: every tile has a photo and every extra is counted`,
-      tiles.length + overflow === count,
-      `${tiles.length} tiles + ${overflow} overflow != ${count}`
+      `${count} photos: at most four across`,
+      rows.every((n) => n <= 4),
+      `rows were ${JSON.stringify(rows)}`
     )
-    checkThat(`${count} photos: at most six tiles`, tiles.length <= 6, 'too many tiles')
+    checkThat(
+      `${count} photos: the fuller rows come first`,
+      rows.every((n, i) => i === 0 || n <= (rows[i - 1] ?? n)),
+      `rows were ${JSON.stringify(rows)} — the album's lead photo should not shrink`
+    )
   }
 
-  check('a single photo fills the whole area', collageFor(1), {
-    rows: 1,
-    tiles: [{ colSpan: 6, rowSpan: 1 }],
-    overflow: 0,
-  })
-  check('three photos are one large and two stacked', collageFor(3), {
-    rows: 2,
-    tiles: [
-      { colSpan: 4, rowSpan: 2 },
-      { colSpan: 2, rowSpan: 1 },
-      { colSpan: 2, rowSpan: 1 },
-    ],
-    overflow: 0,
-  })
-  check('a ten-photo album shows six and counts four', collageFor(10).overflow, 4)
-  check('an empty post renders nothing rather than throwing', collageFor(0), {
-    rows: 1,
-    tiles: [],
-    overflow: 0,
-  })
+  check('one photo fills the area', collageFor(1), { rows: [1] })
+  check('three sit in a single row', collageFor(3), { rows: [3] })
+  check('five split three over two', collageFor(5), { rows: [3, 2] })
+  check('seven split four over three', collageFor(7), { rows: [4, 3] })
+  check('nine split evenly in threes', collageFor(9), { rows: [3, 3, 3] })
+  // The case that drove the rewrite: ten photos, all ten shown, no +N badge.
+  check('ten photos are all shown', collageFor(10), { rows: [4, 3, 3] })
+  check('an empty post renders nothing rather than throwing', collageFor(0), { rows: [] })
 
   console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`)
   if (failures > 0) process.exit(1)

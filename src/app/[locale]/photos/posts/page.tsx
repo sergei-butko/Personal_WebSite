@@ -97,7 +97,6 @@ export default async function PhotosByPostPage({
               pause: dict.photos.pause,
               seek: dict.photos.seek,
               listenOnTelegram: dict.photos.listenOnTelegram,
-              morePhotos: dict.photos.morePhotos,
             }}
           />
           <SyncedNote
