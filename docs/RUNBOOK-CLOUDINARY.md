@@ -208,6 +208,72 @@ It cannot be deduplicated by URL: Telegram signs its CDN URLs and they differ
 per fetch for identical images. That is the mistake the first implementation
 made, and `npm run test:dedup` now pins the rule.
 
+### The song attached to a post
+
+The channel posts a track a few seconds after the album it goes with, and the
+by-post view shows it under the photos with a player. Two separate things have
+to work for that, and only the first is automatic.
+
+**Title and artist are free.** `t.me/s/<channel>` renders an audio message as a
+card with the track title and the performer on it, and `pairAudio` in
+`telegram-parse.ts` binds each song to the post directly before it in message
+order. That happens on every sync with no configuration, and a track with no
+file still renders — as the same card, linking out to Telegram.
+
+**The audio file needs a bot.** Telegram serves audio to nobody who is not
+logged in: there is no file URL in the markup on `/s/` or on `?embed=1`, unlike
+photos and videos. And the Bot API has no "read message N of channel C" — a bot
+only sees messages that arrive as updates, and updates expire after 24 hours.
+What does work is `forwardMessage`, whose response is the full message object
+with the `file_id` in it. So the sync forwards each track into a private chat,
+reads the id off the reply, downloads the file, uploads it to
+`telegram/audio/<messageId>`, and deletes the forwarded copy again.
+
+To turn it on:
+
+1. Message [@BotFather](https://t.me/BotFather), `/newbot`, and keep the token.
+2. Add the bot to **@just_my_photos** as an administrator. It needs no
+   permissions — membership is what allows the forward.
+3. Open a chat with your own new bot and press **Start**. A bot cannot message
+   a person who has never started it, and the forward has to land somewhere.
+4. Message [@userinfobot](https://t.me/userinfobot); it replies with your
+   numeric user id. That is `TELEGRAM_AUDIO_CHAT` — your own DM with the bot.
+   (A private channel works too, and its id looks like `-1001234567890`. The DM
+   is simply one less thing to create; the forwards are deleted either way, so
+   nothing accumulates in it.)
+5. Add two repository secrets: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_AUDIO_CHAT`.
+   Or, to run it from this machine instead, add both to `.env` alongside
+   `CLOUDINARY_URL` and run `npx tsx --env-file=.env scripts/sync-telegram.ts`.
+   Every `.env*` is gitignored, so neither ends up in the repo.
+
+Every run prints which state it is in — `bot download configured`, `off (no
+TELEGRAM_BOT_TOKEN)`, or `INCOMPLETE` when one secret is set without the other —
+followed by how many songs came back with a playable file. A track that cannot
+be fetched (a forward the channel refuses, a file over the Bot API's 20 MB
+download ceiling) is logged and skipped; it keeps its title and artist and the
+card links to Telegram instead.
+
+The **first** run with the secrets in place fetches every song in the channel's
+history, not just new ones: the existing snapshot predates this feature, so
+every photo row is missing its track. That is the one case where a sync edits a
+row it has already captured, and it is additive only — a row that already names
+a song is never touched, hand-edited or not.
+
+Prune does not touch audio. Cloudinary files sound under its `video` resource
+type, which `listAssetIds` does not enumerate, so an orphaned track stays.
+Deliberate: it is a few megabytes, and the Bot API may not be able to re-fetch
+what a prune removed.
+
+### Trying a sync without writing anything
+
+```bash
+SYNC_DRY_RUN=1 npm run sync:photos
+```
+
+Fetches, parses, pairs the songs and reports what it would do, then stops before
+every upload and the prune. Useful before a first run against a live snapshot,
+and the reason the script can be run at all without touching the content store.
+
 ### Pulling the whole channel
 
 There is no photo cap by default any more. It used to default to 400, the

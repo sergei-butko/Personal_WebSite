@@ -14,6 +14,37 @@
  */
 
 /**
+ * The song posted alongside an album.
+ *
+ * The channel's habit is to post a track right after the photos it goes with,
+ * and that adjacency is the only link between them — Telegram records no
+ * relationship, so the sync infers it positionally and stores the result here.
+ *
+ * Every field is editable, `publicId` included. A track the sync could not
+ * reach (a forward the channel refuses, a file over the Bot API's download
+ * ceiling) arrives with title and artist but no publicId, and the player
+ * degrades to a link out to Telegram — the same card, minus the sound.
+ */
+export interface PostAudio {
+  /** Telegram message id of the AUDIO post, not of the album. */
+  id: number
+  /** The song's own post on Telegram. */
+  permalink: string
+  title: string
+  /** Artist. Sometimes empty — Telegram's card omits it for untagged files. */
+  performer: string
+  /** Cloudinary public id, e.g. "telegram/audio/554". Absent = no playback. */
+  publicId?: string
+  /**
+   * Seconds, as Telegram reports it. Absent when the file was never fetched,
+   * and 0 when Telegram itself does not know — a file whose container carries
+   * no duration metadata, which is a third of this channel's tracks. Treat 0
+   * as unknown, not as a zero-length song.
+   */
+  duration?: number
+}
+
+/**
  * One photo as it appears on this site.
  *
  * Every field below is EDITABLE. The snapshot in Cloudinary is the canonical
@@ -43,6 +74,16 @@ export interface Photo {
   alt: Partial<Record<'en' | 'uk', string>>
   /** Keep this one out of the gallery without deleting it. */
   hidden?: boolean
+  /**
+   * The song posted after this photo's album, repeated on every row of it.
+   *
+   * Denormalised the same way `caption` and `timestamp` are: the snapshot is
+   * one row per image because the gallery roll and the dedup both want it
+   * that way, and lib/photos/group.ts reads the post-level fields off the
+   * first row when it regroups. A separate audio table would be a second
+   * store to keep in step by hand, in a file that is edited by hand.
+   */
+  audio?: PostAudio
   /** Cloudinary public id, e.g. "telegram/571-0". Not a URL, not a path. */
   publicId: string
   /** Intrinsic size, so the grid can reserve space before the image loads. */

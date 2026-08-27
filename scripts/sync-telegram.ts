@@ -35,7 +35,13 @@
  */
 
 import { createHash } from 'node:crypto'
-import { parseChannelPage, type ParsedPost } from './telegram-parse'
+import {
+  pairAudio,
+  parseChannelPage,
+  type PairedAudio,
+  type ParsedPost,
+} from './telegram-parse'
+import { audioFetchConfigured, audioFetchStatus, fetchAudio } from './telegram-bot'
 import { decideAsset, type StoredSize } from './photo-dedup'
 import { setOutput } from './github-output'
 import {
@@ -44,15 +50,24 @@ import {
   deleteAssets,
   fetchJson,
   listAssetIds,
+  uploadAudio,
   uploadImage,
   uploadJson,
 } from './cloudinary'
-import type { Photo, PhotoSnapshot } from '../src/lib/photos/types'
+import type { Photo, PhotoSnapshot, PostAudio } from '../src/lib/photos/types'
 
 const CHANNEL = process.env.TELEGRAM_CHANNEL ?? 'just_my_photos'
 const OUT_DATA = 'data/photos.json'
 const OUT_HASHES = 'data/photo-hashes.json'
 const FOLDER = process.env.TELEGRAM_MEDIA_FOLDER ?? 'telegram'
+const AUDIO_FOLDER = `${FOLDER}/audio`
+
+/**
+ * The Bot API refuses to serve a file over 20 MB, so anything larger cannot be
+ * downloaded at all — the ceiling is Telegram's, not a policy of this script.
+ * A track that big is a mistagged album rip rather than a song.
+ */
+const MAX_AUDIO_BYTES = Number(process.env.SYNC_MAX_AUDIO_BYTES ?? 20 * 1024 * 1024)
 
 /** Re-download and re-upload everything, ignoring both caches. */
 const FORCE = process.env.SYNC_FORCE === '1'
@@ -62,6 +77,17 @@ const FORCE = process.env.SYNC_FORCE === '1'
  * reference. Opt-in, because it is the only destructive thing here.
  */
 const PRUNE = process.env.SYNC_PRUNE === '1'
+
+/**
+ * Do everything except write: fetch, parse, pair, decide, report — then stop
+ * short of every upload and the prune.
+ *
+ * Here because this repo's rule is that a script is run before it ships, and
+ * the only run this script otherwise has is one against the live content
+ * store. "It typechecks" is what let sync-threads.ts fail on every scheduled
+ * run for weeks. A dry run exercises the same code path and touches nothing.
+ */
+const DRY_RUN = process.env.SYNC_DRY_RUN === '1'
 
 /**
  * No photo cap by default.
@@ -87,6 +113,11 @@ function fail(message: string): never {
 
 function publicIdFor(postId: number, index: number): string {
   return `${FOLDER}/${postId}-${index}`
+}
+
+/** Keyed on the AUDIO post's message id, so a re-run replaces in place. */
+function audioPublicIdFor(audioPostId: number): string {
+  return `${AUDIO_FOLDER}/${audioPostId}`
 }
 
 /**
@@ -211,6 +242,13 @@ async function rehost(
     }
   }
 
+  if (DRY_RUN) {
+    // The download and the hash above are real work worth exercising; only the
+    // upload is skipped. Dimensions come back from Cloudinary, so a dry run has
+    // none — and cannot, since a dry run never writes a snapshot to put them in.
+    return { publicId, width: 0, height: 0, deduped: false }
+  }
+
   try {
     const uploaded = await uploadImage(bytes, publicId)
     hashes.set(hash, uploaded.publicId)
@@ -222,8 +260,72 @@ async function rehost(
   }
 }
 
+/**
+ * Re-hosts one song and returns what the snapshot should record about it.
+ *
+ * Never returns null. Title and artist come from the channel page and are
+ * always available, so a post that had a song always says so — the bytes are
+ * what may be missing, and their absence turns the player into a link out to
+ * Telegram rather than removing the track. That distinction is the whole
+ * reason `publicId` is optional on PostAudio.
+ *
+ * Telegram's own tags win over the HTML card when both are present: the card
+ * is a rendering, the tags are the file.
+ */
+async function rehostAudio(
+  channel: string,
+  track: PairedAudio,
+  stored: Map<number, PostAudio>
+): Promise<PostAudio> {
+  const card: PostAudio = {
+    id: track.id,
+    permalink: track.permalink,
+    title: track.title,
+    performer: track.performer,
+  }
+
+  // Already fetched by an earlier run. Re-forwarding it would cost a download
+  // and a Cloudinary write to arrive at the same asset under the same id.
+  const known = stored.get(track.id)
+  if (known?.publicId) return known
+
+  if (!audioFetchConfigured() || DRY_RUN) return card
+
+  const fetched = await fetchAudio(channel, track.id, MAX_AUDIO_BYTES)
+  if (!fetched) return card
+
+  const publicId = audioPublicIdFor(track.id)
+  try {
+    return {
+      ...card,
+      title: fetched.title || card.title,
+      performer: fetched.performer || card.performer,
+      publicId: await uploadAudio(fetched.bytes, publicId),
+      duration: fetched.duration,
+    }
+  } catch (error) {
+    console.warn(`  ! ${publicId}: upload failed — ${(error as Error).message}`)
+    return card
+  }
+}
+
 /** Known public id → size, from the snapshot plus whatever this run uploads. */
 const uploadedDimensions = new Map<string, StoredSize>()
+
+/**
+ * Songs already re-hosted, keyed by the audio post's message id.
+ *
+ * Read off the photo rows because that is where the snapshot keeps them —
+ * denormalised onto every image of the album, so the first row carrying a
+ * given track id is as good as any other.
+ */
+function storedAudio(photos: readonly Photo[]): Map<number, PostAudio> {
+  const map = new Map<number, PostAudio>()
+  for (const photo of photos) {
+    if (photo.audio && !map.has(photo.audio.id)) map.set(photo.audio.id, photo.audio)
+  }
+  return map
+}
 
 /** The committed content-hash map, or an empty one on first run. */
 async function loadHashes(): Promise<Map<string, string>> {
@@ -300,7 +402,62 @@ async function main(): Promise<void> {
   const posts = fetched.filter((post) => !cursor || post.timestamp > cursor)
   console.log(`  ${posts.length} new of ${fetched.length} posts fetched`)
 
-  if (posts.length === 0) {
+  /*
+   * Songs, matched to albums over the WHOLE fetched history rather than the
+   * new slice. Two reasons, and the second is the load-bearing one:
+   *
+   * - A song and its album are separate messages seconds apart, so a sync that
+   *   happened to run between them would see the song with its album already
+   *   past the cursor.
+   * - Every photo in the snapshot predates this feature and carries no track
+   *   at all. Scoping to new posts would mean no post ever gets a song until
+   *   a new one is published.
+   *
+   * So a stored row may GAIN an `audio` field it never had. That is the one
+   * edit a sync makes to a row it has already captured, it is additive only —
+   * a row that already names a track is left exactly as it is, hand-edited or
+   * not — and it is the only way the existing archive gets its music.
+   */
+  const tracks = pairAudio(fetched)
+  const knownAudio = storedAudio(stored)
+
+  const albumsNeedingAudio = new Set<number>()
+  for (const post of posts) if (tracks.has(post.id)) albumsNeedingAudio.add(post.id)
+  for (const photo of stored) {
+    if (!photo.audio && tracks.has(photo.id)) albumsNeedingAudio.add(photo.id)
+  }
+
+  const audioByAlbum = new Map<number, PostAudio>()
+  if (albumsNeedingAudio.size > 0) {
+    console.log(
+      `→ ${albumsNeedingAudio.size} album(s) with a song; ` +
+        `bot download ${audioFetchStatus()}`
+    )
+    for (const albumId of albumsNeedingAudio) {
+      const track = tracks.get(albumId)
+      if (!track) continue
+      audioByAlbum.set(albumId, await rehostAudio(CHANNEL, track, knownAudio))
+    }
+    const withFile = [...audioByAlbum.values()].filter((a) => a.publicId).length
+    console.log(
+      `  ${withFile} of ${audioByAlbum.size} song(s) have a playable file; ` +
+        `the rest render as a link to Telegram`
+    )
+  }
+
+  // Additive only: a row that already names a track keeps it.
+  let backfilled = 0
+  const carried = stored.map((photo) => {
+    const track = photo.audio ? undefined : audioByAlbum.get(photo.id)
+    if (!track) return photo
+    backfilled++
+    return { ...photo, audio: track }
+  })
+  if (backfilled > 0) {
+    console.log(`  ${backfilled} stored photo row(s) gained the song of their post`)
+  }
+
+  if (posts.length === 0 && backfilled === 0) {
     console.log(`✓ ${stored.length} photos, nothing new`)
     await setOutput('changed', 'false')
     return
@@ -335,6 +492,8 @@ async function main(): Promise<void> {
       else if (media.deduped) deduped++
       else uploaded++
 
+      const track = audioByAlbum.get(post.id)
+
       photos.push({
         id: post.id,
         permalink: post.permalink,
@@ -343,6 +502,8 @@ async function main(): Promise<void> {
         // Empty until written. Editable in the snapshot, which is why
         // content/photo-meta.ts no longer exists.
         alt: {},
+        // Repeated on every row of the album — see PostAudio on why.
+        ...(track ? { audio: track } : {}),
         publicId: media.publicId,
         width: media.width,
         height: media.height,
@@ -364,15 +525,16 @@ async function main(): Promise<void> {
       `${cached} unchanged`
   )
 
-  if (photos.length === 0) {
+  if (photos.length === 0 && backfilled === 0) {
     console.log(`✓ ${stored.length} photos, nothing new`)
     await setOutput('changed', 'false')
     return
   }
 
   // APPEND. Stored photos pass through untouched, captions and alt text
-  // included.
-  const merged = [...stored, ...photos]
+  // included — `carried` differs from `stored` only where a row gained a song
+  // it did not have, which is the one additive exception above.
+  const merged = [...carried, ...photos]
   merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id)
 
   // Built from the MERGED set, never from this run's photos alone. Prune
@@ -381,10 +543,25 @@ async function main(): Promise<void> {
   const distinct = new Set(merged.map((photo) => photo.publicId))
   console.log(`  ${merged.length} photos → ${distinct.size} distinct assets`)
 
+  if (DRY_RUN) {
+    const songs = merged.filter((photo) => photo.audio).length
+    console.log(
+      `✓ dry run: ${photos.length} new photo(s), ${backfilled} row(s) given a song, ` +
+        `${merged.length} total, ${songs} carrying a track. Nothing written.`
+    )
+    await setOutput('changed', 'false')
+    return
+  }
+
   await uploadJson(OUT_HASHES, hashesToObject(hashes))
 
   if (PRUNE) {
-    console.log(`→ pruning ${FOLDER}/`)
+    // Images only. Audio is stored as a Cloudinary `video` resource, which
+    // listAssetIds does not enumerate, so a prune can neither see nor delete a
+    // track. Left that way deliberately: an untested destructive path over
+    // files the Bot API may no longer be able to re-fetch is a bad trade for
+    // the few megabytes an orphaned song costs.
+    console.log(`→ pruning ${FOLDER}/ (images only)`)
     const assets = await listAssetIds(`${FOLDER}/`)
     const orphans = assets.filter((id) => !distinct.has(id))
     if (orphans.length === 0) {
@@ -407,7 +584,8 @@ async function main(): Promise<void> {
   await uploadJson(OUT_DATA, next)
   await setOutput('changed', 'true')
   console.log(
-    `✓ ${photos.length} new photo(s) appended; ${merged.length} total in ${OUT_DATA}`
+    `✓ ${photos.length} new photo(s) appended, ${backfilled} row(s) given a song; ` +
+      `${merged.length} total in ${OUT_DATA}`
   )
 }
 

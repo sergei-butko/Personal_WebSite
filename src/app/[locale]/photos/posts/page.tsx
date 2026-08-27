@@ -5,14 +5,18 @@ import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
 import { isUnsynced } from '@/lib/photos/types'
 import { resolveAlt } from '@/lib/photos/alt'
 import { groupByPost } from '@/lib/photos/group'
+import { formatPostDateTime } from '@/lib/photos/format'
+import { audioUrl } from '@/lib/media'
 import { PostGallery, type PostGroup } from '@/components/photos/post-gallery'
 import { PhotoViewSwitch } from '@/components/photos/view-switch'
+import { ChannelButton } from '@/components/photos/channel-button'
 import { PhotosEmpty, SyncedNote } from '@/components/photos/notices'
 import { Container, PageHeading } from '@/components/layout/container'
 
 /**
  * The same photos as ../, grouped back into the Telegram posts they were
- * published in, with each post's own text above its images.
+ * published in — one card per post, with its text, its time, its song, and a
+ * way through to the original.
  */
 export default async function PhotosByPostPage({
   params,
@@ -31,7 +35,13 @@ export default async function PhotosByPostPage({
       id: post.id,
       permalink: post.permalink,
       timestamp: post.timestamp,
+      // Both the formatting and the audio URL are resolved here rather than in
+      // the card: PostGallery is a Client Component, and neither the locale
+      // date tables nor the Cloudinary cloud name should cross into the bundle.
+      dateTime: formatPostDateTime(post.timestamp, locale),
       caption: post.caption,
+      ...(post.audio ? { audio: post.audio } : {}),
+      ...(post.audio?.publicId ? { audioSrc: audioUrl(post.audio.publicId) } : {}),
       items: post.photos.map((photo) => ({
         photo,
         alt: resolveAlt(photo, locale, dict.photos.genericAlt),
@@ -41,7 +51,10 @@ export default async function PhotosByPostPage({
 
   return (
     <Container>
-      <PageHeading title={dict.photos.title} intro={dict.photos.byPostIntro} />
+      <PageHeading
+        title={dict.photos.title}
+        action={<ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />}
+      />
 
       <PhotoViewSwitch
         locale={locale}
@@ -60,13 +73,24 @@ export default async function PhotosByPostPage({
         <>
           <PostGallery
             posts={groups}
-            closeLabel={dict.photos.close}
-            openLabelPrefix={dict.photos.open}
-            viewOnTelegram={dict.photos.viewOnTelegram}
-            previousLabel={dict.photos.previous}
-            nextLabel={dict.photos.next}
-            countOne={dict.photos.countOne}
-            countMany={dict.photos.countMany}
+            strings={{
+              closeLabel: dict.photos.close,
+              openLabelPrefix: dict.photos.open,
+              viewOnTelegram: dict.photos.viewOnTelegram,
+              previousLabel: dict.photos.previous,
+              nextLabel: dict.photos.next,
+              countOne: dict.photos.countOne,
+              countMany: dict.photos.countMany,
+              perRowLabel: dict.photos.perRowPosts,
+              fewerPerRow: dict.photos.fewerPerRow,
+              morePerRow: dict.photos.morePerRow,
+              pinchHint: dict.photos.pinchHint,
+              play: dict.photos.play,
+              pause: dict.photos.pause,
+              seek: dict.photos.seek,
+              listenOnTelegram: dict.photos.listenOnTelegram,
+              morePhotos: dict.photos.morePhotos,
+            }}
           />
           <SyncedNote
             syncedAt={syncedAt}

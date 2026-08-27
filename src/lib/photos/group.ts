@@ -1,4 +1,4 @@
-import type { Photo } from './types'
+import type { Photo, PostAudio } from './types'
 
 /**
  * Grouping the flat photo snapshot back into Telegram posts.
@@ -9,7 +9,8 @@ import type { Photo } from './types'
  * id), `permalink`, `timestamp` and `caption`, and differs only in `publicId`
  * and its dimensions. Checked against the live snapshot — across 235 posts,
  * no post's rows disagreed on caption or timestamp — so reading those four
- * fields off the first row of a group is sound rather than a guess.
+ * fields off the first row of a group is sound rather than a guess. `audio` is
+ * denormalised the same way and read the same way.
  *
  * Pure, and importing nothing but a type, so the "by post" page can be
  * rendered from a fixture and the rule can be reasoned about without a
@@ -24,6 +25,8 @@ export interface PhotoPost {
   timestamp: string
   /** The post's text as written on Telegram. Often empty. */
   caption: string
+  /** The song posted after this album, when there was one. */
+  audio?: PostAudio
   /** In the order they appear in the post, never the order they synced in. */
   photos: Photo[]
 }
@@ -70,6 +73,7 @@ export function groupByPost(photos: readonly Photo[]): PhotoPost[] {
       permalink: photo.permalink,
       timestamp: photo.timestamp,
       caption: photo.caption,
+      ...(photo.audio ? { audio: photo.audio } : {}),
       photos: [photo],
     })
   }

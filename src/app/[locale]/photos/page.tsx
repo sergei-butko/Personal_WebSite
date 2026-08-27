@@ -6,6 +6,7 @@ import { isUnsynced } from '@/lib/photos/types'
 import { resolveAlt, resolveCaption } from '@/lib/photos/alt'
 import { PhotoGallery, type GalleryItem } from '@/components/photos/gallery'
 import { PhotoViewSwitch } from '@/components/photos/view-switch'
+import { ChannelButton } from '@/components/photos/channel-button'
 import { PhotosEmpty, SyncedNote } from '@/components/photos/notices'
 import { Container, PageHeading } from '@/components/layout/container'
 
@@ -32,7 +33,12 @@ export default async function PhotosPage({
 
   return (
     <Container>
-      <PageHeading title={dict.photos.title} intro={dict.photos.intro} />
+      {/* No standfirst: the grid below says "these are photos from Telegram"
+          more directly than a sentence about it can, and the button says where. */}
+      <PageHeading
+        title={dict.photos.title}
+        action={<ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />}
+      />
 
       <PhotoViewSwitch
         locale={locale}
@@ -51,11 +57,17 @@ export default async function PhotosPage({
         <>
           <PhotoGallery
             items={items}
-            closeLabel={dict.photos.close}
-            openLabelPrefix={dict.photos.open}
-            viewOnTelegram={dict.photos.viewOnTelegram}
-            previousLabel={dict.photos.previous}
-            nextLabel={dict.photos.next}
+            strings={{
+              closeLabel: dict.photos.close,
+              openLabelPrefix: dict.photos.open,
+              viewOnTelegram: dict.photos.viewOnTelegram,
+              previousLabel: dict.photos.previous,
+              nextLabel: dict.photos.next,
+              perRowLabel: dict.photos.perRowPhotos,
+              fewerPerRow: dict.photos.fewerPerRow,
+              morePerRow: dict.photos.morePerRow,
+              pinchHint: dict.photos.pinchHint,
+            }}
           />
           <SyncedNote
             syncedAt={syncedAt}

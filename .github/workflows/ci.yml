@@ -33,6 +33,13 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      # The album-into-card layout rule behind the by-post photo view. Pure
+      # arithmetic and no network, and it guards SITE code rather than the
+      # sync's — a layout that leaves a hole shows up in one card out of two
+      # hundred, which a build cannot notice and an eye rarely does.
+      - name: Verify the album-into-card layout
+        run: npm run test:collage
+
       - name: Build
         run: npm run build
         env:

@@ -26,6 +26,22 @@ export const photoSnapshotSchema: z.ZodType<PhotoSnapshot> = z.object({
       // Editable, and absent on everything the sync has not been told about.
       alt: z.object({ en: z.string().optional(), uk: z.string().optional() }).default({}),
       hidden: z.boolean().optional(),
+      // Optional throughout: a post may have no song, and a song may have no
+      // playable file. Both are ordinary states, not a broken snapshot.
+      audio: z
+        .object({
+          id: z.number().int(),
+          permalink: z.string().min(1),
+          title: z.string(),
+          performer: z.string(),
+          publicId: z.string().min(1).optional(),
+          // Non-negative, not positive: Telegram reports duration 0 for a
+          // file whose container carries no duration metadata — 6 of the 18
+          // songs in this channel. Rejecting 0 failed the whole build over
+          // data that is perfectly honest about not knowing.
+          duration: z.number().nonnegative().optional(),
+        })
+        .optional(),
       publicId: z.string().min(1),
       width: z.number().positive(),
       height: z.number().positive(),

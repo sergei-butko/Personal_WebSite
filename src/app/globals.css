@@ -252,6 +252,66 @@
   background-color: var(--shiki-dark-bg) !important;
 }
 
+/*
+ * The scrub bar on a photo post's song.
+ *
+ * A styled `input[type=range]`, so keyboard, drag and screen-reader support
+ * all come from the platform. Only the appearance is replaced, and it has to
+ * be replaced twice — WebKit and Firefox expose the track and the thumb under
+ * different pseudo-elements, and neither accepts the other's selector in the
+ * same rule. A shared selector list would drop BOTH rules on both engines.
+ *
+ * The played portion is painted with a gradient driven by --played rather than
+ * a second element behind the input, which is the usual trick and does not
+ * survive the thumb being dragged past it.
+ */
+.audio-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.audio-scrub::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--played, 0%),
+    var(--color-edge) var(--played, 0%)
+  );
+}
+
+.audio-scrub::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--played, 0%),
+    var(--color-edge) var(--played, 0%)
+  );
+}
+
+.audio-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  /* The track is 3px and the thumb 11px, so it needs lifting by the difference. */
+  margin-top: -4px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+.audio-scrub::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

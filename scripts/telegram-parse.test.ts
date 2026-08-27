@@ -9,7 +9,7 @@
 
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { parseChannelPage } from './telegram-parse'
+import { pairAudio, parseChannelPage } from './telegram-parse'
 
 const FIXTURE = path.join(import.meta.dirname, '__fixtures__', 'channel-page.html')
 
@@ -75,6 +75,50 @@ async function main(): Promise<void> {
     'captions are absent in this fixture',
     page.posts.every((p) => p.caption === ''),
     'a caption appeared — good, but the alt-text fallback assumption needs revisiting'
+  )
+
+  // Audio. Three of the six posts are songs, each posted seconds after the
+  // album it belongs to — the pattern the pairing rule reads.
+  check(
+    'audio posts are recognised',
+    page.posts.filter((p) => p.audio).map((p) => p.id),
+    [554, 570, 579]
+  )
+  check(
+    'title and performer are read off the document card',
+    page.posts.find((p) => p.id === 554)?.audio,
+    { title: 'The Future Is Now', performer: 'The Offspring' }
+  )
+  checkThat(
+    'a post with photos is never read as audio',
+    page.posts.every((p) => p.images.length === 0 || p.audio === undefined),
+    'a photo album carried an audio card'
+  )
+
+  const paired = pairAudio(page.posts)
+  check(
+    'each song binds to the album directly before it',
+    [...paired.entries()].map(([album, track]) => [album, track.id]),
+    [
+      [547, 554],
+      [563, 570],
+      [571, 579],
+    ]
+  )
+  check('the paired track keeps its own message id and permalink', paired.get(547), {
+    title: 'The Future Is Now',
+    performer: 'The Offspring',
+    id: 554,
+    permalink: 'https://t.me/just_my_photos/554',
+  })
+  // The rule is positional, so the two ways it can be wrong are worth pinning:
+  // a song with no album before it, and a second song after the same album.
+  const orphan = { ...page.posts[1]!, id: 1, permalink: 'https://t.me/x/1' }
+  check('a song with nothing before it binds to nothing', pairAudio([orphan]).size, 0)
+  check(
+    'a second song after the same album does not displace the first',
+    pairAudio([...page.posts, { ...page.posts[1]!, id: 555 }]).get(547)?.id,
+    554
   )
 
   console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`)

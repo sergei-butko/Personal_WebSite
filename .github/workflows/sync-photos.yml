@@ -81,6 +81,15 @@ jobs:
           # never re-downloads the whole channel.
           SYNC_FORCE: ${{ inputs.force && '1' || '0' }}
           SYNC_PRUNE: ${{ inputs.prune && '1' || '0' }}
+          # Optional, and the sync says which state it is in on every run.
+          # Without them each album's song is still recorded from the channel
+          # page — title and artist — and the site renders a track card that
+          # links to Telegram. With them the file itself is re-hosted and the
+          # card becomes a player. Telegram serves audio to nobody who is not
+          # logged in, so there is no scrape that replaces these.
+          # See docs/RUNBOOK-CLOUDINARY.md for how to create them.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_AUDIO_CHAT: ${{ secrets.TELEGRAM_AUDIO_CHAT }}
 
       - name: Deploy the site
         # No commit is pushed, so nothing triggers deploy.yml on its own and

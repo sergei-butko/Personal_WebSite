@@ -140,6 +140,29 @@ preview page — no API key, no bot. Walks history backwards via `?before=`,
 re-hosts each photo in Cloudinary, writes `data/photos.json`. Parsing is
 isolated in `telegram-parse.ts` and pinned by `npm run test:telegram` against a
 saved fixture, so a Telegram markup change fails locally and loudly.
+`SYNC_DRY_RUN=1` does everything except write, which is how the script gets run
+before it ships without touching the live snapshot.
+
+**The song under each post is half-scraped and half-bot, and that split is
+forced.** The channel posts a track seconds after the album it belongs to, and
+`pairAudio` binds each song to the post directly before it in message order —
+sorted by id, not document order, so a pair straddling a `?before=` page still
+matches. Title and artist come free off the preview page. **The file does not
+exist there:** Telegram serves audio to nobody who is not logged in, on `/s/`
+and on `?embed=1` alike. Don't go looking again — it was checked.
+
+So `telegram-bot.ts` fetches the bytes with `TELEGRAM_BOT_TOKEN` +
+`TELEGRAM_AUDIO_CHAT`, both optional. The Bot API has no "read message N of
+channel C" either — updates expire after 24 hours — so it uses `forwardMessage`,
+whose reply carries the `file_id`, then `getFile`, then deletes the forwarded
+copy. Without the secrets the sync still records every track and the site
+renders a card that links to Telegram; the player is what is missing, not the
+song. Setup is in `docs/RUNBOOK-CLOUDINARY.md`.
+
+The first sync with a token in place back-fills the whole archive, because every
+existing row predates the feature. That is the **one** case where a sync edits a
+row it has already captured; it only ever adds an absent `audio` field and never
+overwrites one.
 
 **Threads** (`sync-threads.ts`): the official Graph API with `threads_basic`.
 **Threads cannot be scraped** — `robots.txt` disallows it and it violates Meta's
@@ -162,6 +185,16 @@ expires loudly and is refreshed by hand.
   a re-upload replaces in place.
 - **Deduplication is by sha256 of the bytes,** never by URL, mapped in
   `data/photo-hashes.json`. The rule is pure and pinned by `npm run test:dedup`.
+- **A card's collage must fill its rectangle.** The by-post view sizes every
+  card the same, so an album of one and an album of ten get the same media area
+  — `lib/photos/collage.ts` decides the tiling and never emits more than six
+  tiles, because seven and eight cannot tile a rectangle without a hole. A hole
+  appears in one card out of two hundred and is invisible in a screenshot of the
+  rest, so the rule is pinned by `npm run test:collage` rather than by looking.
+  The tiles' images are `absolute inset-0`: as ordinary flow content their
+  intrinsic height becomes the tile's minimum, the `1fr` rows grow past the
+  container's aspect ratio, and cards holding portrait photos come out taller
+  than cards holding landscape ones.
 - **Cloudinary raw delivery is eventually consistent.** An overwrite took ~4s to
   become visible on this account, and a `?v=<now>` cache-buster does not defeat
   it — a deleted asset was still served from cache. So `scripts/cloudinary.ts`
@@ -283,7 +316,7 @@ them into feature work.
 
 ```
 npm run typecheck && npm run lint && npm run format:check && npm run build
-npm run test:telegram && npm run test:dedup
+npm run test:telegram && npm run test:dedup && npm run test:collage
 ```
 
 The build must run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
@@ -299,3 +332,13 @@ workers reject `--env-file` in `NODE_OPTIONS`).
 
 Scripts must be **executed**, not just typechecked. `sync-threads.ts` passed
 typecheck and build for weeks while failing at runtime on every scheduled run.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -124,6 +124,47 @@ export async function uploadImage(
 }
 
 /**
+ * Uploads an audio file under a caller-chosen public id.
+ *
+ * resource_type is 'video', which is not a typo — Cloudinary has no separate
+ * audio type and files every sound under video. Delivery is the same shape
+ * (/video/upload/), which is why lib/media.ts builds the URL rather than the
+ * caller guessing at it.
+ *
+ * Nothing is returned but the id: unlike an image there is no width or height
+ * worth carrying, and duration comes from Telegram, which knows the real value
+ * rather than one inferred from a container.
+ */
+export async function uploadAudio(bytes: Buffer, publicId: string): Promise<string> {
+  await configureCloudinary()
+  const client = api
+  if (!client) throw new Error('Cloudinary was not configured')
+
+  const result = await new Promise<Record<string, unknown>>((resolve, reject) => {
+    const stream = client.uploader.upload_stream(
+      {
+        public_id: publicId,
+        overwrite: true,
+        invalidate: true,
+        resource_type: 'video',
+      },
+      (error, uploaded) => {
+        if (error) return reject(new Error(error.message))
+        if (!uploaded) return reject(new Error(`${publicId}: upload returned nothing`))
+        resolve(uploaded as unknown as Record<string, unknown>)
+      }
+    )
+    stream.end(bytes)
+  })
+
+  const id = String(result.public_id ?? '')
+  if (!id) {
+    throw new Error(`${publicId}: upload succeeded but the response lacked public_id`)
+  }
+  return id
+}
+
+/**
  * Every asset id under a folder prefix. Paginated; Cloudinary caps a page at
  * 500. Used only by the prune step, which needs to know what is there in
  * order to spot what the snapshot no longer references.

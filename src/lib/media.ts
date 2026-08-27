@@ -46,6 +46,21 @@ export function mediaUrl(publicId: string, width: number): string {
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transform}/${encodeURI(publicId)}`
 }
 
+/**
+ * A delivery URL for an audio file.
+ *
+ * /video/upload/, not /audio/: Cloudinary has no audio resource type and
+ * stores every sound as a video. The .mp3 extension asks the CDN to transcode
+ * on delivery, so whatever Telegram was holding — m4a, ogg, flac — arrives as
+ * something every browser can play, and the player needs no per-file format
+ * handling. The first request for a track pays for the transcode; the CDN
+ * serves the rest.
+ */
+export function audioUrl(publicId: string): string {
+  assertConfigured(`the audio file "${publicId}"`)
+  return `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/${encodeURI(publicId)}.mp3`
+}
+
 export function mediaSrcSet(publicId: string, intrinsicWidth: number): string {
   return MEDIA_WIDTHS.filter((w) => w <= intrinsicWidth)
     .map((w) => `${mediaUrl(publicId, w)} ${w}w`)

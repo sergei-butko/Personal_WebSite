@@ -15,6 +15,7 @@
     "test:telegram": "tsx scripts/telegram-parse.test.ts",
     "sync:photos": "tsx scripts/sync-telegram.ts",
     "test:dedup": "tsx scripts/photo-dedup.test.ts",
+    "test:collage": "tsx scripts/collage.test.ts",
     "content:pull": "tsx scripts/content.ts pull",
     "content:push": "tsx scripts/content.ts push"
   },
