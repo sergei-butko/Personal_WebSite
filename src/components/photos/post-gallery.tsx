@@ -41,6 +41,16 @@ export interface PostGalleryStrings {
   listenOnTelegram: string
 }
 
+/**
+ * Row tracks every card spans: caption, collage, player, meta.
+ *
+ * The number is load-bearing in three places at once — the <li>, the <article>
+ * and the count of children the card renders — and they must agree or the
+ * cards shear apart. Adding a band to the card means changing this and adding
+ * a placeholder branch for it.
+ */
+const CARD_TRACKS = 4
+
 /** Which photo is open, addressed by post and by position inside it. */
 interface Cursor {
   post: number
@@ -112,20 +122,25 @@ export function PostGallery({
         />
       </div>
 
+      {/*
+       * Four implicit row tracks per card row, and every card spans all four —
+       * see CARD_TRACKS. The <li> and the <article> inside it are both
+       * `subgrid`, which is what hands the card's own children up to the
+       * shared tracks instead of the card measuring itself in isolation.
+       */}
       <ol
         ref={attachGrid}
-        // Rows size to their own content and cards stretch within a row, which
-        // is the uniformity that reads: every card edge on a line lines up.
-        // `auto-rows-fr` would extend that across the whole grid — and one post
-        // with four lines of caption then makes all 235 cards that tall, most of
-        // them mostly empty. Tried it; the page was a column of white boxes.
         className="grid gap-4 [touch-action:pan-y]"
         style={{
           gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
         }}
       >
         {posts.map((group, postIndex) => (
-          <li key={group.id} className="min-w-0">
+          <li
+            key={group.id}
+            className="grid min-w-0 grid-rows-subgrid"
+            style={{ gridRow: `span ${CARD_TRACKS}` }}
+          >
             <PostCard
               group={group}
               columns={columns}
@@ -176,25 +191,32 @@ function PostCard({
   const count = group.items.length
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface">
+    <article
+      className="grid grid-rows-subgrid overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface"
+      style={{ gridRow: `span ${CARD_TRACKS}` }}
+    >
       {/*
        * The post's text sits ABOVE its photos, as it does on Telegram — the
        * caption is what the album is a response to, and reading it after the
        * pictures inverts the order it was written in.
        *
-       * The slot is ALWAYS rendered, empty or not, and always the same height.
-       * Rendering it only when there is a caption made every card in a row
-       * start its photos at a different height, which read as a misalignment
-       * rather than as a difference in content — and most posts in this channel
-       * have no caption, so the ragged edge was the common case.
+       * A captionless card renders an EMPTY DIV here, not nothing. The div has
+       * no padding, so it measures zero and a row where nobody wrote anything
+       * has no caption band at all; but it still occupies the track, so when
+       * one card in the row does have text, every other card in that row gets
+       * exactly that much space and the photos start on one line.
        *
-       * Three lines: `min-h` in `em` rather than a pixel height, so it tracks
-       * the font size, and `line-clamp-3` caps the other end. Both numbers have
-       * to agree — a clamp of 3 over a reserve of 2 would still jump.
+       * Omitting the element entirely instead would shift each captionless
+       * card's collage up into the caption track — subgrid places children in
+       * order, and a missing child does not leave a hole, it shifts the rest.
        */}
-      <p className="line-clamp-3 min-h-[4.875em] px-3 pt-3 pb-2.5 text-[13.5px] leading-relaxed whitespace-pre-line">
-        {group.caption}
-      </p>
+      {group.caption ? (
+        <p className="line-clamp-3 px-3 pt-3 pb-2.5 text-[13.5px] leading-relaxed whitespace-pre-line">
+          {group.caption}
+        </p>
+      ) : (
+        <div />
+      )}
 
       {/*
        * Fixed ratio, so the collage occupies the same area on every card
@@ -253,54 +275,60 @@ function PostCard({
         })}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2.5 p-3">
-        {/* mt-auto pins the footer down, so the meta lines agree across a row
-            of cards even when the captions above the photos do not. */}
-        <div className="mt-auto flex flex-col gap-2.5">
-          {group.audio ? (
-            <AudioPlayer
-              audio={group.audio}
-              src={group.audioSrc}
-              playLabel={strings.play}
-              pauseLabel={strings.pause}
-              seekLabel={strings.seek}
-              listenLabel={strings.listenOnTelegram}
-            />
-          ) : null}
-
-          {/*
-           * The whole meta line IS the link out to Telegram. It replaced a
-           * bordered pill that said "View on Telegram" — at three or four cards
-           * across, that button was the heaviest thing on a card whose subject
-           * is a photograph, and it repeated on every one of 235 of them.
-           *
-           * The visible text is the date and the count, so the destination is
-           * carried by an sr-only span rather than left to be inferred: a link
-           * named "21 Aug 2026, 13:45 · 5 photos" tells a screen-reader user
-           * nothing about where it goes. The arrow is decorative and fades in
-           * on hover and on keyboard focus — focus-within, so the affordance is
-           * not mouse-only.
-           */}
-          <a
-            href={group.permalink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group/meta inline-flex flex-wrap items-center gap-x-1.5 font-mono text-[10.5px] text-muted underline-offset-2 transition hover:text-ink hover:underline focus-visible:text-ink focus-visible:underline"
-          >
-            <time dateTime={group.timestamp}>{group.dateTime}</time>
-            <span aria-hidden="true">·</span>
-            <span>
-              {count} {count === 1 ? strings.countOne : strings.countMany}
-            </span>
-            <span
-              aria-hidden="true"
-              className="opacity-0 transition group-hover/meta:opacity-100 group-focus-visible/meta:opacity-100"
-            >
-              ↗
-            </span>
-            <span className="sr-only">{strings.viewOnTelegram}</span>
-          </a>
+      {/*
+       * Same trick as the caption, for the same reason: a post with no song
+       * contributes an empty div, so a row of songless posts has no player band
+       * — and a row with one song reserves the player's height on every card in
+       * it, keeping the meta lines beneath on one line.
+       */}
+      {group.audio ? (
+        <div className="px-3 pt-2.5">
+          <AudioPlayer
+            audio={group.audio}
+            src={group.audioSrc}
+            playLabel={strings.play}
+            pauseLabel={strings.pause}
+            seekLabel={strings.seek}
+            listenLabel={strings.listenOnTelegram}
+          />
         </div>
+      ) : (
+        <div />
+      )}
+
+      <div className="px-3 pt-2.5 pb-3">
+        {/*
+         * The whole meta line IS the link out to Telegram. It replaced a
+         * bordered pill that said "View on Telegram" — at three or four cards
+         * across, that button was the heaviest thing on a card whose subject
+         * is a photograph, and it repeated on every one of 235 of them.
+         *
+         * The visible text is the date and the count, so the destination is
+         * carried by an sr-only span rather than left to be inferred: a link
+         * named "21 Aug 2026, 13:45 · 5 photos" tells a screen-reader user
+         * nothing about where it goes. The arrow is decorative and fades in
+         * on hover and on keyboard focus — focus-within, so the affordance is
+         * not mouse-only.
+         */}
+        <a
+          href={group.permalink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group/meta inline-flex flex-wrap items-center gap-x-1.5 font-mono text-[10.5px] text-muted underline-offset-2 transition hover:text-ink hover:underline focus-visible:text-ink focus-visible:underline"
+        >
+          <time dateTime={group.timestamp}>{group.dateTime}</time>
+          <span aria-hidden="true">·</span>
+          <span>
+            {count} {count === 1 ? strings.countOne : strings.countMany}
+          </span>
+          <span
+            aria-hidden="true"
+            className="opacity-0 transition group-hover/meta:opacity-100 group-focus-visible/meta:opacity-100"
+          >
+            ↗
+          </span>
+          <span className="sr-only">{strings.viewOnTelegram}</span>
+        </a>
       </div>
     </article>
   )
