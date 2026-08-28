@@ -192,7 +192,19 @@ function PostCard({
 
   return (
     <article
-      className="grid grid-rows-subgrid overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface"
+      /*
+       * grid-cols-[minmax(0,1fr)] is not decoration. The card declares its ROWS
+       * as subgrid and says nothing about columns, so it gets one implicit
+       * column sized `auto` — whose floor is the widest min-content among its
+       * children. At four cards across that came to 249px inside a 234px card:
+       * every child overflowed by 15px and `overflow-hidden` clipped them. The
+       * collage cropped invisibly, so the only visible symptom was the player
+       * losing its right padding and running under the border.
+       *
+       * A 0 minimum lets the column be the card's width instead of its
+       * content's, and the flex rows inside shrink to fit as they were built to.
+       */
+      className="grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface"
       style={{ gridRow: `span ${CARD_TRACKS}` }}
     >
       {/*
