@@ -83,6 +83,8 @@ export const en = {
     perRow: 'Bottles per row',
     noImage: 'No photo in this post',
     wardrobePlaceholder: 'The wardrobe is not built yet.',
+    openPost: 'Open review:',
+    close: 'Close',
   },
   about: { title: 'About', intro: 'Who I am, and how to reach me.' },
   cv: { title: 'CV', intro: 'Experience, skills, and education.' },

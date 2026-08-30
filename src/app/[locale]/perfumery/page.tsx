@@ -44,6 +44,8 @@ export default async function PerfumeryPage({
       brand: post.fragrance?.brand ?? '',
       name: post.fragrance?.name ?? '',
       fallbackText: post.text,
+      images: post.images,
+      text: post.text,
     }
   })
 
@@ -79,6 +81,9 @@ export default async function PerfumeryPage({
             pinchHint: dict.photos.pinchHint,
             viewOnThreads: dict.threads.viewOnThreads,
             noImage: dict.threads.noImage,
+            openLabelPrefix: dict.threads.openPost,
+            close: dict.threads.close,
+            imageAlt: dict.threads.imageAlt,
           }}
         />
       )}

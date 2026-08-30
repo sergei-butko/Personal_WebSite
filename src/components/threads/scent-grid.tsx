@@ -1,10 +1,13 @@
 'use client'
 
+import { useCallback, useState } from 'react'
+import type { ThreadsImage } from '@/lib/threads/types'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
+import { PostDialog, type DialogPost } from '@/components/threads/post-dialog'
 import { DensityControl } from '@/components/photos/density-control'
 import { useDensity, type DensityRange } from '@/components/photos/use-density'
 
-/** One post, reduced to what a card shows. */
+/** One post: what the card shows, plus what the dialog needs behind it. */
 export interface ScentCard {
   id: string
   permalink: string
@@ -14,6 +17,10 @@ export interface ScentCard {
   name: string
   /** Falls back to the post text when no bottle is named. */
   fallbackText: string
+  /** Every image, for the dialog. The card shows only the first. */
+  images: ThreadsImage[]
+  /** The full review. */
+  text: string
 }
 
 export interface ScentGridStrings {
@@ -23,15 +30,27 @@ export interface ScentGridStrings {
   pinchHint: string
   viewOnThreads: string
   noImage: string
+  openLabelPrefix: string
+  close: string
+  imageAlt: string
 }
 
 /**
- * Two to four cards across. Not one: a single column of bottles is a list, and
- * the point of this view is to see the wardrobe at a glance. Not five: the
- * brand and the scent name are two lines of real text under each picture, and
- * past four they wrap to one word a line.
+ * Two to six cards across, and never narrower than a tile can be read.
+ *
+ * `minTile` is what makes six honest. The count is remembered per visitor, so
+ * without a cap someone who picks six on a desktop meets six on a phone the
+ * next day — six 55px cards. With it the stored number is a ceiling and the
+ * viewport decides the rest, which is the "less if the screen is narrow" half
+ * of an adaptive grid without giving up the control.
  */
-const RANGE: DensityRange = { min: 2, max: 4, initial: 3, initialNarrow: 2 }
+const RANGE: DensityRange = {
+  min: 2,
+  max: 6,
+  initial: 6,
+  initialNarrow: 2,
+  minTile: 150,
+}
 
 /**
  * The perfumery grid — one card per post, a bottle each.
@@ -58,6 +77,19 @@ export function ScentGrid({
   // object is a ref" from that member access and then rejects every other read
   // of the object during render. See components/photos/gallery.tsx.
   const { columns, attachGrid } = density
+  const [open, setOpen] = useState<number | null>(null)
+  const close = useCallback(() => setOpen(null), [])
+
+  const current = open === null ? null : cards[open]
+  const dialogPost: DialogPost | null = current
+    ? {
+        permalink: current.permalink,
+        brand: current.brand,
+        name: current.name,
+        text: current.text,
+        images: current.images,
+      }
+    : null
 
   return (
     <>
@@ -80,10 +112,29 @@ export function ScentGrid({
       >
         {cards.map((card, index) => (
           <li key={card.id} className="min-w-0">
+            {/*
+             * A real link to the post, with JS intercepting the click to open
+             * the dialog instead. So with JS the card is a reader; without it
+             * every card still goes somewhere, rather than being a dead button
+             * that silently does nothing.
+             */}
             <a
               href={card.permalink}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(event) => {
+                // Modified clicks still open Threads in a new tab.
+                if (
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.button !== 0
+                )
+                  return
+                event.preventDefault()
+                setOpen(index)
+              }}
+              aria-label={`${strings.openLabelPrefix} ${[card.brand, card.name].filter(Boolean).join(' ') || card.fallbackText.slice(0, 60)}`}
               className="group grid h-full grid-rows-[auto_1fr] overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface transition hover:border-accent focus-visible:border-accent"
             >
               {/*
@@ -134,6 +185,14 @@ export function ScentGrid({
           </li>
         ))}
       </ul>
+
+      <PostDialog
+        post={dialogPost}
+        onClose={close}
+        closeLabel={strings.close}
+        viewOnThreads={strings.viewOnThreads}
+        imageAlt={strings.imageAlt}
+      />
     </>
   )
 }

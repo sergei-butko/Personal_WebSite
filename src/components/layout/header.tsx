@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Nav } from '@/components/layout/nav'
 import { localePath, type Locale } from '@/lib/i18n'
 import type { Dictionary } from '@/content/i18n'
 import { profile } from '@/content/profile'
@@ -30,20 +31,19 @@ export function Header({ locale, dict }: { locale: Locale; dict: Dictionary }) {
         </Link>
 
         <div className="flex flex-wrap items-center gap-4">
-          <nav aria-label={dict.common.menu}>
-            <ul className="flex flex-wrap gap-4 text-sm font-medium text-muted">
-              {navItems.map((item) => (
-                <li key={item.key}>
-                  <Link
-                    href={localePath(locale, item.path)}
-                    className="transition hover:text-ink"
-                  >
-                    {dict.nav[item.key]}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {/*
+           * The nav is a Client Component because marking the current page
+           * needs the pathname, and the header is rendered once by the layout,
+           * which does not know it. Everything else here stays on the server.
+           */}
+          <Nav
+            locale={locale}
+            label={dict.common.menu}
+            items={navItems.map((item) => ({
+              href: localePath(locale, item.path),
+              label: dict.nav[item.key],
+            }))}
+          />
           <LocaleSwitcher current={locale} label={dict.common.language} />
           <ThemeToggle label={dict.common.theme} />
         </div>

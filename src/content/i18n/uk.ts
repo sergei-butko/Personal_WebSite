@@ -86,6 +86,8 @@ export const uk: Dictionary = {
     perRow: 'Флаконів у рядку',
     noImage: 'У цьому дописі немає фото',
     wardrobePlaceholder: 'Гардероб ще не зібрано.',
+    openPost: 'Відкрити огляд:',
+    close: 'Закрити',
   },
   about: { title: 'Про мене', intro: 'Хто я і як зі мною звʼязатися.' },
   cv: { title: 'Резюме', intro: 'Досвід, навички та освіта.' },

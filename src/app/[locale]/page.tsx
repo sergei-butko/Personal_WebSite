@@ -31,6 +31,18 @@ export default async function HomePage({
 
   const recentPhotos = photoSnapshot.photos.filter((photo) => !photo.hidden).slice(0, 12)
 
+  /*
+   * The four most recent posts that actually have a picture. `flatMap` rather
+   * than filter-then-map so the narrowed type survives: `post.images[0]` is
+   * possibly-undefined, and a filter does not tell TypeScript otherwise.
+   */
+  const perfumeryThumbs = threadsSnapshot.posts
+    .flatMap((post) => {
+      const image = post.images[0]
+      return image ? [{ id: post.id, image }] : []
+    })
+    .slice(0, 4)
+
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
       <BentoGrid>
@@ -42,21 +54,31 @@ export default async function HomePage({
                 <PlatformIcon platform="threads" className="h-4 w-4" />
                 <Eyebrow>{dict.home.perfumery}</Eyebrow>
               </span>
-              {threadsSnapshot.posts.length > 0 ? (
-                <ul className="flex flex-col gap-2.5">
-                  {threadsSnapshot.posts.slice(0, 3).map((post) => (
-                    <li
-                      key={post.id}
-                      className="border-b border-edge pb-2.5 last:border-0 last:pb-0"
-                    >
-                      <a
-                        href={post.permalink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="line-clamp-2 text-[14px] leading-relaxed transition hover:text-accent"
+              {/*
+               * Four bottles, pictures only.
+               *
+               * This tile used to be three lines of clamped post text, which
+               * on a page whose subject is fragrance told a visitor nothing
+               * they could recognise — a review reads as grey text at 14px,
+               * and the bottle is the thing that carries. Posts with no image
+               * are skipped rather than shown as an empty square, so the tile
+               * takes the four most recent that have one.
+               */}
+              {perfumeryThumbs.length > 0 ? (
+                <ul className="grid grid-cols-4 gap-2">
+                  {perfumeryThumbs.map((post) => (
+                    <li key={post.id}>
+                      <Link
+                        href={localePath(locale, 'perfumery')}
+                        className="block overflow-hidden rounded-xl border border-edge transition hover:border-accent focus-visible:border-accent"
                       >
-                        {post.text || post.permalink}
-                      </a>
+                        <CloudinaryImage
+                          asset={post.image}
+                          alt={post.image.alt || dict.threads.imageAlt}
+                          sizes="(max-width: 640px) 22vw, 160px"
+                          className="aspect-square h-full w-full object-cover"
+                        />
+                      </Link>
                     </li>
                   ))}
                 </ul>
