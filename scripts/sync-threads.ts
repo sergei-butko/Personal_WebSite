@@ -217,30 +217,88 @@ async function rehost(
 }
 
 /**
- * The author's own first reply to one of their own posts, or null.
+ * The author's own earliest reply to one of their own posts, or null.
  *
- * Threads returns replies from everyone, in no promised order, so this sorts
- * by timestamp and takes the earliest — then keeps it only if the author is
- * the account owner. Somebody else's reply is their words; republishing it
- * under Serhii's byline would be wrong regardless of how useful it is.
+ * Threads returns replies from everyone, in no promised order. This filters to
+ * the account owner FIRST and takes the earliest of those. Somebody else's
+ * reply is their words; republishing it under Serhii's byline would be wrong
+ * regardless of how useful it is.
+ *
+ * ## The order of those two steps is the whole bug this once had
+ *
+ * It used to sort every reply, take the single earliest, and return null if
+ * that one was not the owner's. On a post nobody had answered yet — the common
+ * case, since the follow-up is posted seconds later — that worked. On a post a
+ * follower reached first, it threw the continuation away without looking any
+ * further, and since the verdict lives in that follow-up, the review arrived
+ * cut off mid-sentence with no score. It looked like a post that simply had no
+ * verdict. One is known to have been lost that way (Green Tea, 25 replies, none
+ * of them the owner's on the first page).
+ *
+ * Hence the pagination too: 25 replies was one page, and the owner's follow-up
+ * on a busy post can sit past it. A cap stays, because a post with thousands of
+ * replies should not stall a sync — but it is a page budget now, not a single
+ * page, and running out is logged rather than silently treated as "no reply".
  *
  * `getJson` exits the process on an API error, which is right for a missing
  * permission (every post would fail identically) but wrong for one dead post.
  * So this calls fetch directly and distinguishes the two.
  */
+/** Pages of replies to walk before giving up on finding the owner's. */
+const MAX_REPLY_PAGES = Number(process.env.SYNC_MAX_REPLY_PAGES ?? 8)
+
 async function fetchFirstOwnReply(
   postId: string,
   username: string
 ): Promise<ApiReply | null> {
-  const url = new URL(`${HOST}/${postId}/replies`)
-  url.searchParams.set('fields', REPLY_FIELDS)
-  url.searchParams.set('limit', '25')
-  url.searchParams.set('access_token', token!)
+  const owner = username.replace(/^@/, '').toLowerCase()
+  const mine: ApiReply[] = []
+  let next: string | undefined
 
+  for (let page = 1; page <= MAX_REPLY_PAGES; page++) {
+    const url = new URL(next ?? `${HOST}/${postId}/replies`)
+    if (!next) {
+      url.searchParams.set('fields', REPLY_FIELDS)
+      url.searchParams.set('limit', '100')
+      url.searchParams.set('access_token', token!)
+    }
+
+    const page$ = await fetchReplyPage(postId, url)
+    if (page$ === null) return null
+
+    for (const reply of page$.replies) {
+      // Meta returns usernames without the @, but be forgiving about it.
+      if (reply.username?.replace(/^@/, '').toLowerCase() === owner) mine.push(reply)
+    }
+
+    if (!page$.next) break
+    next = page$.next
+    if (page === MAX_REPLY_PAGES) {
+      console.warn(
+        `  ! replies for ${postId}: stopped after ${MAX_REPLY_PAGES} pages with more ` +
+          `available. Raise SYNC_MAX_REPLY_PAGES if a follow-up looks missing.`
+      )
+    }
+  }
+
+  if (mine.length === 0) return null
+  mine.sort((a, b) => (a.timestamp ?? '').localeCompare(b.timestamp ?? ''))
+  return mine[0] ?? null
+}
+
+/** One page of replies, or null when the post itself should be skipped. */
+async function fetchReplyPage(
+  postId: string,
+  url: URL
+): Promise<{ replies: ApiReply[]; next: string | undefined } | null> {
   const res = await fetch(url)
   const text = await res.text()
 
-  let body: { data?: ApiReply[]; error?: { message?: string; code?: number } }
+  let body: {
+    data?: ApiReply[]
+    paging?: { next?: string }
+    error?: { message?: string; code?: number }
+  }
   try {
     body = JSON.parse(text) as typeof body
   } catch {
@@ -277,20 +335,16 @@ async function fetchFirstOwnReply(
   }
 
   const replies = (body.data ?? []).filter((reply) => reply.timestamp)
-  if (replies.length === 0) return null
-
-  replies.sort((a, b) => (a.timestamp ?? '').localeCompare(b.timestamp ?? ''))
-  const first = replies[0]
-  if (!first) return null
 
   // Without an author there is no way to tell your reply from a stranger's,
   // and guessing would republish someone else's words under your byline. If
   // the field is missing the request shape is wrong, not the data — every
   // post would silently yield no follow-up, which is the failure this repo
   // keeps paying for. Stop instead.
-  if (first.username === undefined) {
+  const anonymous = replies.find((reply) => reply.username === undefined)
+  if (anonymous) {
     fail(
-      `The replies edge returned no "username" for reply ${first.id}.\n` +
+      `The replies edge returned no "username" for reply ${anonymous.id}.\n` +
         `  Without it a reply of yours cannot be told from anyone else's, and\n` +
         `  attaching one regardless would republish a stranger's words. Meta has\n` +
         `  probably renamed or dropped the field — check REPLY_FIELDS against\n` +
@@ -298,11 +352,7 @@ async function fetchFirstOwnReply(
     )
   }
 
-  // Meta returns usernames without the @, but be forgiving about it.
-  const author = first.username.replace(/^@/, '').toLowerCase()
-  if (author !== username.replace(/^@/, '').toLowerCase()) return null
-
-  return first
+  return { replies, next: body.paging?.next }
 }
 
 /** Videos skipped this run, for one summary line instead of scary warnings. */
