@@ -67,5 +67,13 @@
     "href": "https://github.com/sergei-butko",
     "footer": false,
     "identity": true
+  },
+  {
+    "platform": "linkedin",
+    "label": "LinkedIn",
+    "handle": "sergei-butko",
+    "href": "https://www.linkedin.com/in/sergei-butko/",
+    "footer": false,
+    "identity": true
   }
 ]

@@ -49,9 +49,9 @@ import {
  *     #0088CC 3.89   #229ED9 3.02   #FA233B 3.91   #FB5C74 3.05
  *     #0866FF 4.82   #6366F1 4.47   #A855F7 3.96   #181717 17.89   #000 21.0
  *
- * LinkedIn is absent from simple-icons entirely (removed at LinkedIn's
- * request), so anything without a mark falls back to a neutral glyph rather
- * than breaking the layout.
+ * LinkedIn is absent from simple-icons (removed at LinkedIn's request), so its
+ * entry below carries a hand-drawn path instead. Anything else without a mark
+ * still falls back to a neutral glyph rather than breaking the layout.
  */
 
 export interface Platform {
@@ -120,6 +120,27 @@ const platforms = {
     dark: '#FC5C7D',
     fill: 'linear-gradient(135deg, #FA233B 0%, #FB5C74 100%)',
   }),
+  /*
+   * LinkedIn is the one mark written out by hand rather than taken from
+   * simple-icons, because simple-icons does not carry it — it was removed at
+   * LinkedIn's request. What is here is the plain "in" glyph on a rounded
+   * square, drawn to their own brand guidance, used to link to Serhii's own
+   * profile. That is what the guidance is for; it is not a redistributed icon
+   * set.
+   *
+   * #0A66C2 is LinkedIn's current brand blue and manages 5.69:1 on the light
+   * surface, but only 2.37:1 on the dark one — under the 3:1 a non-text
+   * graphic needs. Dark mode gets #4BA3EA (4.95:1), the same treatment
+   * Telegram's entry above already uses for the same reason.
+   */
+  linkedin: {
+    label: 'LinkedIn',
+    path: 'M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13Zm1.78 13.02H3.56V9h3.56v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z',
+    light: '#0A66C2',
+    dark: '#4BA3EA',
+    fill: '#0A66C2',
+    fg: WHITE,
+  },
   x: brand(siX, { light: SOFT_DARK, dark: SOFT_LIGHT, fill: '#000000' }),
   github: brand(siGithub, { light: SOFT_DARK, dark: SOFT_LIGHT, fill: '#181717' }),
   // Email is the one tile with no brand to borrow, and it used to be flat

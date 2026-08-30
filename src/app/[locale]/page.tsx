@@ -32,8 +32,9 @@ export default async function HomePage({
   const recentPhotos = photoSnapshot.photos.filter((photo) => !photo.hidden).slice(0, 12)
 
   /*
-   * The four most recent posts that actually have a picture. `flatMap` rather
-   * than filter-then-map so the narrowed type survives: `post.images[0]` is
+   * The twelve most recent posts that actually have a picture — two rows of
+   * six, the shape the photos tile below already uses. `flatMap` rather than
+   * filter-then-map so the narrowed type survives: `post.images[0]` is
    * possibly-undefined, and a filter does not tell TypeScript otherwise.
    */
   const perfumeryThumbs = threadsSnapshot.posts
@@ -41,57 +42,62 @@ export default async function HomePage({
       const image = post.images[0]
       return image ? [{ id: post.id, image }] : []
     })
-    .slice(0, 4)
+    .slice(0, 12)
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
       <BentoGrid>
         {/* Row 1 — Threads, three quarters. */}
+        {/*
+         * The WHOLE tile is the link, as the About and CV tiles already are.
+         * It used to be twelve separate links to one destination plus a
+         * thirteenth in the corner — thirteen tab stops that all went to the
+         * same page, and a card that looked clickable everywhere but only was
+         * on the pictures. One link is fewer stops and no dead ground.
+         *
+         * Which means the thumbnails must NOT be links: an <a> inside an <a>
+         * is invalid, and browsers recover from it by closing the outer one
+         * early, so the corner arrow would fall outside the link entirely.
+         */}
         <Card as="article" className="sm:col-span-2 lg:col-span-3">
-          <div className="flex h-full flex-col justify-between gap-4">
-            <div>
-              <span className="mb-2.5 flex items-center gap-2">
-                <PlatformIcon platform="threads" className="h-4 w-4" />
-                <Eyebrow>{dict.home.perfumery}</Eyebrow>
+          <Link
+            href={localePath(locale, 'perfumery')}
+            className="flex h-full flex-col"
+            aria-label={`${dict.home.perfumery}: ${dict.home.perfumeryAll}`}
+          >
+            <span className="mb-2.5 flex items-center gap-2">
+              <PlatformIcon platform="threads" className="h-4 w-4" />
+              <Eyebrow>{dict.home.perfumery}</Eyebrow>
+            </span>
+            {/*
+             * Bottles, pictures only. This tile used to be three lines of
+             * clamped post text, which on a page whose subject is fragrance
+             * told a visitor nothing they could recognise. Posts with no image
+             * are skipped rather than shown as an empty square.
+             */}
+            {perfumeryThumbs.length > 0 ? (
+              <span className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                {perfumeryThumbs.map((post) => (
+                  <span
+                    key={post.id}
+                    className="block overflow-hidden rounded-xl border border-edge"
+                  >
+                    <CloudinaryImage
+                      asset={post.image}
+                      alt={post.image.alt || dict.threads.imageAlt}
+                      sizes="(max-width: 640px) 25vw, 120px"
+                      className="aspect-square h-full w-full object-cover"
+                    />
+                  </span>
+                ))}
               </span>
-              {/*
-               * Four bottles, pictures only.
-               *
-               * This tile used to be three lines of clamped post text, which
-               * on a page whose subject is fragrance told a visitor nothing
-               * they could recognise — a review reads as grey text at 14px,
-               * and the bottle is the thing that carries. Posts with no image
-               * are skipped rather than shown as an empty square, so the tile
-               * takes the four most recent that have one.
-               */}
-              {perfumeryThumbs.length > 0 ? (
-                <ul className="grid grid-cols-4 gap-2">
-                  {perfumeryThumbs.map((post) => (
-                    <li key={post.id}>
-                      <Link
-                        href={localePath(locale, 'perfumery')}
-                        className="block overflow-hidden rounded-xl border border-edge transition hover:border-accent focus-visible:border-accent"
-                      >
-                        <CloudinaryImage
-                          asset={post.image}
-                          alt={post.image.alt || dict.threads.imageAlt}
-                          sizes="(max-width: 640px) 22vw, 160px"
-                          className="aspect-square h-full w-full object-cover"
-                        />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted">{dict.threads.empty}</p>
-              )}
-            </div>
-            <p className="text-[11px]">
-              <Link href={localePath(locale, 'perfumery')} className="text-accent">
-                {dict.home.perfumeryAll} &rarr;
-              </Link>
-            </p>
-          </div>
+            ) : (
+              <span className="text-sm text-muted">{dict.threads.empty}</span>
+            )}
+            <span className="mt-auto pt-3 text-[11px] text-accent">
+              {dict.home.perfumeryAll} &rarr;
+            </span>
+          </Link>
         </Card>
 
         {/* Row 1 — who I am, one quarter, straight to About. */}
@@ -137,35 +143,38 @@ export default async function HomePage({
 
         {/* Row 2 — the Telegram channel, three quarters. */}
         <Card className="sm:col-span-2 lg:col-span-3">
-          <span className="mb-2.5 flex items-center gap-2">
-            <PlatformIcon platform="telegram" className="h-4 w-4" />
-            <Eyebrow>{dict.home.photos}</Eyebrow>
-          </span>
-          {recentPhotos.length > 0 ? (
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-              {recentPhotos.map((photo) => (
-                <Link
-                  key={`${photo.id}-${photo.publicId}`}
-                  href={localePath(locale, 'photos')}
-                  className="overflow-hidden rounded-xl border border-edge"
-                >
-                  <CloudinaryImage
-                    asset={photo}
-                    alt={resolveAlt(photo, locale, dict.photos.genericAlt)}
-                    sizes="(max-width: 640px) 25vw, 120px"
-                    className="aspect-square h-full w-full object-cover"
-                  />
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted">{dict.photos.empty}</p>
-          )}
-          <p className="mt-3 text-[11px]">
-            <Link href={localePath(locale, 'photos')} className="text-accent">
+          <Link
+            href={localePath(locale, 'photos')}
+            className="flex h-full flex-col"
+            aria-label={`${dict.home.photos}: ${dict.photos.title}`}
+          >
+            <span className="mb-2.5 flex items-center gap-2">
+              <PlatformIcon platform="telegram" className="h-4 w-4" />
+              <Eyebrow>{dict.home.photos}</Eyebrow>
+            </span>
+            {recentPhotos.length > 0 ? (
+              <span className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                {recentPhotos.map((photo) => (
+                  <span
+                    key={`${photo.id}-${photo.publicId}`}
+                    className="block overflow-hidden rounded-xl border border-edge"
+                  >
+                    <CloudinaryImage
+                      asset={photo}
+                      alt={resolveAlt(photo, locale, dict.photos.genericAlt)}
+                      sizes="(max-width: 640px) 25vw, 120px"
+                      className="aspect-square h-full w-full object-cover"
+                    />
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span className="text-sm text-muted">{dict.photos.empty}</span>
+            )}
+            <span className="mt-auto pt-3 text-[11px] text-accent">
               {dict.photos.title} &rarr;
-            </Link>
-          </p>
+            </span>
+          </Link>
         </Card>
       </BentoGrid>
     </main>

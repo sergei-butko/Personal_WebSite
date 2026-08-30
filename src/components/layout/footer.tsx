@@ -15,8 +15,16 @@ import { profile } from '@/content/profile'
  * anchor. `title` is for the sighted hover.
  */
 export function Footer() {
+  /*
+   * No top margin. The page container sets the gap on every other side with its
+   * own padding, and `mt-16` here made the space below the last card three
+   * times the space above the first — visible on the home page, where the bento
+   * grid sits between the two. The layout's flex-1 on the content still pushes
+   * this to the bottom of a short page, which is what the margin was mistaken
+   * for.
+   */
   return (
-    <footer className="mt-16 border-t border-edge">
+    <footer className="border-t border-edge">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-5 py-8 text-sm text-muted">
         <p>
           &copy; {new Date().getFullYear()} {profile.name}
