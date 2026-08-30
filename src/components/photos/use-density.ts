@@ -22,16 +22,6 @@ export interface DensityRange {
   initial: number
   /** The same, on a phone, where `initial` would be unreadably small. */
   initialNarrow: number
-  /**
-   * Roughly the narrowest a tile may get, in CSS pixels. Optional.
-   *
-   * When set, the column count is capped by what actually fits: the stored
-   * preference is a ceiling, not a promise. Without it, a visitor who chooses
-   * six across on a desktop gets six across on a phone the next day, because
-   * the choice is remembered and the viewport is not consulted again — six
-   * 55px cards, which is not a grid so much as a texture.
-   */
-  minTile?: number
 }
 
 export interface Density {
@@ -119,14 +109,8 @@ function write(key: string, value: number): void {
   notify(key)
 }
 
-/** One resize subscription shape, shared by every grid on the page. */
-function subscribeToResize(onChange: () => void): () => void {
-  window.addEventListener('resize', onChange)
-  return () => window.removeEventListener('resize', onChange)
-}
-
 export function useDensity(key: string, range: DensityRange): Density {
-  const stored = useSyncExternalStore(
+  const columns = useSyncExternalStore(
     useCallback(
       (onChange: () => void) => {
         const set = listeners.get(key) ?? new Set()
@@ -152,24 +136,6 @@ export function useDensity(key: string, range: DensityRange): Density {
     () => snapshot(key, range),
     () => range.initial
   )
-
-  /*
-   * What the viewport can actually hold, watched rather than read once: the
-   * cap has to survive a rotation and a resized window, not just the first
-   * paint. Subscribing to resize through the same store shape keeps the value
-   * out of render and the hydration honest — the server has no width, so it
-   * reports Infinity and the first client pass narrows it.
-   */
-  const fits = useSyncExternalStore(
-    subscribeToResize,
-    () =>
-      range.minTile
-        ? Math.max(range.min, Math.floor(window.innerWidth / range.minTile))
-        : range.max,
-    () => range.max
-  )
-
-  const columns = Math.min(stored, fits, range.max)
 
   const step = useCallback(
     (delta: number) => {
@@ -249,11 +215,10 @@ export function useDensity(key: string, range: DensityRange): Density {
     max: range.max,
     // Undefined at each end, which disables the button. zoomIn removes a
     // column and is therefore bounded by min, not max.
-    // Bounded by the stored preference, not the capped view: on a narrow
-    // screen the cap already limits what renders, and disabling the control as
-    // well would leave a visitor unable to change anything at all.
-    zoomIn: stored > range.min ? () => step(-1) : undefined,
-    zoomOut: stored < range.max ? () => step(1) : undefined,
+    // Undefined at each end, which disables the button. zoomIn removes a
+    // column and is therefore bounded by min, not max.
+    zoomIn: columns > range.min ? () => step(-1) : undefined,
+    zoomOut: columns < range.max ? () => step(1) : undefined,
     setColumns,
     attachGrid: setGrid,
   }

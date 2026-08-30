@@ -80,7 +80,6 @@ export const en = {
     syncedAt: 'synced',
     viewPosts: 'Posts',
     viewWardrobe: 'Wardrobe',
-    perRow: 'Bottles per row',
     noImage: 'No photo in this post',
     wardrobePlaceholder: 'The wardrobe is not built yet.',
     openPost: 'Open review:',

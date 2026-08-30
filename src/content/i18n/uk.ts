@@ -83,7 +83,6 @@ export const uk: Dictionary = {
     syncedAt: 'синхронізовано',
     viewPosts: 'Дописи',
     viewWardrobe: 'Гардероб',
-    perRow: 'Флаконів у рядку',
     noImage: 'У цьому дописі немає фото',
     wardrobePlaceholder: 'Гардероб ще не зібрано.',
     openPost: 'Відкрити огляд:',

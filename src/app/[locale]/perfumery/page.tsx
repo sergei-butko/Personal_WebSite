@@ -72,13 +72,6 @@ export default async function PerfumeryPage({
         <ScentGrid
           cards={cards}
           strings={{
-            perRowLabel: dict.threads.perRow,
-            // The zoom control is the photos page's, strings included: it is
-            // the same control doing the same job, and a second set of labels
-            // would be two translations of "Zoom in" to keep in step.
-            zoomIn: dict.photos.zoomIn,
-            zoomOut: dict.photos.zoomOut,
-            pinchHint: dict.photos.pinchHint,
             viewOnThreads: dict.threads.viewOnThreads,
             noImage: dict.threads.noImage,
             openLabelPrefix: dict.threads.openPost,

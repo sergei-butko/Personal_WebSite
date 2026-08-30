@@ -4,8 +4,6 @@ import { useCallback, useState } from 'react'
 import type { ThreadsImage } from '@/lib/threads/types'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 import { PostDialog, type DialogPost } from '@/components/threads/post-dialog'
-import { DensityControl } from '@/components/photos/density-control'
-import { useDensity, type DensityRange } from '@/components/photos/use-density'
 
 /** One post: what the card shows, plus what the dialog needs behind it. */
 export interface ScentCard {
@@ -24,10 +22,6 @@ export interface ScentCard {
 }
 
 export interface ScentGridStrings {
-  perRowLabel: string
-  zoomIn: string
-  zoomOut: string
-  pinchHint: string
   viewOnThreads: string
   noImage: string
   openLabelPrefix: string
@@ -36,21 +30,19 @@ export interface ScentGridStrings {
 }
 
 /**
- * Two to six cards across, and never narrower than a tile can be read.
+ * Five across at full width, stepping down with the viewport.
  *
- * `minTile` is what makes six honest. The count is remembered per visitor, so
- * without a cap someone who picks six on a desktop meets six on a phone the
- * next day — six 55px cards. With it the stored number is a ceiling and the
- * viewport decides the rest, which is the "less if the screen is narrow" half
- * of an adaptive grid without giving up the control.
+ * Breakpoints rather than `auto-fit`/`minmax`: auto-fit derives the count from
+ * a minimum tile width, so the widest layout is whatever the arithmetic happens
+ * to produce — six, or four — and five is the number asked for. Capping the
+ * ladder at `lg` makes five the answer on every screen wide enough to hold it.
+ *
+ * No zoom control here, unlike the photo grids. This is a wardrobe read at a
+ * glance, and its cards carry two lines of type under each picture; the photo
+ * roll is 443 squares a visitor genuinely wants to scale. The same control on
+ * both would be consistency for its own sake.
  */
-const RANGE: DensityRange = {
-  min: 2,
-  max: 6,
-  initial: 6,
-  initialNarrow: 2,
-  minTile: 150,
-}
+const GRID = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
 
 /**
  * The perfumery grid — one card per post, a bottle each.
@@ -72,11 +64,6 @@ export function ScentGrid({
   cards: ScentCard[]
   strings: ScentGridStrings
 }) {
-  const density = useDensity('perfumery:per-row', RANGE)
-  // Destructured rather than read at the `ref`: React's compiler infers "this
-  // object is a ref" from that member access and then rejects every other read
-  // of the object during render. See components/photos/gallery.tsx.
-  const { columns, attachGrid } = density
   const [open, setOpen] = useState<number | null>(null)
   const close = useCallback(() => setOpen(null), [])
 
@@ -93,23 +80,7 @@ export function ScentGrid({
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
-        <DensityControl
-          density={density}
-          legend={strings.perRowLabel}
-          zoomInLabel={strings.zoomIn}
-          zoomOutLabel={strings.zoomOut}
-          pinchHint={strings.pinchHint}
-        />
-      </div>
-
-      <ul
-        ref={attachGrid}
-        // pan-y keeps vertical scrolling native while the pinch handler takes
-        // the two-finger gesture; without it the browser zooms the page.
-        className="grid gap-4 [touch-action:pan-y]"
-        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-      >
+      <ul className={`grid gap-4 ${GRID}`}>
         {cards.map((card, index) => (
           <li key={card.id} className="min-w-0">
             {/*
@@ -151,8 +122,11 @@ export function ScentGrid({
                       `${card.brand} ${card.name}`.trim() ||
                       card.fallbackText
                     }
-                    sizes={`(max-width: 640px) ${Math.round(100 / columns)}vw, ${Math.round(1024 / columns)}px`}
-                    priority={index < columns}
+                    // Mirrors the breakpoint ladder above. Kept in step by
+                    // hand, which is the cost of a static grid — the numbers
+                    // are the same four the classes name.
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+                    priority={index < 5}
                     className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                   />
                 ) : (
