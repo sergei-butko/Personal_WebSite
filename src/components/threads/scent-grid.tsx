@@ -73,6 +73,8 @@ export function ScentGrid({
     ? {
         permalink: current.permalink,
         title: fragranceTitle(current.fragrance),
+        brand: current.fragrance?.brand ?? '',
+        name: current.fragrance?.name ?? '',
         text: current.text,
         images: current.images,
       }

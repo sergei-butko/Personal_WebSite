@@ -7,8 +7,11 @@ import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 /** One post, as the dialog needs it. */
 export interface DialogPost {
   permalink: string
-  /** `Brand - Scent`, already formatted. Empty when no bottle is named. */
+  /** `Brand – Scent`, already formatted. Empty when no bottle is named. */
   title: string
+  /** The halves again, for the heading under the photographs. */
+  brand: string
+  name: string
   text: string
   images: ThreadsImage[]
 }
@@ -52,6 +55,20 @@ export function PostDialog({
 
   const title = post?.title ?? ''
 
+  /*
+   * Paragraphs, split on blank lines.
+   *
+   * One <p> with `whitespace-pre-line` renders every break at the same height,
+   * so a paragraph boundary looked identical to a line break inside one — and
+   * these reviews use both: single newlines within a thought, a blank line
+   * where the follow-up comment was joined on. Splitting gives the boundaries
+   * real space and keeps `pre-line` for the breaks inside each piece.
+   */
+  const paragraphs = (post?.text ?? '')
+    .split(/\n\s*\n/)
+    .map((piece) => piece.trim())
+    .filter(Boolean)
+
   return (
     <dialog
       ref={ref}
@@ -70,7 +87,7 @@ export function PostDialog({
            * Sticky, so "View on Threads" stays reachable in a long review
            * rather than sitting above three screens of scroll.
            */}
-          <div className="flex items-start justify-between gap-3 border-b border-edge bg-surface px-4 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-edge bg-surface px-4 py-3">
             <div className="min-w-0">
               {title ? (
                 <p className="truncate text-[15px] leading-snug font-semibold">{title}</p>
@@ -107,27 +124,58 @@ export function PostDialog({
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 overflow-y-auto p-4">
-            {post.images.map((image) => (
-              <CloudinaryImage
-                key={image.publicId}
-                asset={image}
-                alt={image.alt || title || imageAlt}
-                sizes="(max-width: 640px) 92vw, 44rem"
-                // Capped, not natural height. These are bottle shots, mostly
-                // portrait, and at full width one of them is taller than the
-                // dialog — which pushed the review itself entirely below the
-                // fold and made the panel look like a photo viewer.
-                className="max-h-[52dvh] w-full rounded-xl object-contain"
-              />
-            ))}
+          <div className="overflow-y-auto">
+            {/*
+             * Two up, and half the height they were. A review carries two
+             * bottle shots of the same thing — a pack shot and a styled one —
+             * and stacked at full width they were two screens of scrolling
+             * before a word of the writing. Side by side they read as one
+             * exhibit. A lone image takes one cell rather than stretching,
+             * which keeps every dialog's photographs the same size.
+             */}
+            {post.images.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 p-5 pb-0">
+                {post.images.map((image) => (
+                  <CloudinaryImage
+                    key={image.publicId}
+                    asset={image}
+                    alt={image.alt || title || imageAlt}
+                    sizes="(max-width: 640px) 46vw, 21rem"
+                    className="max-h-[26dvh] w-full rounded-xl object-contain"
+                  />
+                ))}
+              </div>
+            ) : null}
 
-            {post.text ? (
-              // whitespace-pre-line, because a review is written in paragraphs
-              // and the snapshot keeps its line breaks.
-              <p className="text-[14.5px] leading-relaxed whitespace-pre-line">
-                {post.text}
-              </p>
+            {/*
+             * The bottle, named again under its photographs — the scent as the
+             * heading and the house beneath it. The top bar carries the same
+             * pair as one line, but that bar is chrome: it stays put while the
+             * dialog scrolls and reads as a label for the window. This is the
+             * heading of the piece of writing under it.
+             */}
+            {post.name ? (
+              <div className="px-6 pt-5">
+                <h2 className="text-[19px] leading-tight font-semibold">{post.name}</h2>
+                {post.brand ? (
+                  <p className="mt-1 text-[13px] tracking-wide text-muted uppercase">
+                    {post.brand}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {paragraphs.length > 0 ? (
+              <div className="flex flex-col gap-3.5 px-6 pt-4 pb-6">
+                {paragraphs.map((paragraph, index) => (
+                  <p
+                    key={index}
+                    className="text-[14.5px] leading-relaxed whitespace-pre-line"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
             ) : null}
           </div>
         </div>

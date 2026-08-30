@@ -1,7 +1,7 @@
 import type { Fragrance } from './types'
 
 /**
- * A post's title: `Brand - Scent`.
+ * A post's title: `Brand – Scent`.
  *
  * One function rather than the same template literal in the card and again in
  * the dialog, because the two are read side by side — a card opens into the
@@ -15,5 +15,5 @@ import type { Fragrance } from './types'
 export function fragranceTitle(fragrance: Fragrance | undefined): string {
   if (!fragrance) return ''
   const parts = [fragrance.brand.trim(), fragrance.name.trim()].filter(Boolean)
-  return parts.join(' - ')
+  return parts.join(' – ')
 }
