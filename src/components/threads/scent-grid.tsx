@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import type { ThreadsImage } from '@/lib/threads/types'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 import { PostDialog, type DialogPost } from '@/components/threads/post-dialog'
+import { fragranceTitle } from '@/lib/threads/title'
 
 /** One post: what the card shows, plus what the dialog needs behind it. */
 export interface ScentCard {
@@ -11,8 +12,8 @@ export interface ScentCard {
   permalink: string
   /** The post's first image. Absent on a text post or a repost. */
   image?: { publicId: string; width: number; height: number; alt: string }
-  brand: string
-  name: string
+  /** The bottle, hand-written. Undefined until someone names it. */
+  fragrance?: { brand: string; name: string }
   /** Falls back to the post text when no bottle is named. */
   fallbackText: string
   /** Every image, for the dialog. The card shows only the first. */
@@ -71,8 +72,7 @@ export function ScentGrid({
   const dialogPost: DialogPost | null = current
     ? {
         permalink: current.permalink,
-        brand: current.brand,
-        name: current.name,
+        title: fragranceTitle(current.fragrance),
         text: current.text,
         images: current.images,
       }
@@ -81,83 +81,85 @@ export function ScentGrid({
   return (
     <>
       <ul className={`grid gap-4 ${GRID}`}>
-        {cards.map((card, index) => (
-          <li key={card.id} className="min-w-0">
-            {/*
-             * A real link to the post, with JS intercepting the click to open
-             * the dialog instead. So with JS the card is a reader; without it
-             * every card still goes somewhere, rather than being a dead button
-             * that silently does nothing.
-             */}
-            <a
-              href={card.permalink}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => {
-                // Modified clicks still open Threads in a new tab.
-                if (
-                  event.metaKey ||
-                  event.ctrlKey ||
-                  event.shiftKey ||
-                  event.button !== 0
-                )
-                  return
-                event.preventDefault()
-                setOpen(index)
-              }}
-              aria-label={`${strings.openLabelPrefix} ${[card.brand, card.name].filter(Boolean).join(' ') || card.fallbackText.slice(0, 60)}`}
-              className="group grid h-full grid-rows-[auto_1fr] overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface transition hover:border-accent focus-visible:border-accent"
-            >
+        {cards.map((card, index) => {
+          const title = fragranceTitle(card.fragrance)
+          return (
+            <li key={card.id} className="min-w-0">
               {/*
-               * Square, so a row of bottles is a row of equal rectangles
-               * whatever shape the photographs are. Portrait bottle shots and
-               * the occasional landscape flat-lay otherwise make a ragged band.
+               * A real link to the post, with JS intercepting the click to open
+               * the dialog instead. So with JS the card is a reader; without it
+               * every card still goes somewhere, rather than being a dead button
+               * that silently does nothing.
                */}
-              <div className="relative aspect-square overflow-hidden bg-canvas">
-                {card.image ? (
-                  <CloudinaryImage
-                    asset={card.image}
-                    alt={
-                      card.image.alt ||
-                      `${card.brand} ${card.name}`.trim() ||
-                      card.fallbackText
-                    }
-                    // Mirrors the breakpoint ladder above. Kept in step by
-                    // hand, which is the cost of a static grid — the numbers
-                    // are the same four the classes name.
-                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
-                    priority={index < 5}
-                    className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                  />
-                ) : (
-                  // 26 of 128 posts carry no image — text posts and reposts.
-                  // They still belong in the grid, so the card keeps its shape
-                  // and says why it is empty rather than collapsing.
-                  <span className="absolute inset-0 flex items-center justify-center px-4 text-center font-mono text-[10.5px] text-muted">
-                    {strings.noImage}
-                  </span>
-                )}
-              </div>
+              <a
+                href={card.permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => {
+                  // Modified clicks still open Threads in a new tab.
+                  if (
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.button !== 0
+                  )
+                    return
+                  event.preventDefault()
+                  setOpen(index)
+                }}
+                aria-label={`${strings.openLabelPrefix} ${title || card.fallbackText.slice(0, 60)}`}
+                className="group grid h-full grid-rows-[auto_1fr] overflow-hidden rounded-[var(--radius-card)] border border-edge bg-surface transition hover:border-accent focus-visible:border-accent"
+              >
+                {/*
+                 * Square, so a row of bottles is a row of equal rectangles
+                 * whatever shape the photographs are. Portrait bottle shots and
+                 * the occasional landscape flat-lay otherwise make a ragged band.
+                 */}
+                <div className="relative aspect-square overflow-hidden bg-canvas">
+                  {card.image ? (
+                    <CloudinaryImage
+                      asset={card.image}
+                      alt={card.image.alt || title || card.fallbackText}
+                      // Mirrors the breakpoint ladder above. Kept in step by
+                      // hand, which is the cost of a static grid — the numbers
+                      // are the same four the classes name.
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+                      priority={index < 5}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    // 26 of 128 posts carry no image — text posts and reposts.
+                    // They still belong in the grid, so the card keeps its shape
+                    // and says why it is empty rather than collapsing.
+                    <span className="absolute inset-0 flex items-center justify-center px-4 text-center font-mono text-[10.5px] text-muted">
+                      {strings.noImage}
+                    </span>
+                  )}
+                </div>
 
-              <div className="flex flex-col gap-0.5 px-3 py-2.5">
-                {card.brand || card.name ? (
-                  <>
-                    <span className="truncate text-[11px] tracking-wide text-muted uppercase">
-                      {card.brand}
-                    </span>
+                {/*
+                 * One line, `Brand - Scent`, not a brand eyebrow over a name.
+                 * Two lines put the house above the bottle in the hierarchy, and
+                 * on a wardrobe it is the bottle you are looking for; the brand
+                 * is how you tell two similar names apart. Clamped to two visual
+                 * lines so a long pair wraps rather than truncating the scent,
+                 * which is the half that identifies it.
+                 */}
+                <div className="px-3 py-2.5">
+                  {title ? (
                     <span className="line-clamp-2 text-[13.5px] leading-snug font-medium">
-                      {card.name}
+                      {title}
                     </span>
-                  </>
-                ) : (
-                  <span className="line-clamp-3 text-[13px] leading-relaxed text-muted">
-                    {card.fallbackText}
-                  </span>
-                )}
-              </div>
-            </a>
-          </li>
-        ))}
+                  ) : (
+                    <span className="line-clamp-3 text-[13px] leading-relaxed text-muted">
+                      {card.fallbackText}
+                    </span>
+                  )}
+                </div>
+              </a>
+            </li>
+          )
+        })}
       </ul>
 
       <PostDialog

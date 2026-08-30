@@ -7,8 +7,8 @@ import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 /** One post, as the dialog needs it. */
 export interface DialogPost {
   permalink: string
-  brand: string
-  name: string
+  /** `Brand - Scent`, already formatted. Empty when no bottle is named. */
+  title: string
   text: string
   images: ThreadsImage[]
 }
@@ -50,7 +50,7 @@ export function PostDialog({
     if (!open && dialog.open) dialog.close()
   }, [open])
 
-  const title = [post?.brand, post?.name].filter(Boolean).join(' ')
+  const title = post?.title ?? ''
 
   return (
     <dialog
@@ -73,14 +73,7 @@ export function PostDialog({
           <div className="flex items-start justify-between gap-3 border-b border-edge bg-surface px-4 py-3">
             <div className="min-w-0">
               {title ? (
-                <>
-                  <p className="truncate text-[11px] tracking-wide text-muted uppercase">
-                    {post.brand}
-                  </p>
-                  <p className="truncate text-[15px] leading-snug font-semibold">
-                    {post.name}
-                  </p>
-                </>
+                <p className="truncate text-[15px] leading-snug font-semibold">{title}</p>
               ) : null}
             </div>
 
