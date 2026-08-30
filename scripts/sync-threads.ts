@@ -384,25 +384,38 @@ async function normalise(
   }
 }
 
+/** The newest timestamp among a set of posts, or null when there are none. */
+function newestOf(posts: Array<{ timestamp: string }>): string | null {
+  let newest: string | null = null
+  for (const post of posts) {
+    if (!newest || post.timestamp > newest) newest = post.timestamp
+  }
+  return newest
+}
+
 /**
- * The newest timestamp already stored, or null when nothing is.
+ * The incremental cursor: only posts strictly newer than this are taken.
  *
- * This is the whole of the incremental rule. The snapshot is the canonical,
- * hand-editable copy of the site's posts, so a sync must never rewrite a post
- * it has already captured — an edit made here would be silently reverted on
- * the next run. Only posts strictly newer than this cursor are taken.
+ * Read from the snapshot's own `syncedThrough` rather than derived from the
+ * posts still in it, and that distinction is the whole point. The derived
+ * version made curating the archive quietly destructive in one case: the
+ * snapshot is hand-editable, deleting the most recent post lowered the cursor,
+ * and the next sync saw that post as new and put it back. Deleting an older
+ * post already worked, so the failure only showed up on the one you had just
+ * removed — the worst possible shape for a bug in something you edit by hand.
+ *
+ * A monotonic cursor makes deletion mean deletion. It falls back to deriving
+ * the value for a snapshot written before the field existed, and main() writes
+ * it out afterwards so the fallback runs exactly once.
  *
  * Consequences worth knowing, all of them intended:
  * - Editing a post on Threads after it syncs does not update the site.
  * - Deleting a post on Threads does not remove it from the site.
  * - Backdated posts (rare) would fall below the cursor and be missed.
  */
-function newestStored(posts: Array<{ timestamp: string }>): string | null {
-  let newest: string | null = null
-  for (const post of posts) {
-    if (!newest || post.timestamp > newest) newest = post.timestamp
-  }
-  return newest
+function cursorFrom(snapshot: ThreadsSnapshot | null): string | null {
+  if (snapshot?.syncedThrough) return snapshot.syncedThrough
+  return newestOf(snapshot?.posts ?? [])
 }
 
 async function main(): Promise<void> {
@@ -416,11 +429,13 @@ async function main(): Promise<void> {
   console.log(`  @${username}`)
 
   // The stored snapshot is the source of truth, not a mirror to regenerate.
-  const stored = (await fetchJson<ThreadsSnapshot>(OUT_DATA))?.posts ?? []
-  const cursor = newestStored(stored)
+  const storedSnapshot = await fetchJson<ThreadsSnapshot>(OUT_DATA)
+  const stored = storedSnapshot?.posts ?? []
+  const cursor = cursorFrom(storedSnapshot)
   console.log(
     cursor
-      ? `→ ${stored.length} posts already stored, newest ${cursor}`
+      ? `→ ${stored.length} posts stored, synced through ${cursor}` +
+          (storedSnapshot?.syncedThrough ? '' : ' (derived; writing it out this run)')
       : '→ nothing stored yet, taking the whole feed'
   )
 
@@ -436,6 +451,20 @@ async function main(): Promise<void> {
   console.log(`  ${raw.length} new of ${fetched.length} fetched`)
 
   if (raw.length === 0) {
+    /*
+     * Nothing new, but the cursor may still need writing out. Until
+     * `syncedThrough` is IN the file, it is derived from the posts array — and
+     * deleting the newest post by hand would lower it, so the next sync would
+     * put that post back. The repair must not wait for the next new post,
+     * because the whole point of it is to make hand-curation safe today.
+     *
+     * `changed` stays false: the rendered site is byte-identical, so there is
+     * nothing to deploy.
+     */
+    if (storedSnapshot && !storedSnapshot.syncedThrough && cursor) {
+      await uploadJson(OUT_DATA, { ...storedSnapshot, syncedThrough: cursor })
+      console.log(`  wrote syncedThrough ${cursor}; hand-deleted posts now stay deleted`)
+    }
     console.log(`✓ ${stored.length} posts, nothing new`)
     await setOutput('changed', 'false')
     return
@@ -489,9 +518,20 @@ async function main(): Promise<void> {
   const merged = [...stored, ...posts]
   merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 
+  /*
+   * Monotonic by construction: the highest of what we already promised to have
+   * seen and what this run actually saw. `newestOf(posts)` alone would lower it
+   * on a run whose new posts are all older than the cursor, which cannot happen
+   * today but is one refactor away from happening.
+   */
+  const seen = [cursor, newestOf(posts)].filter((t): t is string => Boolean(t))
+  const syncedThrough =
+    seen.length > 0 ? seen.reduce((a, b) => (a > b ? a : b)) : undefined
+
   const snapshot: ThreadsSnapshot = {
     syncedAt: new Date().toISOString(),
     username,
+    ...(syncedThrough ? { syncedThrough } : {}),
     posts: merged,
   }
 

@@ -1,41 +1,30 @@
 import Link from 'next/link'
-import { localePath, type Locale } from '@/lib/i18n'
-
-export type PhotoView = 'all' | 'posts'
 
 /**
- * The roll / by-post switch.
+ * A segmented control over two or more routes.
  *
- * Two <Link>s rather than a client-side tab, which is what lets both views be
+ * Links rather than a client-side tab, which is what lets every view be
  * prerendered: each is its own URL, so it is shareable, it works with JS off,
  * and — with 443 photos — a visitor downloads only the view they asked for
- * instead of both. Next still routes between them on the client, so it
+ * instead of all of them. Next still routes between them on the client, so it
  * behaves like a tab.
  *
  * aria-current is the part a segmented control usually gets wrong: without it
  * the active state is a colour difference and nothing else, which a screen
  * reader cannot see.
+ *
+ * Generic because the photos and perfumery pages want the same control over
+ * different routes, and the second copy is where the aria-current gets left
+ * out.
  */
-export function PhotoViewSwitch({
-  locale,
-  current,
-  allLabel,
-  byPostLabel,
-}: {
-  locale: Locale
-  current: PhotoView
-  allLabel: string
-  byPostLabel: string
-}) {
-  const tabs = [
-    { view: 'all' as const, href: localePath(locale, 'photos'), label: allLabel },
-    {
-      view: 'posts' as const,
-      href: localePath(locale, 'photos/posts'),
-      label: byPostLabel,
-    },
-  ]
+export interface ViewTab {
+  /** Stable key for React, and what `current` is compared against. */
+  view: string
+  href: string
+  label: string
+}
 
+export function ViewSwitch({ tabs, current }: { tabs: ViewTab[]; current: string }) {
   return (
     <div className="inline-flex rounded-full border border-edge bg-surface p-1">
       {tabs.map((tab) => {

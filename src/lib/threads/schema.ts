@@ -28,6 +28,9 @@ const imageSchema = z.object({
 export const threadsSnapshotSchema: z.ZodType<ThreadsSnapshot> = z.object({
   syncedAt: z.string().min(1),
   username: z.string().min(1),
+  // Optional: snapshots written before this field existed do not carry it, and
+  // the sync derives and backfills it on the next run.
+  syncedThrough: z.string().min(1).optional(),
   posts: z.array(
     z.object({
       id: z.string().min(1),
@@ -37,6 +40,12 @@ export const threadsSnapshotSchema: z.ZodType<ThreadsSnapshot> = z.object({
       text: z.string(),
       images: z.array(imageSchema),
       isQuotePost: z.boolean(),
+      // Hand-written and optional. Both halves required together when present:
+      // a brand with no scent, or the reverse, is a half-finished edit rather
+      // than a meaningful state, and catching it here beats rendering it.
+      fragrance: z
+        .object({ brand: z.string().min(1), name: z.string().min(1) })
+        .optional(),
     })
   ),
 }) as z.ZodType<ThreadsSnapshot>

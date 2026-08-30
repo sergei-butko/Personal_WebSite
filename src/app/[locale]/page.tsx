@@ -40,7 +40,7 @@ export default async function HomePage({
             <div>
               <span className="mb-2.5 flex items-center gap-2">
                 <PlatformIcon platform="threads" className="h-4 w-4" />
-                <Eyebrow>{dict.home.threads}</Eyebrow>
+                <Eyebrow>{dict.home.perfumery}</Eyebrow>
               </span>
               {threadsSnapshot.posts.length > 0 ? (
                 <ul className="flex flex-col gap-2.5">
@@ -65,8 +65,8 @@ export default async function HomePage({
               )}
             </div>
             <p className="text-[11px]">
-              <Link href={localePath(locale, 'threads')} className="text-accent">
-                {dict.home.threadsAll} &rarr;
+              <Link href={localePath(locale, 'perfumery')} className="text-accent">
+                {dict.home.perfumeryAll} &rarr;
               </Link>
             </p>
           </div>

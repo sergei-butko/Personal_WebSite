@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation'
-import { isLocale } from '@/lib/i18n'
+import { isLocale, localePath } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
 import { isUnsynced } from '@/lib/photos/types'
 import { resolveAlt, resolveCaption } from '@/lib/photos/alt'
 import { PhotoGallery, type GalleryItem } from '@/components/photos/gallery'
-import { PhotoViewSwitch } from '@/components/photos/view-switch'
+import { ViewSwitch } from '@/components/ui/view-switch'
 import { ChannelButton } from '@/components/photos/channel-button'
 import { PhotosEmpty, SyncedNote } from '@/components/photos/notices'
 import { Container } from '@/components/layout/container'
@@ -44,11 +44,20 @@ export default async function PhotosPage({
       <h1 className="sr-only">{dict.photos.title}</h1>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PhotoViewSwitch
-          locale={locale}
+        <ViewSwitch
+          tabs={[
+            {
+              view: 'all',
+              href: localePath(locale, 'photos'),
+              label: dict.photos.viewAll,
+            },
+            {
+              view: 'posts',
+              href: localePath(locale, 'photos/posts'),
+              label: dict.photos.viewByPost,
+            },
+          ]}
           current="all"
-          allLabel={dict.photos.viewAll}
-          byPostLabel={dict.photos.viewByPost}
         />
         <ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />
       </div>

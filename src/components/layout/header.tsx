@@ -14,7 +14,7 @@ import { LocaleSwitcher } from '@/components/layout/locale-switcher'
  */
 const navItems = [
   { key: 'home', path: '' },
-  { key: 'threads', path: 'threads' },
+  { key: 'perfumery', path: 'perfumery' },
   { key: 'photos', path: 'photos' },
   { key: 'links', path: 'links' },
   { key: 'about', path: 'about' },
