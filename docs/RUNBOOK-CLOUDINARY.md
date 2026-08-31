@@ -229,9 +229,11 @@ Editing a post's image list or deleting a post leaves its assets behind.
 `media:organise` reports them on every run; this removes them.
 
 Only assets under `telegram/` and `threads/` are ever candidates. The snapshots
-in `data/`, Cloudinary's own demo files at the root (`sample`, `cld-sample-*`,
-`main-sample`) and anything else outside those two namespaces are never touched,
-whatever the flag says. Old prefixes count deliberately: an unreferenced asset
+in `data/` and anything else outside those two namespaces are never touched,
+whatever the flag says — a new Cloudinary account arrives with demo assets at
+the root and in `samples/`, and removing those is the owner's call, not a
+sync's. (They were deleted by hand on 2026-08-31: 7 at the root and 57 in
+`samples/`, 169 MB in all, which was 39% of the account.) Old prefixes count deliberately: an unreferenced asset
 was never renamed — a rename is only planned for something a snapshot points at
 — so these sit at `threads/<postId>-<slot>` rather than under
 `threads/images/`, and matching on the folder would find none of them.

@@ -329,8 +329,9 @@ async function main(): Promise<void> {
    *
    * Scoped to the two namespaces these scripts own, and that scoping is what
    * makes the prune below safe rather than a nice-to-have: `data/` holds the
-   * snapshots themselves, and the root holds Cloudinary's own demo files
-   * (`sample`, `cld-sample-*`), none of which are this tool's to judge.
+   * snapshots themselves, and anything outside both is not this tool's to
+   * judge — a new account arrives with Cloudinary's demo assets at the root and
+   * in `samples/`, and those are for their owner to remove, not for a sync.
    *
    * Old prefixes count. An unreferenced asset was never renamed — a rename is
    * only planned for something a snapshot points at — so these sit at
