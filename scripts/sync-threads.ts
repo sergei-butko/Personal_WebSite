@@ -33,6 +33,7 @@ import type {
   ThreadsSnapshot,
 } from '../src/lib/threads/types'
 import { THREADS_IMAGE_FOLDER } from './media-name'
+import { mergePosts } from './threads-merge'
 
 const HOST = 'https://graph.threads.net/v1.0'
 const OUT_DATA = 'data/threads.json'
@@ -569,9 +570,21 @@ async function main(): Promise<void> {
     fail('Every new post failed to normalise. Refusing to touch the snapshot.')
   }
 
-  // APPEND. Stored posts are passed through untouched, edits and all.
-  const merged = [...stored, ...posts]
-  merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+  /*
+   * APPEND. Stored posts are passed through untouched, edits and all — that is
+   * the whole rule, and mergePosts states it rather than leaving it to the
+   * `storedIds` filter forty lines up to imply. It also catches the one case
+   * that filter cannot: the same post arriving twice within a single fetch,
+   * which cursor pagination is entitled to do.
+   */
+  const { posts: merged, collisions } = mergePosts(stored, posts)
+  if (collisions > 0) {
+    // Not fatal — the right posts are kept either way. Worth saying out loud
+    // because the upstream filter should have made it impossible.
+    console.warn(
+      `  ! ${collisions} fetched post(s) had an id already present and were dropped`
+    )
+  }
 
   /*
    * Monotonic by construction: the highest of what we already promised to have
@@ -593,7 +606,8 @@ async function main(): Promise<void> {
   await uploadJson(OUT_DATA, snapshot)
   await setOutput('changed', 'true')
   console.log(
-    `✓ ${posts.length} new post(s) appended; ${merged.length} total in ${OUT_DATA}`
+    `✓ ${merged.length - stored.length} new post(s) appended; ` +
+      `${merged.length} total in ${OUT_DATA}`
   )
 }
 

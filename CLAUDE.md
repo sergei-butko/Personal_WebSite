@@ -341,7 +341,7 @@ them into feature work.
 ```
 npm run typecheck && npm run lint && npm run format:check && npm run build
 npm run test:telegram && npm run test:dedup && npm run test:collage
-npm run test:names
+npm run test:names && npm run test:merge
 ```
 
 The build must run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
