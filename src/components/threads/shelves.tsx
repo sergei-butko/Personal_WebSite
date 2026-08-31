@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Shelf } from '@/lib/threads/wardrobe'
+import type { Shelf } from '@/lib/threads/shelves'
 import type { ThreadsPost } from '@/lib/threads/types'
 import { fragranceTitle } from '@/lib/threads/title'
 import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 import { PostDialog, type DialogPost } from '@/components/threads/post-dialog'
 
-export interface WardrobeStrings {
+export interface ShelvesStrings {
   /** Heading for the shelf of posts with no bottle named. */
   unnamed: string
   noImage: string
@@ -25,7 +25,7 @@ export interface WardrobeStrings {
  * A shelf is a scrolling row, so the tiles cannot be a fraction of the row —
  * `1fr` columns would shrink thirteen Kajal bottles to fit instead of
  * overflowing, and there would be nothing to scroll. Fixed widths also keep
- * every shelf's bottles the same size, which is the whole point of a wardrobe:
+ * every shelf's bottles the same size, which is the whole point of a shelf:
  * a house with one bottle and a house with thirteen read as the same object.
  */
 const TILE = 'w-32 sm:w-40'
@@ -90,7 +90,7 @@ function BrandShelf({
   count: number
   /** Positional, not derived from the key: a brand makes a poor HTML id. */
   headingId: string
-  strings: WardrobeStrings
+  strings: ShelvesStrings
   onOpen: (post: ThreadsPost) => void
   /** Load this shelf's images immediately — true only for the first shelf. */
   eager: boolean
@@ -237,7 +237,7 @@ function BrandShelf({
 
                 {/*
                  * The name, on hover and on keyboard focus. The bottle is meant
-                 * to be recognised by its photograph — that is what a wardrobe
+                 * to be recognised by its photograph — that is what a shelf
                  * is — so the caption stays out of the way until someone is
                  * asking about that particular one.
                  */}
@@ -259,19 +259,19 @@ function BrandShelf({
 }
 
 /**
- * The wardrobe: a shelf per house, alphabetical, bottles alphabetical on it.
+ * The shelf view: one shelf per house, alphabetical, bottles alphabetical on it.
  *
  * The other half of the perfumery page. The bottles grid answers "what has he
  * written lately" — it is the archive newest-first. This answers "what does he
  * own", which is a question about houses, and so it is grouped and sorted by
  * one rather than by date. Same posts, same dialog, different question.
  */
-export function Wardrobe({
+export function Shelves({
   shelves,
   strings,
 }: {
   shelves: Shelf[]
-  strings: WardrobeStrings
+  strings: ShelvesStrings
 }) {
   const [open, setOpen] = useState<ThreadsPost | null>(null)
   const close = useCallback(() => setOpen(null), [])

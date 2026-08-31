@@ -13,14 +13,14 @@ import type { ViewTab } from '@/components/ui/view-switch'
  */
 export function perfumeryTabs(
   locale: Locale,
-  labels: { posts: string; wardrobe: string }
+  labels: { posts: string; shelf: string }
 ): ViewTab[] {
   return [
     { view: 'posts', href: localePath(locale, 'perfumery'), label: labels.posts },
     {
-      view: 'wardrobe',
-      href: localePath(locale, 'perfumery/wardrobe'),
-      label: labels.wardrobe,
+      view: 'shelf',
+      href: localePath(locale, 'perfumery/shelf'),
+      label: labels.shelf,
     },
   ]
 }

@@ -6,7 +6,7 @@ import type { ThreadsPost } from './types'
  *
  * `brand` is null for the shelf of bottles nobody has named yet — the
  * `fragrance` block is hand-written, so a freshly synced post carries none.
- * Those posts get a shelf at the end rather than being dropped: a wardrobe
+ * Those posts get a shelf at the end rather than being dropped: a shelf view
  * quietly holding fewer bottles than the archive does is the failure this repo
  * keeps paying for elsewhere (see the photo sync's silent truncation).
  */

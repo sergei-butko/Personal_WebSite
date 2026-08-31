@@ -4,10 +4,10 @@ import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadThreadsSnapshot } from '@/lib/threads/snapshot'
 import { isUnsynced } from '@/lib/threads/types'
-import { buildShelves } from '@/lib/threads/wardrobe'
+import { buildShelves } from '@/lib/threads/shelves'
 import { PerfumeryHeader } from '@/components/threads/perfumery-header'
 import { PerfumeryEmpty } from '@/components/threads/notices'
-import { Wardrobe } from '@/components/threads/wardrobe-shelves'
+import { Shelves } from '@/components/threads/shelves'
 import { Container } from '@/components/layout/container'
 import { perfumeryTabs } from '@/lib/threads/tabs'
 
@@ -19,11 +19,11 @@ export async function generateMetadata({
   const { locale } = await params
   if (!isLocale(locale)) return {}
   const dict = getDictionary(locale)
-  return { title: `${dict.threads.viewWardrobe} — ${dict.threads.title} — Serhii Butko` }
+  return { title: `${dict.threads.viewShelf} — ${dict.threads.title} — Serhii Butko` }
 }
 
 /**
- * The wardrobe: a shelf per house, alphabetical, scrolling sideways when a
+ * The shelf view: one shelf per house, alphabetical, scrolling sideways when a
  * house owns more bottles than a row holds. See ../page.tsx for the other view.
  *
  * The grouping is a build-time pure function over the same snapshot the bottles
@@ -31,7 +31,7 @@ export async function generateMetadata({
  * house a bottle belongs to is `fragrance.brand`, hand-written in the snapshot,
  * so the shelves are only ever as good as those fields.
  */
-export default async function WardrobePage({
+export default async function ShelfPage({
   params,
 }: {
   params: Promise<{ locale: string }>
@@ -49,9 +49,9 @@ export default async function WardrobePage({
         title={dict.threads.title}
         tabs={perfumeryTabs(locale, {
           posts: dict.threads.viewPosts,
-          wardrobe: dict.threads.viewWardrobe,
+          shelf: dict.threads.viewShelf,
         })}
-        current="wardrobe"
+        current="shelf"
         threadsHref={`https://www.threads.com/@${username}`}
         viewOnThreads={dict.threads.viewOnThreads}
       />
@@ -63,10 +63,10 @@ export default async function WardrobePage({
           linkLabel={dict.threads.viewOnThreads}
         />
       ) : (
-        <Wardrobe
+        <Shelves
           shelves={buildShelves(posts, locale)}
           strings={{
-            unnamed: dict.threads.wardrobeUnnamed,
+            unnamed: dict.threads.shelfUnnamed,
             noImage: dict.threads.noImage,
             openLabelPrefix: dict.threads.openPost,
             close: dict.threads.close,

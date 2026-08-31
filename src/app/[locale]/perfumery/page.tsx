@@ -22,7 +22,7 @@ export async function generateMetadata({
   return { title: `${getDictionary(locale).threads.title} — Serhii Butko` }
 }
 
-/** The bottles: one card per post, newest first. See ./wardrobe for the other view. */
+/** The bottles: one card per post, newest first. See ./shelf for the other view. */
 export default async function PerfumeryPage({
   params,
 }: {
@@ -54,7 +54,7 @@ export default async function PerfumeryPage({
         title={dict.threads.title}
         tabs={perfumeryTabs(locale, {
           posts: dict.threads.viewPosts,
-          wardrobe: dict.threads.viewWardrobe,
+          shelf: dict.threads.viewShelf,
         })}
         current="posts"
         threadsHref={`https://www.threads.com/@${username}`}

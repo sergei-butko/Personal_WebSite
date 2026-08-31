@@ -24,7 +24,7 @@ export interface NavItem {
  *
  * ## Matching by prefix, not equality
  *
- * /en/perfumery/wardrobe must light up "Perfumery". Equality would leave the
+ * /en/perfumery/shelf must light up "Perfumery". Equality would leave the
  * nav looking like nothing is selected on every sub-view, which reads as a bug.
  * Home is the exception and matches exactly, since every path starts with
  * "/en/" and it would otherwise be permanently active.

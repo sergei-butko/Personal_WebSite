@@ -38,7 +38,7 @@ export interface ScentGridStrings {
  * to produce — six, or four — and five is the number asked for. Capping the
  * ladder at `lg` makes five the answer on every screen wide enough to hold it.
  *
- * No zoom control here, unlike the photo grids. This is a wardrobe read at a
+ * No zoom control here, unlike the photo grids. This is a shelf read at a
  * glance, and its cards carry two lines of type under each picture; the photo
  * roll is 443 squares a visitor genuinely wants to scale. The same control on
  * both would be consistency for its own sake.
@@ -142,7 +142,7 @@ export function ScentGrid({
                 {/*
                  * One line, `Brand - Scent`, not a brand eyebrow over a name.
                  * Two lines put the house above the bottle in the hierarchy, and
-                 * on a wardrobe it is the bottle you are looking for; the brand
+                 * on a shelf it is the bottle you are looking for; the brand
                  * is how you tell two similar names apart. Clamped to two visual
                  * lines so a long pair wraps rather than truncating the scent,
                  * which is the half that identifies it.
