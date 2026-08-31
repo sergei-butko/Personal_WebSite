@@ -32,10 +32,11 @@ import type {
   ThreadsPost,
   ThreadsSnapshot,
 } from '../src/lib/threads/types'
+import { THREADS_IMAGE_FOLDER } from './media-name'
 
 const HOST = 'https://graph.threads.net/v1.0'
 const OUT_DATA = 'data/threads.json'
-const FOLDER = process.env.THREADS_MEDIA_FOLDER ?? 'threads'
+const FOLDER = THREADS_IMAGE_FOLDER
 const PAGE_SIZE = 100
 
 const FIELDS = [
@@ -175,9 +176,13 @@ async function fetchAllPosts(): Promise<ApiPost[]> {
 /**
  * Re-hosts one Threads image in Cloudinary under a stable public id.
  *
- * The id is `threads/<postId>-<slot>` — Meta's post id, which does not
+ * The id is `threads/images/<postId>-<slot>` — Meta's post id, which does not
  * rotate. Meta's own media_url is signed and expires, so it is never stored
  * and never rendered; only the bytes behind it are kept, once.
+ *
+ * NOT `<Brand>-<Scent>-<n>`, which is what these end up called: the fragrance
+ * is hand-written and does not exist yet at capture time. `media:organise`
+ * renames them once a bottle has been named — see media-name.ts.
  *
  * Returns null on failure so one dead image cannot fail the whole sync.
  */

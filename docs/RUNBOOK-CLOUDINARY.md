@@ -114,7 +114,7 @@ npx serve out   # or open out/en/photos/index.html
 
 Confirm: photos load, they come from `res.cloudinary.com`, and
 `public/images/` does not exist. Then open the Cloudinary **Media Library** and
-confirm a `telegram/` folder with ~400 assets named `<postId>-<slot>`.
+confirm a `telegram/images/` folder with ~400 assets named `<postId>-<slot>`.
 
 ## 5. Merge
 
@@ -183,9 +183,9 @@ before. The `.old` clone is the only copy of the pre-rewrite history.
 
 ## How it works afterwards
 
-`sync-telegram.ts` uploads each photo to `telegram/<postId>-<slot>` and writes
-the snapshot to `data/photos.json`, in the same Cloudinary account.
-`sync-threads.ts` does the same to `threads/<postId>-<slot>` and
+`sync-telegram.ts` uploads each photo to `telegram/images/<postId>-<slot>` and
+writes the snapshot to `data/photos.json`, in the same Cloudinary account.
+`sync-threads.ts` does the same to `threads/images/<postId>-<slot>` and
 `data/threads.json`. Neither writes to the repository. The public id is derived from a stable source id, so
 a re-run **replaces** an asset rather than adding one — which is precisely what
 the previous implementation got wrong.
@@ -196,6 +196,56 @@ there is no encode step and no variant files.
 
 `/public/images/` is gitignored. If it reappears locally, something ran an old
 script — nothing in the tree writes there any more.
+
+### The layout, and the two fields that decide it
+
+| Folder             | Holds                    | Named                 |
+| ------------------ | ------------------------ | --------------------- |
+| `telegram/images/` | Channel photos           | `<postId>-<slot>`     |
+| `telegram/audio/`  | The song under each post | `<audioPostId>`       |
+| `threads/images/`  | Bottle shots             | `<Brand>-<Scent>-<n>` |
+| `data/`            | The three JSON snapshots | `<name>.json`         |
+
+**An asset's folder is not its public id.** This cloud is in Cloudinary's
+_dynamic folder_ mode, where `asset_folder` — what the Media Library groups by
+— is a separate field from `public_id`, which is what the delivery URL is built
+from. Neither `uploader.upload` nor `uploader.rename` sets it, so for a long
+time every asset these scripts uploaded sat in the ROOT of the Media Library,
+653 of them in one list, while its id said `telegram/…`. Only
+`uploader.explicit` writes it; `asset_folder` and `to_asset_folder` are not
+honoured as rename options, and both were tried.
+
+`api.update` also writes it and is the obvious call — do not use it here. It is
+an **Admin API** request, and the free plan allows 500 of those an hour, fewer
+than the 651 assets a full run touches. `uploader.explicit` is an Upload API
+request and is not on that budget.
+
+### Renaming bottles: `npm run media:organise`
+
+    SYNC_DRY_RUN=1 npm run media:organise   # print the plan, touch nothing
+    npm run media:organise                  # do it
+
+A Threads image arrives as `threads/images/<postId>-<slot>`, because the
+fragrance is hand-written and **does not exist when the sync runs** — Serhii
+names the bottle afterwards through `content:pull` / `content:push`. This
+command is the second half: it renames each image after the bottle its post
+names, files everything in the table above, and rewrites the three snapshots to
+match.
+
+Run it after naming bottles. It is idempotent — a second run reports nothing to
+do — and it is safe to interrupt: the snapshots are written once, at the very
+end, only after every rename has returned, so a run that dies leaves the site
+pointing exactly where it did and the next run finishes the job.
+
+`media-name.ts` holds the naming rules and `npm run test:names` pins them.
+Diacritics fold (`Wūlóng Chá` → `Wulong_Cha`), apostrophes vanish
+(`Sister's Aroma` → `Sisters_Aroma`), and `-` never appears inside a field
+because it separates them (`Marc-Antoine Barrois` → `Marc_Antoine_Barrois`).
+A post with no bottle named keeps its post id.
+
+**Renaming changes delivery URLs, so deploy straight afterwards.** The
+published HTML is static and holds the old ids; until it is rebuilt those
+images 404.
 
 ### Distinctness
 

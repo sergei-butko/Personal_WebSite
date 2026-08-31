@@ -13,7 +13,14 @@ export type ThreadsMediaType =
   'TEXT_POST' | 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' | 'AUDIO' | 'REPOST_FACADE'
 
 export interface ThreadsImage {
-  /** Cloudinary public id, e.g. "threads/17900000000000000-0". Not a URL. */
+  /**
+   * Cloudinary public id, e.g. "threads/images/Tom_Ford-Oud_Wood-1". Not a URL.
+   *
+   * The sync writes "threads/images/<postId>-<slot>" — the fragrance below is
+   * hand-written and does not exist yet at capture time — and
+   * `npm run media:organise` renames it after the bottle once one is named.
+   * A post with no bottle keeps the id-shaped form.
+   */
   publicId: string
   /** Intrinsic size, for aspect-ratio and CLS. */
   width: number

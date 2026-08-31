@@ -9,8 +9,9 @@
  * downloaded and re-encoded every photo into public/images/photos/, keyed on a
  * hash of the signed Telegram URL — which rotates on every fetch, so the cache
  * never hit and each run left another full copy behind. The public id below is
- * derived from the Telegram message id and slot instead: stable across runs,
- * so a re-sync overwrites in place rather than accumulating.
+ * derived from the Telegram message id and slot instead —
+ * `telegram/images/<postId>-<slot>` — which is stable across runs, so a re-sync
+ * overwrites in place rather than accumulating.
  */
 
 /**

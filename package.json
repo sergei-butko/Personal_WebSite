@@ -16,8 +16,10 @@
     "sync:photos": "tsx scripts/sync-telegram.ts",
     "test:dedup": "tsx scripts/photo-dedup.test.ts",
     "test:collage": "tsx scripts/collage.test.ts",
+    "test:names": "tsx scripts/media-name.test.ts",
     "content:pull": "tsx scripts/content.ts pull",
-    "content:push": "tsx scripts/content.ts push"
+    "content:push": "tsx scripts/content.ts push",
+    "media:organise": "tsx scripts/organise-media.ts"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",

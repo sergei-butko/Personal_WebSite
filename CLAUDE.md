@@ -182,7 +182,20 @@ expires loudly and is refreshed by hand.
   rotate per fetch, so the cache never hit, every run re-encoded the whole
   channel under new names, and nothing was deleted: 402 photos became 10,377
   files and 827 MB across thirteen runs. Public ids are `<postId>-<slot>` now, so
-  a re-upload replaces in place.
+  a re-upload replaces in place. **A Threads image ends up named after its
+  bottle** (`threads/images/Tom_Ford-Oud_Wood-1`) — but not at upload time,
+  because the fragrance is hand-written and does not exist yet when the sync
+  runs. The sync still writes the id-shaped name and `npm run media:organise`
+  renames it afterwards. Do not try to move that into the sync.
+- **A Cloudinary folder is not a public id prefix.** This cloud is in dynamic
+  folder mode: `asset_folder` is what the Media Library groups by, `public_id`
+  is what the delivery URL is built from, and they are independent. Neither
+  `upload` nor `rename` sets the former — so 653 assets sat in the root of the
+  Media Library for months while every id said `telegram/…`. Only
+  `uploader.explicit` writes it. `api.update` does too, and is the wrong call:
+  it is an Admin API request, the free plan allows 500 an hour, and a full
+  `media:organise` touches 651 assets. Renaming changes delivery URLs, so a run
+  is followed by a deploy — the published HTML is static and holds the old ids.
 - **Deduplication is by sha256 of the bytes,** never by URL, mapped in
   `data/photo-hashes.json`. The rule is pure and pinned by `npm run test:dedup`.
 - **A card's collage must fill its rectangle.** The by-post view sizes every
@@ -328,6 +341,7 @@ them into feature work.
 ```
 npm run typecheck && npm run lint && npm run format:check && npm run build
 npm run test:telegram && npm run test:dedup && npm run test:collage
+npm run test:names
 ```
 
 The build must run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,

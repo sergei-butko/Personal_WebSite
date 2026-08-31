@@ -14,7 +14,7 @@
  * - Image bytes never touch the repository. Cloudinary stores the original and
  *   derives every width and format on delivery, so there is no encode step,
  *   no variant files, and nothing to commit but the snapshot below.
- * - The public id is `telegram/<postId>-<slot>` — derived from Telegram's own
+ * - The public id is `telegram/images/<postId>-<slot>` — from Telegram's own
  *   message id, which is stable. A re-upload therefore REPLACES the asset.
  *   The version of this script that shipped before keyed on a sha1 of the
  *   signed source URL, which rotates on every fetch: the cache never hit,
@@ -54,13 +54,19 @@ import {
   uploadImage,
   uploadJson,
 } from './cloudinary'
+import { TELEGRAM_IMAGE_FOLDER, telegramAudioId, telegramImageId } from './media-name'
 import type { Photo, PhotoSnapshot, PostAudio } from '../src/lib/photos/types'
 
 const CHANNEL = process.env.TELEGRAM_CHANNEL ?? 'just_my_photos'
 const OUT_DATA = 'data/photos.json'
 const OUT_HASHES = 'data/photo-hashes.json'
-const FOLDER = process.env.TELEGRAM_MEDIA_FOLDER ?? 'telegram'
-const AUDIO_FOLDER = `${FOLDER}/audio`
+/*
+ * Where the photos land. From media-name.ts so that this script and
+ * `media:organise` cannot disagree about the layout — when they did, a sync
+ * quietly rebuilt the old flat structure underneath the organised one. Audio
+ * goes to its own folder, which telegramAudioId knows about.
+ */
+const FOLDER = TELEGRAM_IMAGE_FOLDER
 
 /**
  * The Bot API refuses to serve a file over 20 MB, so anything larger cannot be
@@ -111,14 +117,10 @@ function fail(message: string): never {
   process.exit(1)
 }
 
-function publicIdFor(postId: number, index: number): string {
-  return `${FOLDER}/${postId}-${index}`
-}
+const publicIdFor = telegramImageId
 
 /** Keyed on the AUDIO post's message id, so a re-run replaces in place. */
-function audioPublicIdFor(audioPostId: number): string {
-  return `${AUDIO_FOLDER}/${audioPostId}`
-}
+const audioPublicIdFor = telegramAudioId
 
 /**
  * Photos already uploaded, from the snapshot in Cloudinary.

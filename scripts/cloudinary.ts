@@ -164,34 +164,147 @@ export async function uploadAudio(bytes: Buffer, publicId: string): Promise<stri
   return id
 }
 
+/** image, video (which is where audio lives) or raw. */
+export type ResourceType = 'image' | 'video' | 'raw'
+
 /**
  * Every asset id under a folder prefix. Paginated; Cloudinary caps a page at
  * 500. Used only by the prune step, which needs to know what is there in
  * order to spot what the snapshot no longer references.
  */
-export async function listAssetIds(prefix: string): Promise<string[]> {
+export async function listAssetIds(
+  prefix: string,
+  resourceType: ResourceType = 'image'
+): Promise<string[]> {
+  return (await listAssets(resourceType, prefix)).map((asset) => asset.publicId)
+}
+
+/** One asset as the Admin API describes it. */
+export interface AssetRow {
+  publicId: string
+  /**
+   * Where the Media Library files it. INDEPENDENT of publicId on this cloud —
+   * see the header of scripts/media-name.ts. '' means the root, which is where
+   * every asset uploaded by these scripts landed before `media:organise`.
+   */
+  assetFolder: string
+  bytes: number
+}
+
+/**
+ * Every asset of one resource type, optionally under a prefix.
+ *
+ * Paginated at 500, so the whole account is a handful of calls. That matters:
+ * the Admin API is capped at 500 requests an hour on this plan, and asking
+ * about 651 assets one at a time would blow through it in a single run. Listing
+ * once and holding the answer in memory is what keeps `media:organise` inside
+ * the budget — see the note on setAssetFolder for the other half of that.
+ */
+export async function listAssets(
+  resourceType: ResourceType,
+  prefix?: string
+): Promise<AssetRow[]> {
   await configureCloudinary()
   const client = api
   if (!client) throw new Error('Cloudinary was not configured')
 
-  const ids: string[] = []
+  const rows: AssetRow[] = []
   let cursor: string | undefined
 
   do {
     const page = await client.api.resources({
       type: 'upload',
-      resource_type: 'image',
-      prefix,
+      resource_type: resourceType,
+      ...(prefix ? { prefix } : {}),
       max_results: 500,
       next_cursor: cursor,
     })
     for (const asset of page.resources ?? []) {
-      if (asset.public_id) ids.push(String(asset.public_id))
+      if (!asset.public_id) continue
+      rows.push({
+        publicId: String(asset.public_id),
+        assetFolder: String(asset.asset_folder ?? ''),
+        bytes: Number(asset.bytes ?? 0),
+      })
     }
     cursor = page.next_cursor as string | undefined
   } while (cursor)
 
-  return ids
+  return rows
+}
+
+/**
+ * Changes an asset's public id, and therefore its delivery URL.
+ *
+ * `overwrite` is deliberately NOT passed, so Cloudinary refuses rather than
+ * destroying whatever is already at the target. Two bottles that slug to the
+ * same name is the failure this guards against, and the caller checks for it
+ * first — this is the second line, not the first.
+ *
+ * `invalidate` purges the old URL from the CDN. Without it the previous id
+ * keeps serving from cache for hours, which hides a half-finished migration.
+ */
+export async function renameAsset(
+  from: string,
+  to: string,
+  resourceType: ResourceType = 'image'
+): Promise<void> {
+  await configureCloudinary()
+  const client = api
+  if (!client) throw new Error('Cloudinary was not configured')
+
+  await client.uploader.rename(from, to, {
+    resource_type: resourceType,
+    invalidate: true,
+  })
+}
+
+/**
+ * Files an asset under a Media Library folder, and names it there.
+ *
+ * `uploader.explicit`, not `api.update`, and that is the whole point of this
+ * function. Both write `asset_folder`, but `api.update` is an ADMIN API call
+ * and this account is capped at 500 of those an hour — fewer than the 651
+ * assets a full `media:organise` touches, so the obvious implementation
+ * fails most of the way through and leaves the store half-moved. `explicit`
+ * is an Upload API call and is not on that budget.
+ *
+ * Renaming does NOT move an asset: `uploader.rename` leaves `asset_folder`
+ * exactly as it was, and neither `asset_folder` nor `to_asset_folder` is
+ * honoured as a rename option. Both were tried. This call is the only thing
+ * that moves anything.
+ *
+ * `display_name` is set alongside, because it does not follow a rename either
+ * — an asset renamed to `Dior-Fahrenheit-1` went on calling itself
+ * `17956459470243614-0` in the Media Library until it was written explicitly.
+ */
+export async function setAssetFolder(
+  publicId: string,
+  folder: string,
+  displayName: string,
+  resourceType: ResourceType = 'image'
+): Promise<void> {
+  await configureCloudinary()
+  const client = api
+  if (!client) throw new Error('Cloudinary was not configured')
+
+  /*
+   * Cast because the SDK's `explicit` overloads only admit the transformation
+   * options it was written for, and `asset_folder` / `display_name` are newer
+   * than the types. The call itself is documented and the response carries the
+   * new folder back, which is what the caller verifies against.
+   */
+  const explicit = client.uploader.explicit as (
+    publicId: string,
+    options: Record<string, unknown>
+  ) => Promise<Record<string, unknown>>
+
+  await explicit(publicId, {
+    type: 'upload',
+    resource_type: resourceType,
+    asset_folder: folder,
+    display_name: displayName,
+  })
 }
 
 /**

@@ -9,6 +9,25 @@ updates:
       # One PR for routine updates instead of a dozen.
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # ESLint 10 cannot be installed here, and the failure is at run time
+      # rather than at install: eslint-config-next bundles
+      # eslint-plugin-react@7.37.5, which calls the context.getFilename() API
+      # ESLint 10 removed, and eslint-config-next's own `eslint: ">=9.0.0"`
+      # peer range is loose enough that npm accepts the pair. `npm run lint`
+      # then dies with `contextOrFilename.getFilename is not a function`.
+      #
+      # This is here because the bump was merged once, on 2026-08-31, past two
+      # red `verify` runs — and since deploy.yml does not lint, nothing looked
+      # wrong until every subsequent PR's CI failed. Reverted in #56.
+      #
+      # DELETE THIS ENTRY once eslint-plugin-react ships an ESLint 10 release
+      # (still 7.37.5, peering `eslint: ^9.7`, as of 2026-08-31) — an ignore
+      # hides the upgrade on the day it finally becomes possible, so it is
+      # meant to be temporary. Exact name, so eslint-config-next and the
+      # plugins are untouched; only the `eslint` package itself is held.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
