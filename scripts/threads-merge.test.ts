@@ -122,6 +122,47 @@ check('the same post twice in one batch yields one', twice.posts.length, 1)
 check('the first copy is the one kept', twice.posts[0]?.text, '')
 check('and it counts as a collision', twice.collisions, 1)
 
+// --- the output does not depend on the input order ------------------------
+
+/*
+ * The strong property, and the one that separates this merge from the photo
+ * one. Every post has a unique (timestamp, id), so the comparator totally
+ * orders them and the result is the same however the rows arrive — at any
+ * split, interleaved, or shuffled. Checked against the live 94-post snapshot
+ * at all 95 split points and over 200 shuffles; pinned here offline.
+ *
+ * mergePhotos deliberately does NOT have this: album rows tie on both fields,
+ * so their order comes from the input. See photo-merge.ts.
+ */
+function shuffle<T>(xs: readonly T[], seed: number): T[] {
+  let s = seed
+  const rand = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648
+  const out = [...xs]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[out[i], out[j]] = [out[j] as T, out[i] as T]
+  }
+  return out
+}
+
+// Five timestamps across twenty-five posts, so every one of them is a tie and
+// the id comparator is what does the ordering. With distinct timestamps this
+// test passes even with the tie-break deleted, which makes it worth nothing.
+const many = Array.from({ length: 25 }, (_, i) =>
+  post(String(100 + i), `2026-01-0${(i % 5) + 1}T00:00:00.000Z`)
+)
+const canonical = JSON.stringify(mergePosts(many, []).posts)
+
+let orderDependent = 0
+for (let seed = 1; seed <= 50; seed++) {
+  const s = shuffle(many, seed)
+  const cut = seed % (many.length + 1)
+  if (JSON.stringify(mergePosts(s.slice(cut), s.slice(0, cut)).posts) !== canonical) {
+    orderDependent += 1
+  }
+}
+check('50 shuffles and splits all give the same answer', orderDependent, 0)
+
 // --- the inputs are not mutated -------------------------------------------
 
 const stored = [a, b]

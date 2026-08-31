@@ -165,6 +165,50 @@ check('alt text survives', kept?.alt, { en: 'a lake at dusk', uk: 'озеро н
 check('the song survives', kept?.audio?.publicId, 'telegram/audio/81')
 check('and so does hidden', kept?.hidden, true)
 
+// --- what survives a reordered input, exactly -----------------------------
+
+/*
+ * mergePhotos is NOT order-independent, and mergePosts is — the difference is
+ * that album rows tie on both timestamp and id, so nothing but input order
+ * separates them.
+ *
+ * What it does guarantee, and what was measured over 50 shuffles of the live
+ * 443-row snapshot: no row is lost or gained, and the ALBUMS stay in the right
+ * places. Only slot order inside an album follows the input. That is the
+ * precondition in photo-merge.ts, from the other side.
+ */
+function shuffle<T>(xs: readonly T[], seed: number): T[] {
+  let s = seed
+  const rand = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648
+  const out = [...xs]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[out[i], out[j]] = [out[j] as T, out[i] as T]
+  }
+  return out
+}
+
+const archive = [
+  ...Array.from({ length: 4 }, (_, i) => photo(200, `telegram/images/200-${i}`, T2)),
+  ...Array.from({ length: 3 }, (_, i) => photo(100, `telegram/images/100-${i}`, T1)),
+]
+const rowKeys = (xs: Photo[]) =>
+  xs
+    .map((p) => `${p.id}:${p.publicId}`)
+    .sort()
+    .join(',')
+const postSeq = (xs: Photo[]) => xs.map((p) => p.id).filter((id, i, a) => id !== a[i - 1])
+
+let lost = 0
+let albumsMoved = 0
+for (let seed = 1; seed <= 50; seed++) {
+  const { photos: out } = mergePhotos(shuffle(archive, seed), [])
+  if (rowKeys(out) !== rowKeys(archive)) lost += 1
+  if (JSON.stringify(postSeq(out)) !== JSON.stringify([200, 100])) albumsMoved += 1
+}
+check('no shuffle loses or invents a row', lost, 0)
+check('and the albums stay in post order', albumsMoved, 0)
+
 // --- the inputs are not mutated -------------------------------------------
 
 const stored = [a0]
