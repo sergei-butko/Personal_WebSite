@@ -220,6 +220,31 @@ an **Admin API** request, and the free plan allows 500 of those an hour, fewer
 than the 651 assets a full run touches. `uploader.explicit` is an Upload API
 request and is not on that budget.
 
+### Deleting what nothing references: `MEDIA_PRUNE=1`
+
+    SYNC_DRY_RUN=1 MEDIA_PRUNE=1 npm run media:organise   # list, delete nothing
+    MEDIA_PRUNE=1 npm run media:organise                  # delete
+
+Editing a post's image list or deleting a post leaves its assets behind.
+`media:organise` reports them on every run; this removes them.
+
+Only assets under `telegram/` and `threads/` are ever candidates. The snapshots
+in `data/`, Cloudinary's own demo files at the root (`sample`, `cld-sample-*`,
+`main-sample`) and anything else outside those two namespaces are never touched,
+whatever the flag says. Old prefixes count deliberately: an unreferenced asset
+was never renamed — a rename is only planned for something a snapshot points at
+— so these sit at `threads/<postId>-<slot>` rather than under
+`threads/images/`, and matching on the folder would find none of them.
+
+**Opt-in because it is irreversible in a way the photo prune is not.** A Telegram
+photo can be fetched from the channel again — that is what `SYNC_REPAIR` does —
+but Meta's media URLs are signed and expire, so a deleted Threads image is gone
+for good. Read the list it prints first; it prints all of them, never a
+truncated sample, because that log is the only record of what went.
+
+17 were removed on 2026-08-31: five second images dropped from Kajal and Dior
+posts by hand, and twelve belonging to posts no longer in the snapshot.
+
 ### Repairing a row whose asset is gone: `SYNC_REPAIR=1`
 
     SYNC_REPAIR=1 SYNC_DRY_RUN=1 npm run sync:photos   # what is missing

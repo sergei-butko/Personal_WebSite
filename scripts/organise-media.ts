@@ -34,14 +34,23 @@
  * That is why the store is listed first and compared against, rather than the
  * snapshot being trusted about where things are.
  *
- * Nothing here deletes. Assets the snapshots no longer reference are reported
- * and left alone; `SYNC_PRUNE=1 npm run sync:photos` is the one thing in this
- * repo allowed to remove an asset.
+ * ## Deleting
+ *
+ * Nothing is deleted unless MEDIA_PRUNE=1 is passed, and then only assets under
+ * `telegram/` and `threads/` that no snapshot references. The snapshots
+ * themselves (`data/`), Cloudinary's own demo files and anything else outside
+ * those two namespaces are never candidates, whatever the flag says.
+ *
+ * Opt-in because it is irreversible in a way the photo prune is not: a Telegram
+ * photo can be fetched again from the channel — that is what SYNC_REPAIR does —
+ * but Meta's media URLs are signed and expire, so a deleted Threads image is
+ * gone for good. Read the list it prints before passing the flag.
  */
 
 import {
   type AssetRow,
   type ResourceType,
+  deleteAssets,
   fetchJson,
   listAssets,
   renameAsset,
@@ -66,6 +75,14 @@ const THREADS = 'data/threads.json'
 
 /** Say what would happen and touch nothing. */
 const DRY_RUN = process.env.SYNC_DRY_RUN === '1'
+
+/**
+ * Delete assets under telegram/ and threads/ that no snapshot references.
+ *
+ * Off by default. See the note on deleting in the header: a Threads image
+ * cannot be re-fetched, so this is the one irreversible thing here.
+ */
+const PRUNE = process.env.MEDIA_PRUNE === '1'
 
 function fail(message: string): never {
   console.error(`✗ ${message}`)
@@ -307,26 +324,43 @@ async function main(): Promise<void> {
   }
   if (!DRY_RUN && moves.length > 12) console.log(`  … and ${moves.length - 12} more`)
 
-  // Anything in the store the snapshots do not mention. Reported, never
-  // touched — Cloudinary's own `samples/` folder lives here too.
+  /*
+   * Assets in the store that no snapshot mentions.
+   *
+   * Scoped to the two namespaces these scripts own, and that scoping is what
+   * makes the prune below safe rather than a nice-to-have: `data/` holds the
+   * snapshots themselves, and the root holds Cloudinary's own demo files
+   * (`sample`, `cld-sample-*`), none of which are this tool's to judge.
+   *
+   * Old prefixes count. An unreferenced asset was never renamed — a rename is
+   * only planned for something a snapshot points at — so these sit at
+   * `threads/<postId>-<slot>`, not under `threads/images/`. Matching on the
+   * folder would find none of them.
+   */
   const referenced = new Set([...uniqueFolders.values()].map((f) => f.id))
-  const orphans = [...images.keys(), ...videos.keys(), ...raws.keys()].filter(
-    (id) =>
-      !referenced.has(id) &&
-      !id.startsWith('samples/') &&
-      !moves.some((m) => m.from === id)
+  const owned = (id: string) => id.startsWith('telegram/') || id.startsWith('threads/')
+  const orphanImages = [...images.keys()].filter(
+    (id) => owned(id) && !referenced.has(id) && !moves.some((m) => m.from === id)
   )
+  const orphanVideos = [...videos.keys()].filter(
+    (id) => owned(id) && !referenced.has(id) && !moves.some((m) => m.from === id)
+  )
+  const orphans = [...orphanImages, ...orphanVideos]
   if (orphans.length > 0) {
-    console.log(`\n  ${orphans.length} asset(s) no snapshot references (left alone):`)
-    for (const id of orphans.slice(0, 10)) console.log(`    ${id}`)
-    if (orphans.length > 10) console.log(`    … and ${orphans.length - 10} more`)
+    console.log(
+      `\n  ${orphans.length} asset(s) no snapshot references ` +
+        `(${PRUNE ? 'MEDIA_PRUNE=1, these will be DELETED' : 'left alone'}):`
+    )
+    // Every one of them, always. This is the only record of what a prune
+    // removed, and a truncated list is no record at all.
+    for (const id of orphans) console.log(`    ${id}`)
   }
 
   if (DRY_RUN) {
     console.log('\n→ dry run, nothing written')
     return
   }
-  if (moves.length === 0 && needsFolder.length === 0) {
+  if (moves.length === 0 && needsFolder.length === 0 && !(PRUNE && orphans.length > 0)) {
     console.log('\n✓ already organised, nothing to do')
     return
   }
@@ -397,6 +431,15 @@ async function main(): Promise<void> {
   if (unfiled.length > 0) {
     console.warn(`  ! ${unfiled.length} could not be filed (ids and URLs unaffected):`)
     for (const line of unfiled.slice(0, 10)) console.warn(`    ${line}`)
+  }
+
+  if (PRUNE && orphans.length > 0) {
+    // After the renames, so nothing still being moved is in this set, and
+    // before the snapshot write, so a failure here leaves the ids untouched.
+    const removed =
+      (await deleteAssets(orphanImages, 'image')) +
+      (await deleteAssets(orphanVideos, 'video'))
+    console.log(`✓ deleted ${removed} of ${orphans.length} unreferenced asset(s)`)
   }
 
   /*

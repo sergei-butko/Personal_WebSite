@@ -314,7 +314,10 @@ export async function setAssetFolder(
  * built snapshot — see the prune step in sync-telegram.ts, which is opt-in
  * for that reason.
  */
-export async function deleteAssets(publicIds: string[]): Promise<number> {
+export async function deleteAssets(
+  publicIds: string[],
+  resourceType: ResourceType = 'image'
+): Promise<number> {
   await configureCloudinary()
   const client = api
   if (!client) throw new Error('Cloudinary was not configured')
@@ -322,7 +325,11 @@ export async function deleteAssets(publicIds: string[]): Promise<number> {
   let deleted = 0
   for (let i = 0; i < publicIds.length; i += 100) {
     const batch = publicIds.slice(i, i + 100)
-    const result = await client.api.delete_resources(batch)
+    // resource_type is not optional in practice: it defaults to image, so a
+    // batch of songs would report success and delete nothing.
+    const result = await client.api.delete_resources(batch, {
+      resource_type: resourceType,
+    })
     deleted += Object.keys(result.deleted ?? {}).length
   }
   return deleted
