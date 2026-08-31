@@ -220,6 +220,31 @@ an **Admin API** request, and the free plan allows 500 of those an hour, fewer
 than the 651 assets a full run touches. `uploader.explicit` is an Upload API
 request and is not on that budget.
 
+### Repairing a row whose asset is gone: `SYNC_REPAIR=1`
+
+    SYNC_REPAIR=1 SYNC_DRY_RUN=1 npm run sync:photos   # what is missing
+    SYNC_REPAIR=1 npm run sync:photos                  # re-fetch and re-upload
+
+A photo row can lose its Cloudinary asset without anything being wrong with the
+sync — an upload that failed years ago, a deletion in the console. The sync will
+never notice on its own, because it appends only posts newer than the cursor and
+so never looks at a 2019 row again. `media:organise` is what surfaces them, and
+this is what fixes them: the channel walk already fetches the whole history, so
+the bytes are in hand; the flag is only permission to touch a row that would
+otherwise be skipped. It re-uploads what is actually absent, unlike `SYNC_FORCE`,
+which re-uploads all 443 photos to fix one.
+
+It also purges dedup entries naming a missing asset, and that is not
+housekeeping. `decideAsset` is handed "hash → public id" and must trust it; it
+cannot know an id is dead. The first attempt at this repair found the missing
+photo's hash in the map, concluded the bytes were already stored under the very
+id that was missing, and pointed the row back at nothing — reporting a repair
+and changing nothing at all.
+
+A row whose post has since been deleted from the channel cannot be repaired.
+The script says so and leaves it; remove it by hand with `content:pull` /
+`content:push`.
+
 ### Renaming bottles: `npm run media:organise`
 
     SYNC_DRY_RUN=1 npm run media:organise   # print the plan, touch nothing

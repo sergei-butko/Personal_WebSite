@@ -79,6 +79,21 @@ const MAX_AUDIO_BYTES = Number(process.env.SYNC_MAX_AUDIO_BYTES ?? 20 * 1024 * 1
 const FORCE = process.env.SYNC_FORCE === '1'
 
 /**
+ * Re-upload stored photos whose Cloudinary asset has gone missing.
+ *
+ * Off by default, because it costs a listing of the whole folder and every
+ * ordinary run would pay for it to find nothing. A row can lose its asset
+ * without anything being wrong with this script — an upload that failed years
+ * ago, a hand-deletion in the console — and the sync will never notice on its
+ * own: it appends only posts newer than the cursor, so a 2019 row is never
+ * looked at again. `npm run media:organise` is what surfaces these.
+ *
+ * Distinct from SYNC_FORCE, which re-uploads all 443 photos to fix the one
+ * that is broken. This re-uploads only what is actually absent.
+ */
+const REPAIR = process.env.SYNC_REPAIR === '1'
+
+/**
  * Delete Cloudinary assets under FOLDER that the new snapshot does not
  * reference. Opt-in, because it is the only destructive thing here.
  */
@@ -466,6 +481,80 @@ async function main(): Promise<void> {
     )
   }
 
+  /*
+   * Rows whose asset is gone, re-hosted from the channel.
+   *
+   * The walk above is the whole channel — the cursor filters what is NEW, it
+   * does not bound what was fetched — so the bytes for a 2019 photo are
+   * already in hand here. All that is missing is permission to look at a row
+   * the sync would otherwise skip forever.
+   *
+   * The row is mutated in place, before `carried` is built below, so the fix
+   * rides along with the ordinary write instead of needing a second one. Its
+   * public id is recomputed rather than reused, which also drags a row left on
+   * an old prefix into the current layout.
+   */
+  let restored = 0
+  if (REPAIR) {
+    const present = new Set(await listAssetIds(`${FOLDER}/`))
+    const gone = stored.filter((photo) => !present.has(photo.publicId))
+    console.log(
+      `→ repair: ${gone.length} of ${stored.length} stored row(s) have no asset`
+    )
+
+    /*
+     * Purge dedup entries that name an asset which is not there.
+     *
+     * Not housekeeping — without it the repair cannot work. decideAsset is
+     * given "hash → public id" and trusts it, as it must; it has no way to know
+     * an id is dead. So the first attempt at this found the missing photo's
+     * hash in the map, decided the bytes were already stored under
+     * `telegram/10-0`, and pointed the row straight back at the asset that was
+     * missing in the first place. It reported a repair and changed nothing.
+     *
+     * A stale entry is worse than useless in an ordinary run too: any future
+     * photo with the same bytes would be deduplicated onto a dead id.
+     */
+    let purged = 0
+    for (const [hash, id] of [...hashes]) {
+      if (present.has(id)) continue
+      hashes.delete(hash)
+      uploadedDimensions.delete(id)
+      purged++
+    }
+    if (purged > 0) console.log(`  ${purged} dedup entry(s) named a missing asset`)
+
+    const byPostId = new Map(fetched.map((post) => [post.id, post]))
+    for (const photo of gone) {
+      const slot = Number(photo.publicId.slice(photo.publicId.lastIndexOf('-') + 1))
+      const source = Number.isFinite(slot)
+        ? byPostId.get(photo.id)?.images[slot]
+        : undefined
+      if (!source) {
+        // The post was deleted from the channel, or its album was edited and
+        // no longer has that slot. Nothing to re-fetch; say so and leave the
+        // row alone rather than guessing at a replacement.
+        console.warn(
+          `  ! ${photo.publicId}: post ${photo.id} slot ${slot} is not on the ` +
+            `channel any more — remove the row by hand (npm run content:pull)`
+        )
+        continue
+      }
+
+      const media = await rehost(source.url, photo.id, slot, hashes)
+      if (!media) continue
+      restored++
+      if (DRY_RUN) {
+        console.log(`  ↻ would restore ${photo.publicId}`)
+        continue
+      }
+      console.log(`  ↻ ${photo.publicId} → ${media.publicId}`)
+      photo.publicId = media.publicId
+      photo.width = media.width
+      photo.height = media.height
+    }
+  }
+
   // Freshly parsed captions, for the whitespace-only repair below.
   const freshCaptions = new Map(fetched.map((post) => [post.id, post.caption]))
 
@@ -568,7 +657,7 @@ async function main(): Promise<void> {
       `${cached} unchanged`
   )
 
-  if (photos.length === 0 && backfilled === 0 && repaired === 0) {
+  if (photos.length === 0 && backfilled === 0 && repaired === 0 && restored === 0) {
     console.log(`✓ ${stored.length} photos, nothing new`)
     await setOutput('changed', 'false')
     return
@@ -629,7 +718,8 @@ async function main(): Promise<void> {
   await setOutput('changed', 'true')
   console.log(
     `✓ ${photos.length} new photo(s) appended, ${backfilled} row(s) given a song, ` +
-      `${repaired} caption(s) repaired; ${merged.length} total in ${OUT_DATA}`
+      `${repaired} caption(s) repaired, ${restored} asset(s) restored; ` +
+      `${merged.length} total in ${OUT_DATA}`
   )
 }
 
