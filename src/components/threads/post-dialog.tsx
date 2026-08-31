@@ -126,23 +126,44 @@ export function PostDialog({
 
           <div className="overflow-y-auto">
             {/*
-             * Two up, and half the height they were. A review carries two
-             * bottle shots of the same thing — a pack shot and a styled one —
-             * and stacked at full width they were two screens of scrolling
-             * before a word of the writing. Side by side they read as one
-             * exhibit. A lone image takes one cell rather than stretching,
-             * which keeps every dialog's photographs the same size.
+             * Two up. A review carries two bottle shots of the same thing — a
+             * pack shot and a styled one — and stacked at full width they were
+             * two screens of scrolling before a word of the writing. Side by
+             * side they read as one exhibit. A lone image takes one cell rather
+             * than stretching, which keeps every dialog's photographs the same
+             * size.
+             *
+             * Each sits in a square box, and the gap between the boxes is the
+             * padding around them — so the pair divides the dialog's width into
+             * three equal margins and two equal squares, and the photographs
+             * are as large as that width allows. They were capped at 26dvh
+             * before, which made them smaller than the space they were given.
+             *
+             * The box is square and the picture is contained rather than
+             * cropped: these are product shots of different shapes, and cover
+             * would cut the top off a tall bottle to fill a square. Two equal
+             * squares hold their line whatever shape arrives inside them.
              */}
             {post.images.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 p-5 pb-0">
+              <div className="grid grid-cols-2 gap-6 p-6 pb-0">
                 {post.images.map((image) => (
-                  <CloudinaryImage
+                  <div
                     key={image.publicId}
-                    asset={image}
-                    alt={image.alt || title || imageAlt}
-                    sizes="(max-width: 640px) 46vw, 21rem"
-                    className="max-h-[26dvh] w-full rounded-xl object-contain"
-                  />
+                    className="aspect-square overflow-hidden rounded-xl bg-canvas"
+                  >
+                    {/*
+                     * The picture fills the square and object-contain letterboxes
+                     * it inside — rather than max-w/max-h on an intrinsically
+                     * sized image, where both constraints bind at once and the
+                     * element's own box is left square anyway.
+                     */}
+                    <CloudinaryImage
+                      asset={image}
+                      alt={image.alt || title || imageAlt}
+                      sizes="(max-width: 640px) 40vw, 21rem"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                 ))}
               </div>
             ) : null}

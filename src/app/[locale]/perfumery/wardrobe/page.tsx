@@ -3,7 +3,11 @@ import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadThreadsSnapshot } from '@/lib/threads/snapshot'
+import { isUnsynced } from '@/lib/threads/types'
+import { buildShelves } from '@/lib/threads/wardrobe'
 import { PerfumeryHeader } from '@/components/threads/perfumery-header'
+import { PerfumeryEmpty } from '@/components/threads/notices'
+import { Wardrobe } from '@/components/threads/wardrobe-shelves'
 import { Container } from '@/components/layout/container'
 import { perfumeryTabs } from '@/lib/threads/tabs'
 
@@ -19,12 +23,13 @@ export async function generateMetadata({
 }
 
 /**
- * The wardrobe.
+ * The wardrobe: a shelf per house, alphabetical, scrolling sideways when a
+ * house owns more bottles than a row holds. See ../page.tsx for the other view.
  *
- * A named, routable placeholder on purpose. The switch needs two destinations
- * to be a switch, and the standing instruction in CLAUDE.md is to fill empty
- * routes in rather than delete them — a placeholder that says so is honest,
- * where a tab that goes nowhere is a bug report waiting to be filed.
+ * The grouping is a build-time pure function over the same snapshot the bottles
+ * grid renders — there is no second store and nothing to keep in step. Which
+ * house a bottle belongs to is `fragrance.brand`, hand-written in the snapshot,
+ * so the shelves are only ever as good as those fields.
  */
 export default async function WardrobePage({
   params,
@@ -35,7 +40,8 @@ export default async function WardrobePage({
   if (!isLocale(locale)) notFound()
 
   const dict = getDictionary(locale)
-  const { username } = await loadThreadsSnapshot()
+  const snapshot = await loadThreadsSnapshot()
+  const { posts, username } = snapshot
 
   return (
     <Container>
@@ -50,9 +56,27 @@ export default async function WardrobePage({
         viewOnThreads={dict.threads.viewOnThreads}
       />
 
-      <p className="rounded-[var(--radius-card)] border border-dashed border-edge p-6 text-sm text-muted">
-        {dict.threads.wardrobePlaceholder}
-      </p>
+      {isUnsynced(snapshot) ? (
+        <PerfumeryEmpty
+          message={dict.threads.empty}
+          href={`https://www.threads.com/@${username}`}
+          linkLabel={dict.threads.viewOnThreads}
+        />
+      ) : (
+        <Wardrobe
+          shelves={buildShelves(posts, locale)}
+          strings={{
+            unnamed: dict.threads.wardrobeUnnamed,
+            noImage: dict.threads.noImage,
+            openLabelPrefix: dict.threads.openPost,
+            close: dict.threads.close,
+            viewOnThreads: dict.threads.viewOnThreads,
+            imageAlt: dict.threads.imageAlt,
+            scrollBack: dict.threads.shelfBack,
+            scrollForward: dict.threads.shelfForward,
+          }}
+        />
+      )}
     </Container>
   )
 }
