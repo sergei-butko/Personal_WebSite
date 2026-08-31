@@ -55,6 +55,7 @@ import {
   uploadJson,
 } from './cloudinary'
 import { TELEGRAM_IMAGE_FOLDER, telegramAudioId, telegramImageId } from './media-name'
+import { mergePhotos } from './photo-merge'
 import type { Photo, PhotoSnapshot, PostAudio } from '../src/lib/photos/types'
 
 const CHANNEL = process.env.TELEGRAM_CHANNEL ?? 'just_my_photos'
@@ -663,11 +664,22 @@ async function main(): Promise<void> {
     return
   }
 
-  // APPEND. Stored photos pass through untouched, captions and alt text
-  // included — `carried` differs from `stored` only where a row gained a song
-  // it did not have, which is the one additive exception above.
-  const merged = [...carried, ...photos]
-  merged.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id)
+  /*
+   * APPEND. Stored photos pass through untouched, captions and alt text
+   * included — `carried` differs from `stored` only where a row gained a song
+   * it did not have, which is the one additive exception above.
+   *
+   * mergePhotos states that rule rather than leaving it to the `storedIds`
+   * check in the loop above to imply, and it keys on (post, asset) rather than
+   * on either alone — see the file, the choice is not obvious and both simpler
+   * keys lose content.
+   */
+  const { photos: merged, collisions } = mergePhotos(carried, photos)
+  if (collisions > 0) {
+    console.warn(
+      `  ! ${collisions} re-hosted row(s) were already stored and were dropped`
+    )
+  }
 
   // Built from the MERGED set, never from this run's photos alone. Prune
   // deletes whatever the set does not name, so scoping it to the new photos
