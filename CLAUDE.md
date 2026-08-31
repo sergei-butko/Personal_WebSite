@@ -299,7 +299,18 @@ until the upstream box is ticked; nothing here needs changing when it is.
 function`. `eslint-plugin-react` has no ESLint 10 release yet, and
   eslint-config-next's `eslint: ">=9.0.0"` peer range is over-permissive — npm
   installs the combination happily and it fails at run time. Recheck when
-  `eslint-plugin-react` ships ESLint 10 support.
+  `eslint-plugin-react` ships ESLint 10 support — still 7.37.5 as of
+  2026-08-31, peering `eslint: ^9.7` at the top.
+
+  **It has been merged once and reverted.** Dependabot #54 took ESLint to
+  10.9.1 on 2026-08-31; both `verify` runs on it were red before it landed, and
+  once on `main` every subsequent PR's CI failed on the same TypeError —
+  including the grouped minor-and-patch bump that was open at the time, which
+  looked like a merge conflict rather than what it was. `deploy.yml` does not
+  lint, so the live site never noticed and nothing on the site was wrong; only
+  CI was. Reverted in #56. A red `verify` on a Dependabot PR is the whole
+  safeguard here — this is what merging past one costs.
+
 - **TypeScript 7 breaks lint, not typecheck.** `tsc --noEmit`, the build, both
   script tests and `format:check` all pass clean on 7.0.2. `typescript-eslint`
   then refuses to load at all: `typescript-eslint does not support TS 7.0`.
