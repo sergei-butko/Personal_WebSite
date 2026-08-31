@@ -123,6 +123,27 @@ const twiceInAlbum = mergePhotos(
 check('one asset twice in one album is one row', twiceInAlbum.photos.length, 1)
 check('counted', twiceInAlbum.collisions, 1)
 
+// --- a half-fresh album: an input a sync cannot produce -------------------
+
+/*
+ * Pinned so the behaviour is known rather than discovered. Album rows all carry
+ * their post's timestamp and the cursor filters whole posts, so an album is
+ * always wholly stored or wholly fresh — but if one were ever split, every row
+ * still survives and only the ORDER goes: stored rows first, then fresh. No
+ * photo is lost, which is the property worth guaranteeing.
+ */
+const half = mergePhotos(
+  [photo(90, 'telegram/images/90-2', T1), photo(90, 'telegram/images/90-3', T1)],
+  [photo(90, 'telegram/images/90-0', T1), photo(90, 'telegram/images/90-1', T1)]
+)
+check('a split album loses no rows', half.photos.length, 4)
+check('no false collisions', half.collisions, 0)
+check(
+  'though the order follows insertion, stored before fresh',
+  half.photos.map((p) => p.publicId.split('-').pop()),
+  ['2', '3', '0', '1']
+)
+
 // --- stored wins, so hand-written work survives ---------------------------
 
 const edited = photo(80, 'telegram/images/80-0', T1, {

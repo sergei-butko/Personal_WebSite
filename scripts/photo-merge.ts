@@ -81,6 +81,24 @@ export function mergePhotos(
    * The id tie-break is not decoration either — one timestamp in this channel
    * is shared by two different posts, so without it their relative order would
    * depend on the input.
+   *
+   * ## The precondition, stated rather than assumed
+   *
+   * Relying on stability means relying on the input: album rows must arrive
+   * contiguous and in slot order, and an album must be wholly in `stored` or
+   * wholly in `fresh`. A HALF-FRESH album would come out with its stored rows
+   * before its fresh ones — every photo present, in the wrong order.
+   *
+   * A sync cannot produce that. Every row of a post carries the post's
+   * timestamp (checked: 0 of 235 posts in this channel have rows disagreeing
+   * about it) and the cursor filters whole posts by that timestamp, so a post
+   * is entirely new or entirely old. `stored` is the previous snapshot, whose
+   * albums are contiguous, and `fresh` is built by iterating each new post's
+   * images in order.
+   *
+   * This is written down because a replay of the live snapshot split at an
+   * arbitrary row DOES trip it, and that looked like a bug for a few minutes.
+   * It is not one; it is an input a sync cannot hand over.
    */
   photos.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id)
 
