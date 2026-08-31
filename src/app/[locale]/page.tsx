@@ -86,7 +86,12 @@ export default async function HomePage({
                       asset={post.image}
                       alt={post.image.alt || dict.threads.imageAlt}
                       sizes="(max-width: 640px) 25vw, 120px"
-                      className="aspect-square h-full w-full object-cover"
+                      // Contained, like the bottles everywhere else: a quarter
+                      // of these shots are portrait, and cropping one to the
+                      // square takes off the cap. The photos tile below fills
+                      // instead — a cropped photograph is still a photograph,
+                      // a cropped bottle is a different bottle.
+                      className="aspect-square h-full w-full object-contain"
                     />
                   </span>
                 ))}

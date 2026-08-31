@@ -116,6 +116,15 @@ export function ScentGrid({
                  * Square, so a row of bottles is a row of equal rectangles
                  * whatever shape the photographs are. Portrait bottle shots and
                  * the occasional landscape flat-lay otherwise make a ragged band.
+                 *
+                 * The picture is *contained* in that square, not cropped to it.
+                 * 23 of the 93 posts lead with a shot more than 5% off square,
+                 * some as tall as 2:3, and filling the square took a sixth off
+                 * the top and a sixth off the bottom of each — which on a
+                 * centred bottle is the cap and the base, the two things that
+                 * identify it. The letterboxing costs a band of `bg-canvas`
+                 * either side; a beheaded bottle costs the recognition this
+                 * grid exists for.
                  */}
                 <div className="relative aspect-square overflow-hidden bg-canvas">
                   {card.image ? (
@@ -127,7 +136,7 @@ export function ScentGrid({
                       // are the same four the classes name.
                       sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
                       priority={index < 5}
-                      className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                      className="absolute inset-0 h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]"
                     />
                   ) : (
                     // 26 of 128 posts carry no image — text posts and reposts.

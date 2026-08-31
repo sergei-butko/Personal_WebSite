@@ -219,12 +219,18 @@ function BrandShelf({
                 className="group relative flex aspect-square overflow-hidden rounded-[var(--radius-card)] border border-edge bg-canvas transition hover:border-accent focus-visible:border-accent"
               >
                 {image ? (
+                  /*
+                   * Contained, not cropped — the same rule as the bottles grid.
+                   * A tall shot filled to a square loses its cap and its base,
+                   * and on a shelf the photograph is the only label a bottle
+                   * has. The band of `bg-canvas` either side is the price.
+                   */
                   <CloudinaryImage
                     asset={image}
                     alt={image.alt || title || strings.imageAlt}
                     sizes={TILE_SIZES}
                     priority={eager && index < 6}
-                    className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
+                    className="absolute inset-0 h-full w-full object-contain transition duration-300 group-hover:scale-[1.04]"
                   />
                 ) : (
                   // The picture is the whole tile here, so a post without one

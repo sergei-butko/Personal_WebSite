@@ -35,11 +35,12 @@ const linkSchema = z.strictObject({
    */
   directory: z.boolean().default(true),
   /**
-   * Repeated in the site footer as a bare monochrome mark, on every page.
-   * Was `primary`, which claimed to feed "the home card and the hero" — the
-   * home links card is gone and there is no hero, so the flag now names the
-   * one place that actually reads it. Keep this list short: four marks fit
-   * the footer without wrapping on a phone.
+   * Repeated in the site footer as a monochrome mark with its name, on every
+   * page. Was `primary`, which claimed to feed "the home card and the hero" —
+   * the home links card is gone and there is no hero, so the flag now names
+   * the one place that actually reads it. Keep this list short: five named
+   * links fill the footer row on a laptop and wrap to two on a phone, which
+   * is the most it can carry before it stops reading as chrome.
    */
   footer: z.boolean().default(false),
   /** rel="me" marks a verified identity link — good for the fediverse and SEO. */

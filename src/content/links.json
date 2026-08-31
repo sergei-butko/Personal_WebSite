@@ -25,6 +25,14 @@
     "identity": true
   },
   {
+    "platform": "linkedin",
+    "label": "LinkedIn",
+    "handle": "sergei-butko",
+    "href": "https://www.linkedin.com/in/sergei-butko/",
+    "footer": true,
+    "identity": true
+  },
+  {
     "platform": "email",
     "label": "Email",
     "href": "mailto:sergei.butko24@gmail.com",
@@ -65,14 +73,6 @@
     "label": "GitHub",
     "handle": "sergei-butko",
     "href": "https://github.com/sergei-butko",
-    "footer": false,
-    "identity": true
-  },
-  {
-    "platform": "linkedin",
-    "label": "LinkedIn",
-    "handle": "sergei-butko",
-    "href": "https://www.linkedin.com/in/sergei-butko/",
     "footer": false,
     "identity": true
   }

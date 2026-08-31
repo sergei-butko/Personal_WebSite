@@ -142,17 +142,15 @@ export function PostDialog({
              * three equal margins and two equal squares, and the photographs
              * are as large as that width allows.
              *
-             * How the picture meets that square depends on its shape, which is
-             * the one rule here that is not obvious:
-             *
-             *   Portrait — filled and cropped top and bottom. A tall shot
-             *     letterboxed into a square is a thin strip with grey either
-             *     side of it, wasting the width the layout just bought; these
-             *     are centred bottles, so the crop takes background, not
-             *     subject.
-             *   Landscape and square — contained. Cropping the sides of a wide
-             *     shot cuts the bottle out of a flat-lay, which is the whole
-             *     subject rather than the space around it.
+             * Every picture is contained in its square, whatever its shape.
+             * The rule used to fork on orientation — portrait cropped to fill,
+             * landscape contained — on the reasoning that a tall shot is
+             * centred on its bottle and the crop would only take background.
+             * It does not: 71 of the 186 images are portrait, down to 5:8, and
+             * filling a square took a fifth off the top and a fifth off the
+             * bottom, which is the cap and the base. This is the one place a
+             * reader looks at the photograph rather than past it, so nothing
+             * here is cropped and the leftover square is `bg-canvas`.
              */}
             {post.images.length > 0 ? (
               <div className="grid grid-cols-2 gap-8 p-8 pb-0">
@@ -162,8 +160,8 @@ export function PostDialog({
                     className="aspect-square overflow-hidden rounded-xl bg-canvas"
                   >
                     {/*
-                     * The picture fills the square and object-fit decides what
-                     * happens to the overflow — rather than max-w/max-h on an
+                     * The picture takes the whole square and object-fit decides
+                     * how it sits in it — rather than max-w/max-h on an
                      * intrinsically sized image, where both constraints bind at
                      * once and the element's own box is left square anyway.
                      */}
@@ -171,9 +169,7 @@ export function PostDialog({
                       asset={image}
                       alt={image.alt || title || imageAlt}
                       sizes="(max-width: 640px) 40vw, 21rem"
-                      className={`h-full w-full ${
-                        image.height > image.width ? 'object-cover' : 'object-contain'
-                      }`}
+                      className="h-full w-full object-contain"
                     />
                   </div>
                 ))}
