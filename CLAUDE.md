@@ -33,6 +33,16 @@ optimisation. If a solution needs a server it is the wrong solution here — do
 the work at build time instead. `/` is a client-side locale detector
 (`app/(detect)/`) precisely because a static host cannot redirect.
 
+**The one thing that is not frozen at build time is snapshot content.** The
+perfumery and photo views render the snapshot the build fetched — so the HTML
+is complete, indexable and works without JavaScript — and then re-read it in
+the browser through `lib/live-snapshot.ts`, replacing what they show if
+Cloudinary holds something newer. That is what makes `npm run content:push` the
+whole procedure for a content edit instead of push-then-deploy. It is a refresh
+on top of a real prerender, NOT a client-side-only page: delete the build-time
+fetch and the pages lose their content to search engines and to anyone without
+JavaScript.
+
 **`basePath` is `/Personal_WebSite`,** from `NEXT_PUBLIC_BASE_PATH`, set in
 `deploy.yml` and `ci.yml`. `next/link` and `next/image` prefix it automatically;
 **raw `<a href>`, `<img src>`, and anything touching `window.location` do not** —

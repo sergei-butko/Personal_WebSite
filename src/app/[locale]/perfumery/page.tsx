@@ -3,10 +3,8 @@ import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadThreadsSnapshot } from '@/lib/threads/snapshot'
-import { isUnsynced } from '@/lib/threads/types'
-import { ScentGrid, type ScentCard } from '@/components/threads/scent-grid'
+import { LiveScentGrid } from '@/components/threads/live-perfumery'
 import { PerfumeryHeader } from '@/components/threads/perfumery-header'
-import { PerfumeryEmpty } from '@/components/threads/notices'
 import { perfumeryTabs } from '@/lib/threads/tabs'
 import { Container } from '@/components/layout/container'
 
@@ -33,20 +31,7 @@ export default async function PerfumeryPage({
 
   const dict = getDictionary(locale)
   const snapshot = await loadThreadsSnapshot()
-  const { posts, username } = snapshot
-
-  const cards: ScentCard[] = posts.map((post) => {
-    const image = post.images[0]
-    return {
-      id: post.id,
-      permalink: post.permalink,
-      ...(image ? { image } : {}),
-      ...(post.fragrance ? { fragrance: post.fragrance } : {}),
-      fallbackText: post.text,
-      images: post.images,
-      text: post.text,
-    }
-  })
+  const { username } = snapshot
 
   return (
     <Container>
@@ -61,24 +46,26 @@ export default async function PerfumeryPage({
         viewOnThreads={dict.threads.viewOnThreads}
       />
 
-      {isUnsynced(snapshot) ? (
-        <PerfumeryEmpty
-          message={dict.threads.empty}
-          href={`https://www.threads.com/@${username}`}
-          linkLabel={dict.threads.viewOnThreads}
-        />
-      ) : (
-        <ScentGrid
-          cards={cards}
-          strings={{
-            viewOnThreads: dict.threads.viewOnThreads,
-            noImage: dict.threads.noImage,
-            openLabelPrefix: dict.threads.openPost,
-            close: dict.threads.close,
-            imageAlt: dict.threads.imageAlt,
-          }}
-        />
-      )}
+      {/*
+       * Rendered from the snapshot the build fetched, then re-rendered in the
+       * browser if `data/threads.json` has moved on — so `content:push` shows
+       * up without a deploy. See components/threads/live-perfumery.tsx.
+       */}
+      <LiveScentGrid
+        initial={snapshot}
+        strings={{
+          viewOnThreads: dict.threads.viewOnThreads,
+          noImage: dict.threads.noImage,
+          openLabelPrefix: dict.threads.openPost,
+          close: dict.threads.close,
+          imageAlt: dict.threads.imageAlt,
+        }}
+        empty={{
+          message: dict.threads.empty,
+          href: `https://www.threads.com/@${username}`,
+          linkLabel: dict.threads.viewOnThreads,
+        }}
+      />
     </Container>
   )
 }

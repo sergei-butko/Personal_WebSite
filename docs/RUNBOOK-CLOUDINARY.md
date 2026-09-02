@@ -256,6 +256,31 @@ truncated sample, because that log is the only record of what went.
 17 were removed on 2026-08-31: five second images dropped from Kajal and Dior
 posts by hand, and twelve belonging to posts no longer in the snapshot.
 
+### Editing content by hand: `content:pull` / `content:push`
+
+    npm run content:pull    # Cloudinary -> content-local/
+    # edit content-local/photos.json or threads.json
+    npm run content:push    # content-local/ -> Cloudinary
+
+**That is the whole procedure — there is no deploy step.** The perfumery and
+photo views re-read their snapshot in the browser (`lib/live-snapshot.ts`), so a
+pushed edit appears on the next page load. The built HTML is still a full
+prerender of whatever the last deploy saw, which is what keeps the reviews
+indexable and readable without JavaScript; the refresh only replaces what it
+finds newer, and a failed fetch leaves the built page exactly as it was.
+
+Two things still need more than a push:
+
+- **Renaming a bottle.** Changing a `fragrance` changes what its images should
+  be called, so follow with `npm run media:organise`. The site picks up the new
+  ids on the next load, same as any other edit.
+- **Anything outside a snapshot** — profile copy, UI strings, links, MDX posts.
+  Those live in the repo and reach the site the ordinary way, through a deploy.
+
+Re-pull before editing if a sync has run since your last pull. Push refuses a
+stale edit rather than clobbering what the sync added, so nothing is lost — but
+you would redo the edit for nothing.
+
 ### Cloudinary's own demo assets: `npm run media:clean-demo`
 
     npm run media:clean-demo                    # list them, delete nothing

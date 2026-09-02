@@ -156,7 +156,9 @@ async function push(): Promise<void> {
   for (const { doc, value } of pending) next[doc.id] = JSON.stringify(value, null, 2)
   await writeFile(`${DIR}/${BASELINE}`, JSON.stringify(next, null, 2))
 
-  console.log('\n✓ Pushed. The site is a static build, so run Deploy to publish it.')
+  console.log('\n✓ Pushed. The perfumery and photo views re-read this in the browser,')
+  console.log('  so the edit is live on the next page load — no deploy needed.')
+  console.log('  Changed a fragrance? Run media:organise to rename its images.')
 }
 
 async function main(): Promise<void> {

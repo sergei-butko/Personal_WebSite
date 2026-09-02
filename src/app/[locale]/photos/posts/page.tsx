@@ -2,15 +2,9 @@ import { notFound } from 'next/navigation'
 import { isLocale, localePath } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
-import { isUnsynced } from '@/lib/photos/types'
-import { resolveAlt } from '@/lib/photos/alt'
-import { groupByPost } from '@/lib/photos/group'
-import { formatPostDateTime } from '@/lib/photos/format'
-import { audioUrl } from '@/lib/media'
-import { PostGallery, type PostGroup } from '@/components/photos/post-gallery'
+import { LivePostGallery } from '@/components/photos/live-photos'
 import { ViewSwitch } from '@/components/ui/view-switch'
 import { ChannelButton } from '@/components/photos/channel-button'
-import { PhotosEmpty, SyncedNote } from '@/components/photos/notices'
 import { Container } from '@/components/layout/container'
 
 /**
@@ -28,26 +22,7 @@ export default async function PhotosByPostPage({
 
   const dict = getDictionary(locale)
   const photoSnapshot = await loadPhotoSnapshot()
-  const { photos, channel, syncedAt } = photoSnapshot
-
-  const groups: PostGroup[] = groupByPost(photos.filter((photo) => !photo.hidden)).map(
-    (post) => ({
-      id: post.id,
-      permalink: post.permalink,
-      timestamp: post.timestamp,
-      // Both the formatting and the audio URL are resolved here rather than in
-      // the card: PostGallery is a Client Component, and neither the locale
-      // date tables nor the Cloudinary cloud name should cross into the bundle.
-      dateTime: formatPostDateTime(post.timestamp, locale),
-      caption: post.caption,
-      ...(post.audio ? { audio: post.audio } : {}),
-      ...(post.audio?.publicId ? { audioSrc: audioUrl(post.audio.publicId) } : {}),
-      items: post.photos.map((photo) => ({
-        photo,
-        alt: resolveAlt(photo, locale, dict.photos.genericAlt),
-      })),
-    })
-  )
+  const { channel } = photoSnapshot
 
   return (
     <Container>
@@ -80,41 +55,35 @@ export default async function PhotosByPostPage({
         <ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />
       </div>
 
-      {isUnsynced(photoSnapshot) || groups.length === 0 ? (
-        <PhotosEmpty
-          message={dict.photos.empty}
-          channel={channel}
-          viewChannel={dict.photos.viewChannel}
-        />
-      ) : (
-        <>
-          <PostGallery
-            posts={groups}
-            strings={{
-              closeLabel: dict.photos.close,
-              openLabelPrefix: dict.photos.open,
-              viewOnTelegram: dict.photos.viewOnTelegram,
-              previousLabel: dict.photos.previous,
-              nextLabel: dict.photos.next,
-              countOne: dict.photos.countOne,
-              countMany: dict.photos.countMany,
-              perRowLabel: dict.photos.perRowPosts,
-              zoomIn: dict.photos.zoomIn,
-              zoomOut: dict.photos.zoomOut,
-              pinchHint: dict.photos.pinchHint,
-              play: dict.photos.play,
-              pause: dict.photos.pause,
-              seek: dict.photos.seek,
-              listenOnTelegram: dict.photos.listenOnTelegram,
-            }}
-          />
-          <SyncedNote
-            syncedAt={syncedAt}
-            channel={channel}
-            label={dict.photos.syncedAt}
-          />
-        </>
-      )}
+      {/* Refreshed in the browser, like the all-photos view. */}
+      <LivePostGallery
+        initial={photoSnapshot}
+        locale={locale}
+        genericAlt={dict.photos.genericAlt}
+        empty={{
+          message: dict.photos.empty,
+          channel,
+          viewChannel: dict.photos.viewChannel,
+        }}
+        synced={{ label: dict.photos.syncedAt }}
+        strings={{
+          closeLabel: dict.photos.close,
+          openLabelPrefix: dict.photos.open,
+          viewOnTelegram: dict.photos.viewOnTelegram,
+          previousLabel: dict.photos.previous,
+          nextLabel: dict.photos.next,
+          countOne: dict.photos.countOne,
+          countMany: dict.photos.countMany,
+          perRowLabel: dict.photos.perRowPosts,
+          zoomIn: dict.photos.zoomIn,
+          zoomOut: dict.photos.zoomOut,
+          pinchHint: dict.photos.pinchHint,
+          play: dict.photos.play,
+          pause: dict.photos.pause,
+          seek: dict.photos.seek,
+          listenOnTelegram: dict.photos.listenOnTelegram,
+        }}
+      />
     </Container>
   )
 }

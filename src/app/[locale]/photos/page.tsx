@@ -2,12 +2,9 @@ import { notFound } from 'next/navigation'
 import { isLocale, localePath } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadPhotoSnapshot } from '@/lib/photos/snapshot'
-import { isUnsynced } from '@/lib/photos/types'
-import { resolveAlt, resolveCaption } from '@/lib/photos/alt'
-import { PhotoGallery, type GalleryItem } from '@/components/photos/gallery'
+import { LivePhotoGallery } from '@/components/photos/live-photos'
 import { ViewSwitch } from '@/components/ui/view-switch'
 import { ChannelButton } from '@/components/photos/channel-button'
-import { PhotosEmpty, SyncedNote } from '@/components/photos/notices'
 import { Container } from '@/components/layout/container'
 
 /** The gallery roll: every photo, newest first. See ./posts for the grouped view. */
@@ -21,15 +18,7 @@ export default async function PhotosPage({
 
   const dict = getDictionary(locale)
   const photoSnapshot = await loadPhotoSnapshot()
-  const { photos, channel, syncedAt } = photoSnapshot
-
-  const items: GalleryItem[] = photos
-    .filter((photo) => !photo.hidden)
-    .map((photo) => ({
-      photo,
-      alt: resolveAlt(photo, locale, dict.photos.genericAlt),
-      caption: resolveCaption(photo),
-    }))
+  const { channel } = photoSnapshot
 
   return (
     <Container>
@@ -62,35 +51,33 @@ export default async function PhotosPage({
         <ChannelButton channel={channel} label={dict.photos.viewOnTelegram} />
       </div>
 
-      {isUnsynced(photoSnapshot) || items.length === 0 ? (
-        <PhotosEmpty
-          message={dict.photos.empty}
-          channel={channel}
-          viewChannel={dict.photos.viewChannel}
-        />
-      ) : (
-        <>
-          <PhotoGallery
-            items={items}
-            strings={{
-              closeLabel: dict.photos.close,
-              openLabelPrefix: dict.photos.open,
-              viewOnTelegram: dict.photos.viewOnTelegram,
-              previousLabel: dict.photos.previous,
-              nextLabel: dict.photos.next,
-              perRowLabel: dict.photos.perRowPhotos,
-              zoomIn: dict.photos.zoomIn,
-              zoomOut: dict.photos.zoomOut,
-              pinchHint: dict.photos.pinchHint,
-            }}
-          />
-          <SyncedNote
-            syncedAt={syncedAt}
-            channel={channel}
-            label={dict.photos.syncedAt}
-          />
-        </>
-      )}
+      {/*
+       * Rendered from the snapshot the build fetched, then re-rendered in the
+       * browser if `data/photos.json` has moved on — so a caption edited with
+       * `content:push` shows up without a deploy.
+       */}
+      <LivePhotoGallery
+        initial={photoSnapshot}
+        locale={locale}
+        genericAlt={dict.photos.genericAlt}
+        empty={{
+          message: dict.photos.empty,
+          channel,
+          viewChannel: dict.photos.viewChannel,
+        }}
+        synced={{ label: dict.photos.syncedAt }}
+        strings={{
+          closeLabel: dict.photos.close,
+          openLabelPrefix: dict.photos.open,
+          viewOnTelegram: dict.photos.viewOnTelegram,
+          previousLabel: dict.photos.previous,
+          nextLabel: dict.photos.next,
+          perRowLabel: dict.photos.perRowPhotos,
+          zoomIn: dict.photos.zoomIn,
+          zoomOut: dict.photos.zoomOut,
+          pinchHint: dict.photos.pinchHint,
+        }}
+      />
     </Container>
   )
 }

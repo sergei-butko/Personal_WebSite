@@ -3,11 +3,8 @@ import { notFound } from 'next/navigation'
 import { isLocale } from '@/lib/i18n'
 import { getDictionary } from '@/content/i18n'
 import { loadThreadsSnapshot } from '@/lib/threads/snapshot'
-import { isUnsynced } from '@/lib/threads/types'
-import { buildShelves } from '@/lib/threads/shelves'
+import { LiveShelves } from '@/components/threads/live-perfumery'
 import { PerfumeryHeader } from '@/components/threads/perfumery-header'
-import { PerfumeryEmpty } from '@/components/threads/notices'
-import { Shelves } from '@/components/threads/shelves'
 import { Container } from '@/components/layout/container'
 import { perfumeryTabs } from '@/lib/threads/tabs'
 
@@ -41,7 +38,7 @@ export default async function ShelfPage({
 
   const dict = getDictionary(locale)
   const snapshot = await loadThreadsSnapshot()
-  const { posts, username } = snapshot
+  const { username } = snapshot
 
   return (
     <Container>
@@ -56,27 +53,26 @@ export default async function ShelfPage({
         viewOnThreads={dict.threads.viewOnThreads}
       />
 
-      {isUnsynced(snapshot) ? (
-        <PerfumeryEmpty
-          message={dict.threads.empty}
-          href={`https://www.threads.com/@${username}`}
-          linkLabel={dict.threads.viewOnThreads}
-        />
-      ) : (
-        <Shelves
-          shelves={buildShelves(posts, locale)}
-          strings={{
-            unnamed: dict.threads.shelfUnnamed,
-            noImage: dict.threads.noImage,
-            openLabelPrefix: dict.threads.openPost,
-            close: dict.threads.close,
-            viewOnThreads: dict.threads.viewOnThreads,
-            imageAlt: dict.threads.imageAlt,
-            scrollBack: dict.threads.shelfBack,
-            scrollForward: dict.threads.shelfForward,
-          }}
-        />
-      )}
+      {/* Refreshed in the browser, like the bottles grid. */}
+      <LiveShelves
+        initial={snapshot}
+        locale={locale}
+        strings={{
+          unnamed: dict.threads.shelfUnnamed,
+          noImage: dict.threads.noImage,
+          openLabelPrefix: dict.threads.openPost,
+          close: dict.threads.close,
+          viewOnThreads: dict.threads.viewOnThreads,
+          imageAlt: dict.threads.imageAlt,
+          scrollBack: dict.threads.shelfBack,
+          scrollForward: dict.threads.shelfForward,
+        }}
+        empty={{
+          message: dict.threads.empty,
+          href: `https://www.threads.com/@${username}`,
+          linkLabel: dict.threads.viewOnThreads,
+        }}
+      />
     </Container>
   )
 }
