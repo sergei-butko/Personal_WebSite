@@ -32,19 +32,28 @@ export function Footer() {
   return (
     <footer className="border-t border-edge">
       {/*
-       * Named links are wider than glyphs, so the row no longer fits a phone.
-       * It stacks there — copyright above, links below, both centred — rather
-       * than leaving `justify-between` to push two ragged lines apart. From sm
-       * up it is the single row it always was.
+       * Three blocks on one line: wordmark, copyright, links.
+       *
+       * Named links are wider than glyphs, so the row does not fit a phone. It
+       * stacks below sm — the three centred, in order — rather than leaving
+       * `justify-between` to push ragged lines apart.
+       *
+       * `flex-wrap` is not decoration. Between the sm breakpoint and about
+       * 740px the row is in play but too narrow to hold both groups: the
+       * copyright will not shrink (whitespace-nowrap) and the links have
+       * already wrapped to two rows, so `justify-between` pushed them straight
+       * through each other — measured overlapping at 700px and below. Wrapping
+       * drops the links to their own line instead, which is what the stacked
+       * layout does anyway, one breakpoint down.
        */}
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 px-5 py-8 text-sm text-muted sm:flex-row sm:justify-between sm:gap-4">
-        <div className="flex flex-col items-center gap-2.5 sm:items-start">
+      <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 px-5 py-8 text-sm text-muted sm:flex-row sm:flex-wrap sm:justify-between sm:gap-x-4 sm:gap-y-3">
+        <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:gap-4">
           {/*
            * The wordmark, from Cloudinary's `public/full` — see public/README.md.
            *
            * Decorative, like the header's monogram: it spells out the same name
-           * the copyright line beneath it already carries, so giving it alt
-           * text would say it twice.
+           * the copyright beside it already carries, so giving it alt text
+           * would say it twice.
            */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -53,9 +62,15 @@ export function Footer() {
             width={400}
             height={144}
             decoding="async"
-            className="h-11 w-auto"
+            className="h-11 w-auto shrink-0"
           />
-          <p>
+          {/*
+           * Sits beside the wordmark rather than under it, which is what puts
+           * all three blocks on one line. `whitespace-nowrap` because "© 2026
+           * Serhii Butko" breaking across two lines next to a logo reads as a
+           * mistake, and there is room for it at every width that keeps the row.
+           */}
+          <p className="whitespace-nowrap">
             &copy; {new Date().getFullYear()} {profile.name}
           </p>
         </div>
