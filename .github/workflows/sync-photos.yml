@@ -91,6 +91,27 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_AUDIO_CHAT: ${{ secrets.TELEGRAM_AUDIO_CHAT }}
 
+      # After the sync, before the deploy: a run that wrote to Cloudinary is
+      # the moment the store can have gained a row pointing at nothing, and the
+      # deploy below is gated on success(), so a hole here stops the publish
+      # rather than shipping HTML that describes it.
+      #
+      # Unconditional, not gated on `changed`. The failure this catches most
+      # often is not a sync at all — it is a picture added by hand through the
+      # Media Library, which names an asset with a UUID unless you set the
+      # public id yourself, and which happens between runs. A sync that changed
+      # nothing is still the first chance CI gets to notice one.
+      #
+      # Not in ci.yml: the store is not part of a pull request's diff, and
+      # CLOUDINARY_URL is a secret that Dependabot and fork PRs cannot read —
+      # so the step would either be skipped exactly where it is needed or turn
+      # every Dependabot PR red, and a red verify on one of those is the whole
+      # safeguard this repo has against a bad upgrade.
+      - name: Verify the media store
+        env:
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+        run: npm run media:verify
+
       - name: Deploy the site
         # No commit is pushed, so nothing triggers deploy.yml on its own and
         # the sync has to dispatch it.

@@ -278,7 +278,9 @@ Two things still need more than a push:
   into the folder — the Media Library generates a UUID id otherwise and the
   delivery URL is built from the id, so the row 404s while the Media Library
   looks correct. `npm run media:verify` reports exactly that state, and any
-  other row pointing at an asset that is not there.
+  other row pointing at an asset that is not there. Both sync workflows run it
+  themselves, before dispatching a deploy — but they are manual, so a picture
+  added by hand is not checked until the next sync unless you run it yourself.
 - **Anything outside a snapshot** — profile copy, UI strings, links, MDX posts.
   Those live in the repo and reach the site the ordinary way, through a deploy.
 
