@@ -180,6 +180,15 @@ ToS. A perfumery review is posted there as a post plus a follow-up comment; the
 sync joins the two into one post at capture time, and nothing downstream knows
 there were ever two pieces.
 
+It asks for posts `since` the cursor rather than pulling the whole feed to
+decide nothing changed — 133 posts over three requests became one post over
+two, and it stops growing with the archive. `since` is only a hint: the
+client-side filter still decides what counts as new, and the request starts an
+hour before the cursor so that a rounding difference at the server cannot drop
+a post into a gap the cursor has already moved past. `THREADS_FETCH_ALL=1`
+walks everything, for when you suspect a backdated post was missed and do not
+want to touch `syncedThrough`.
+
 `refresh-threads-token.yml` stays on its weekly schedule — it touches no content,
 and a Threads long-lived token that misses its 60-day window dies permanently.
 It self-skips unless `GH_SECRETS_PAT` is set, in which case the token simply

@@ -40,6 +40,27 @@ const OUT_DATA = 'data/threads.json'
 const FOLDER = THREADS_IMAGE_FOLDER
 const PAGE_SIZE = 100
 
+/**
+ * Walk the whole feed, ignoring the cursor. For when you suspect a post was
+ * missed — a backdated one, say — and want a full re-scan without lowering
+ * `syncedThrough`, which is machinery and must not be edited.
+ */
+const FETCH_ALL = process.env.THREADS_FETCH_ALL === '1'
+
+/**
+ * How far BEFORE the cursor to ask the API to start.
+ *
+ * `since` is an optimisation, not the rule: the client-side filter below stays
+ * the authority on what counts as new, and this only decides how much the API
+ * bothers to send. So it is set generously on purpose. If `since` ever rounds
+ * to the minute, or reads a timezone differently than expected, a post landing
+ * seconds after the cursor would be dropped by the server and never asked for
+ * again — the cursor only moves forward. An hour of overlap costs one extra
+ * request and closes that off; the posts it re-fetches are discarded by the
+ * filter, as they already were when every run fetched everything.
+ */
+const SINCE_OVERLAP_SECONDS = 3600
+
 const FIELDS = [
   'id',
   'media_type',
@@ -149,8 +170,20 @@ async function fetchUsername(): Promise<string> {
   return me.username
 }
 
-/** Walks every page of /me/threads. Stops on the first page without a cursor. */
-async function fetchAllPosts(): Promise<ApiPost[]> {
+/**
+ * Walks /me/threads, newest first, stopping on the first page without a cursor.
+ *
+ * `since` narrows it server-side. Without it every run pulled the entire feed
+ * to decide that nothing had changed — 133 posts over three requests to learn
+ * that the answer was zero, and growing with the archive. With it, a run that
+ * finds nothing new costs two requests and never grows.
+ *
+ * Verified equivalent before it was relied on: at three different cursors, the
+ * set of ids `since` returns is identical to the set fetching everything and
+ * filtering locally returns. It is still only a hint — see the filter at the
+ * call site, which decides.
+ */
+async function fetchAllPosts(since: number | undefined): Promise<ApiPost[]> {
   const posts: ApiPost[] = []
   let after: string | undefined
 
@@ -159,6 +192,7 @@ async function fetchAllPosts(): Promise<ApiPost[]> {
     url.searchParams.set('fields', FIELDS)
     url.searchParams.set('limit', String(PAGE_SIZE))
     url.searchParams.set('access_token', token!)
+    if (since !== undefined) url.searchParams.set('since', String(since))
     if (after) url.searchParams.set('after', after)
 
     const body = await getJson<ApiPage>(url)
@@ -495,8 +529,17 @@ async function main(): Promise<void> {
       : '→ nothing stored yet, taking the whole feed'
   )
 
-  console.log('→ fetching posts')
-  const fetched = await fetchAllPosts()
+  const since =
+    cursor && !FETCH_ALL
+      ? Math.floor(new Date(cursor).getTime() / 1000) - SINCE_OVERLAP_SECONDS
+      : undefined
+
+  console.log(
+    since === undefined
+      ? `→ fetching every post${FETCH_ALL ? ' (THREADS_FETCH_ALL=1)' : ''}`
+      : `→ fetching posts since ${new Date(since * 1000).toISOString()}`
+  )
+  const fetched = await fetchAllPosts(since)
 
   const storedIds = new Set(stored.map((post) => post.id))
   const raw = fetched.filter((post) => {
