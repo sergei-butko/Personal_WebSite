@@ -274,6 +274,11 @@ Two things still need more than a push:
 - **Renaming a bottle.** Changing a `fragrance` changes what its images should
   be called, so follow with `npm run media:organise`. The site picks up the new
   ids on the next load, same as any other edit.
+- **Adding a picture by hand.** Upload it with the public id you want, not just
+  into the folder — the Media Library generates a UUID id otherwise and the
+  delivery URL is built from the id, so the row 404s while the Media Library
+  looks correct. `npm run media:verify` reports exactly that state, and any
+  other row pointing at an asset that is not there.
 - **Anything outside a snapshot** — profile copy, UI strings, links, MDX posts.
   Those live in the repo and reach the site the ordinary way, through a deploy.
 

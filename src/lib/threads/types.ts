@@ -26,6 +26,19 @@ export interface ThreadsImage {
   width: number
   height: number
   /**
+   * Cloudinary's version for these bytes, which changes on every write.
+   *
+   * In the delivery URL, so that replacing or REORDERING a post's pictures
+   * produces a new URL. The public id is positional — the `-1`/`-2` suffix is
+   * the index — so a reorder swaps bytes under two stable ids, and without
+   * this a browser holds the old picture for thirty days. See `versionPath` in
+   * lib/media.ts.
+   *
+   * Absent on rows written before the field existed; `media:organise` records
+   * it, and the URL is simply versionless until it does.
+   */
+  version?: number
+  /**
    * From Meta's alt_text. Often empty — Threads does not require alt text.
    * Empty means the image is decorative-by-omission, not decorative by
    * intent, so the UI must handle it (see ThreadsPostCard).

@@ -47,6 +47,8 @@ export interface UploadResult {
   publicId: string
   width: number
   height: number
+  /** Cloudinary's version for the bytes just written. Goes in the URL. */
+  version: number
 }
 
 type CloudinaryApi = (typeof import('cloudinary'))['v2']
@@ -138,14 +140,16 @@ export async function uploadImage(
   const width = Number(result.width)
   const height = Number(result.height)
   const id = String(result.public_id ?? '')
+  const version = Number(result.version ?? 0)
 
-  if (!id || !Number.isFinite(width) || !Number.isFinite(height)) {
+  if (!id || !Number.isFinite(width) || !Number.isFinite(height) || !version) {
     throw new Error(
-      `${publicId}: upload succeeded but the response lacked public_id/width/height`
+      `${publicId}: upload succeeded but the response lacked ` +
+        `public_id/width/height/version`
     )
   }
 
-  return { publicId: id, width, height }
+  return { publicId: id, width, height, version }
 }
 
 /**
@@ -156,11 +160,15 @@ export async function uploadImage(
  * (/video/upload/), which is why lib/media.ts builds the URL rather than the
  * caller guessing at it.
  *
- * Nothing is returned but the id: unlike an image there is no width or height
- * worth carrying, and duration comes from Telegram, which knows the real value
- * rather than one inferred from a container.
+ * The id and the version, and nothing else: unlike an image there is no width
+ * or height worth carrying, and duration comes from Telegram, which knows the
+ * real value rather than one inferred from a container. The version is here for
+ * the same reason it is on an image — it goes in the delivery URL.
  */
-export async function uploadAudio(bytes: Buffer, publicId: string): Promise<string> {
+export async function uploadAudio(
+  bytes: Buffer,
+  publicId: string
+): Promise<{ publicId: string; version: number }> {
   await configureCloudinary()
   const client = api
   if (!client) throw new Error('Cloudinary was not configured')
@@ -184,10 +192,13 @@ export async function uploadAudio(bytes: Buffer, publicId: string): Promise<stri
   })
 
   const id = String(result.public_id ?? '')
-  if (!id) {
-    throw new Error(`${publicId}: upload succeeded but the response lacked public_id`)
+  const version = Number(result.version ?? 0)
+  if (!id || !version) {
+    throw new Error(
+      `${publicId}: upload succeeded but the response lacked public_id/version`
+    )
   }
-  return id
+  return { publicId: id, version }
 }
 
 /** image, video (which is where audio lives) or raw. */
@@ -215,6 +226,12 @@ export interface AssetRow {
    */
   assetFolder: string
   bytes: number
+  /**
+   * Cloudinary's version for the current bytes, which changes on every write.
+   * The site puts it in the delivery URL — see `versionPath` in lib/media.ts —
+   * so `media:organise` reads it from here and records it in the snapshots.
+   */
+  version: number
 }
 
 /**
@@ -251,6 +268,7 @@ export async function listAssets(
         publicId: String(asset.public_id),
         assetFolder: String(asset.asset_folder ?? ''),
         bytes: Number(asset.bytes ?? 0),
+        version: Number(asset.version ?? 0),
       })
     }
     cursor = page.next_cursor as string | undefined

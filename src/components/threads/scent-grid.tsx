@@ -11,7 +11,14 @@ export interface ScentCard {
   id: string
   permalink: string
   /** The post's first image. Absent on a text post or a repost. */
-  image?: { publicId: string; width: number; height: number; alt: string }
+  image?: {
+    publicId: string
+    width: number
+    height: number
+    alt: string
+    /** Carried so the URL is versioned; see `versionPath` in lib/media.ts. */
+    version?: number
+  }
   /** The bottle, hand-written. Undefined until someone names it. */
   fragrance?: { brand: string; name: string }
   /** Falls back to the post text when no bottle is named. */

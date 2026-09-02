@@ -36,6 +36,8 @@ export interface PostAudio {
   performer: string
   /** Cloudinary public id, e.g. "telegram/audio/554". Absent = no playback. */
   publicId?: string
+  /** Cloudinary's version for the file. See `version` on Photo below. */
+  version?: number
   /**
    * Seconds, as Telegram reports it. Absent when the file was never fetched,
    * and 0 when Telegram itself does not know — a file whose container carries
@@ -90,6 +92,13 @@ export interface Photo {
   /** Intrinsic size, so the grid can reserve space before the image loads. */
   width: number
   height: number
+  /**
+   * Cloudinary's version for these bytes, which changes on every write, and
+   * which goes in the delivery URL so that replaced bytes get a URL of their
+   * own — see `versionPath` in lib/media.ts. Absent on rows written before the
+   * field existed; `media:organise` records it.
+   */
+  version?: number
 }
 
 export interface PhotoSnapshot {

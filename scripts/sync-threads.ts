@@ -249,6 +249,9 @@ async function rehost(
       width: uploaded.width,
       height: uploaded.height,
       alt: alt.trim(),
+      // Cloudinary's version for these bytes, which the site puts in the
+      // delivery URL so replaced bytes get a URL of their own.
+      version: uploaded.version,
     }
   } catch (error) {
     console.warn(`  ! image ${publicId}: upload failed — ${(error as Error).message}`)

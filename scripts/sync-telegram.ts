@@ -268,6 +268,17 @@ interface Rehosted {
   publicId: string
   width: number
   height: number
+  /**
+   * Cloudinary's version for the bytes, which goes in the delivery URL.
+   *
+   * Present only on the upload path, where it comes back in the response.
+   * A DEDUPED row points at an asset this run did not write and whose version
+   * is therefore not to hand — `decideAsset` is pure and deliberately knows
+   * nothing about Cloudinary — and a dry run has none because it wrote nothing.
+   * Both are backfilled by `npm run media:organise`, which lists the store, and
+   * a versionless URL resolves correctly in the meantime.
+   */
+  version?: number
   /** True when the bytes matched an image already stored under another id. */
   deduped: boolean
 }
@@ -374,7 +385,7 @@ async function rehostAudio(
       ...card,
       title: fetched.title || card.title,
       performer: fetched.performer || card.performer,
-      publicId: await uploadAudio(fetched.bytes, publicId),
+      ...(await uploadAudio(fetched.bytes, publicId)),
       duration: fetched.duration,
     }
   } catch (error) {
@@ -710,6 +721,7 @@ async function main(): Promise<void> {
         publicId: media.publicId,
         width: media.width,
         height: media.height,
+        ...(media.version ? { version: media.version } : {}),
       })
     }
     if (capped) break

@@ -35,6 +35,7 @@ export const photoSnapshotSchema: z.ZodType<PhotoSnapshot> = z.object({
           title: z.string(),
           performer: z.string(),
           publicId: z.string().min(1).optional(),
+          version: z.number().int().positive().optional(),
           // Non-negative, not positive: Telegram reports duration 0 for a
           // file whose container carries no duration metadata — 6 of the 18
           // songs in this channel. Rejecting 0 failed the whole build over
@@ -45,6 +46,9 @@ export const photoSnapshotSchema: z.ZodType<PhotoSnapshot> = z.object({
       publicId: z.string().min(1),
       width: z.number().positive(),
       height: z.number().positive(),
+      // Cloudinary's version for these bytes. Optional for the same reason as
+      // on a Threads image: rows predating the field deliver a versionless URL.
+      version: z.number().int().positive().optional(),
     })
   ),
 })

@@ -23,6 +23,12 @@ export interface CloudinaryAsset {
   /** Intrinsic size, so the browser can reserve space before loading. */
   width: number
   height: number
+  /**
+   * Cloudinary's version for these bytes. Absent on a snapshot written before
+   * the field existed, in which case the URL is built without one — see
+   * `versionPath` in lib/media.ts for why it is in the path at all.
+   */
+  version?: number
 }
 
 export function CloudinaryImage({
@@ -43,8 +49,8 @@ export function CloudinaryImage({
     // does the resizing and format negotiation this rule asks for.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={mediaUrl(asset.publicId, widestWidth(asset.width))}
-      srcSet={mediaSrcSet(asset.publicId, asset.width)}
+      src={mediaUrl(asset.publicId, widestWidth(asset.width), asset.version)}
+      srcSet={mediaSrcSet(asset.publicId, asset.width, asset.version)}
       sizes={sizes}
       width={asset.width}
       height={asset.height}

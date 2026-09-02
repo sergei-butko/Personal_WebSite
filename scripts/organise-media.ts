@@ -187,6 +187,45 @@ function reFolder(publicId: string, folder: string): string {
   return `${folder}/${displayNameOf(publicId)}`
 }
 
+/**
+ * Writes each asset's current version into the row that points at it.
+ *
+ * Absent from the store means the row points at nothing — `media:verify`
+ * reports that, and it is not this pass's job — so the version is left alone
+ * rather than being cleared, which would silently change a URL as a side
+ * effect of an unrelated run.
+ *
+ * @returns how many rows changed
+ */
+function stampVersions(
+  photos: PhotoSnapshot,
+  threads: ThreadsSnapshot,
+  state: Map<ResourceType, Map<string, AssetRow>>
+): number {
+  const images = state.get('image') ?? new Map<string, AssetRow>()
+  const videos = state.get('video') ?? new Map<string, AssetRow>()
+  let changed = 0
+
+  const stamp = (
+    row: { publicId?: string; version?: number },
+    present: Map<string, AssetRow>
+  ): void => {
+    if (!row.publicId) return
+    const version = present.get(row.publicId)?.version
+    if (!version || row.version === version) return
+    row.version = version
+    changed += 1
+  }
+
+  for (const photo of photos.photos) {
+    stamp(photo, images)
+    if (photo.audio) stamp(photo.audio, videos)
+  }
+  for (const post of threads.posts) for (const image of post.images) stamp(image, images)
+
+  return changed
+}
+
 async function main(): Promise<void> {
   console.log(DRY_RUN ? '→ DRY RUN — nothing will be written\n' : '')
 
@@ -359,18 +398,21 @@ async function main(): Promise<void> {
     for (const id of orphans) console.log(`    ${id}`)
   }
 
+  const mutating =
+    moves.length > 0 || needsFolder.length > 0 || (PRUNE && orphans.length > 0)
+
   if (DRY_RUN) {
+    // Nothing has been written, so the listing above is still current and the
+    // count it produces is the count a real run would record.
+    const wouldStamp = stampVersions(photos, threads, state)
+    if (wouldStamp > 0) console.log(`plan : ${wouldStamp} version(s) to record`)
     console.log('\n→ dry run, nothing written')
-    return
-  }
-  if (moves.length === 0 && needsFolder.length === 0 && !(PRUNE && orphans.length > 0)) {
-    console.log('\n✓ already organised, nothing to do')
     return
   }
 
   // --- Do it --------------------------------------------------------------
 
-  console.log('')
+  if (mutating) console.log('')
 
   /*
    * A failed rename ABORTS. The snapshots have not been written yet, so
@@ -410,7 +452,7 @@ async function main(): Promise<void> {
     done += 1
     if (done % 50 === 0) console.log(`  renamed ${done}/${moves.length}`)
   }
-  console.log(`✓ renamed ${done} asset(s)`)
+  if (mutating) console.log(`✓ renamed ${done} asset(s)`)
 
   /*
    * A failed FOLDER move does not abort. It changes nothing a URL depends on —
@@ -430,7 +472,7 @@ async function main(): Promise<void> {
       console.log(`  filed ${moved + unfiled.length}/${needsFolder.length}`)
     }
   }
-  console.log(`✓ filed ${moved} asset(s) into folders`)
+  if (mutating) console.log(`✓ filed ${moved} asset(s) into folders`)
   if (unfiled.length > 0) {
     console.warn(`  ! ${unfiled.length} could not be filed (ids and URLs unaffected):`)
     for (const line of unfiled.slice(0, 10)) console.warn(`    ${line}`)
@@ -446,12 +488,36 @@ async function main(): Promise<void> {
   }
 
   /*
+   * Versions, last of the reads and after every write above.
+   *
+   * A version identifies the current BYTES of an asset and goes in the delivery
+   * URL — see `versionPath` in lib/media.ts — so the snapshot has to carry the
+   * one the store holds now. It cannot be taken from the listing at the top of
+   * this run: `rename` and `explicit` each write a new version, so anything
+   * this run touched would be stamped with the value it had beforehand, which
+   * is worse than no version at all. Hence a second listing.
+   *
+   * Two more Admin API calls, against a 500-an-hour cap that a full run of 651
+   * assets already respects by listing once rather than asking per asset — and
+   * only when something moved. A run that finds nothing to rename has not
+   * invalidated the listing it already has.
+   */
+  const after = mutating ? await currentState() : state
+  const stamped = stampVersions(photos, threads, after)
+  if (stamped > 0) console.log(`✓ recorded ${stamped} asset version(s)`)
+
+  if (renamed.size === 0 && stamped === 0) {
+    console.log('\n✓ already organised, nothing to do')
+    return
+  }
+
+  /*
    * The snapshots last, and only after every rename has returned. Until this
    * write lands the site still points at the old ids — which is the correct
    * failure: a half-renamed store with an unchanged snapshot renders the
    * assets that have not moved yet and is fixed by running this again.
    */
-  if (renamed.size > 0) {
+  if (renamed.size > 0 || stamped > 0) {
     await uploadJson(PHOTOS, photos)
     await uploadJson(THREADS, threads)
 
@@ -463,7 +529,9 @@ async function main(): Promise<void> {
       for (const [hash, id] of Object.entries(hashes)) next[hash] = renamed.get(id) ?? id
       await uploadJson(HASHES, next)
     }
-    console.log(`✓ rewrote ${renamed.size} id(s) across the snapshots`)
+    if (renamed.size > 0) {
+      console.log(`✓ rewrote ${renamed.size} id(s) across the snapshots`)
+    }
   }
 
   console.log('\n✓ done. Re-run to confirm it reports nothing left to do.')

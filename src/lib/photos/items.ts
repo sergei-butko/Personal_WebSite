@@ -55,7 +55,9 @@ export function toPostGroups(
     dateTime: formatPostDateTime(post.timestamp, locale),
     caption: post.caption,
     ...(post.audio ? { audio: post.audio } : {}),
-    ...(post.audio?.publicId ? { audioSrc: audioUrl(post.audio.publicId) } : {}),
+    ...(post.audio?.publicId
+      ? { audioSrc: audioUrl(post.audio.publicId, post.audio.version) }
+      : {}),
     items: post.photos.map((photo) => ({
       photo,
       alt: resolveAlt(photo, locale, genericAlt),

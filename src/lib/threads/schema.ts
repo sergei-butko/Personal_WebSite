@@ -23,6 +23,9 @@ const imageSchema = z.object({
   width: z.number().positive(),
   height: z.number().positive(),
   alt: z.string(),
+  // Cloudinary's version for these bytes. Optional: rows written before the
+  // field existed carry none and deliver a versionless URL, which still works.
+  version: z.number().int().positive().optional(),
 })
 
 export const threadsSnapshotSchema: z.ZodType<ThreadsSnapshot> = z.object({

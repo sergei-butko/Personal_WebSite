@@ -227,6 +227,33 @@ expires loudly and is refreshed by hand.
   it is an Admin API request, the free plan allows 500 an hour, and a full
   `media:organise` touches 651 assets. Renaming changes delivery URLs, so a run
   is followed by a deploy — the published HTML is static and holds the old ids.
+- **A hand upload through the Media Library is unreachable by default.** The
+  console files an asset in the folder you pick but names it with a generated
+  UUID unless you set the public id yourself — and delivery is by public id, so
+  seven bottle photographs added on 2026-09-02 sat in `threads/images` under
+  the right display names while every row pointing at them 404'd. Nothing
+  caught it: `content:push` validates the SHAPE of a public id, and the build
+  reads ids without asking whether they resolve. `npm run media:verify` is that
+  missing check — run it after adding a picture by hand. Set the public id at
+  upload time and it never arises.
+- **A 404 on a derived URL is cached by the edge, and outlives the fix.** The
+  site asks for `f_auto,q_auto,c_limit,w_{400,800,1200,1600}`; a request for one
+  of those widths while the asset is absent caches the error against that exact
+  derived URL, so the picture stays broken at one width after the asset is in
+  place. `uploader.explicit` with `invalidate` is asynchronous and took longer
+  than it was worth waiting for; renaming the asset out to a temp id and back
+  clears it at once, because the edge keys the cached error on the version.
+- **A delivery URL carries the asset's version, and must.** A public id here is
+  POSITIONAL — `<Brand>-<Scent>-<n>`, n being the index — so reordering a post's
+  pictures renames nothing; it swaps the bytes under two stable ids. Cloudinary
+  serves images with `max-age=2592000`, so on 2026-09-02 four bottles were
+  reordered, the store was right within seconds, and every browser that had
+  already loaded the page kept the old order for up to thirty days. `version`
+  is now a field on every image and song row, emitted as `/v<n>/` by
+  `lib/media.ts`, so replaced bytes get a URL of their own. It is OPTIONAL: a
+  row without one delivers the versionless URL, which still resolves. The syncs
+  record it from the upload response and `media:organise` backfills it from the
+  store — which is also the pass to run after replacing a picture by hand.
 - **Deduplication is by sha256 of the bytes,** never by URL, mapped in
   `data/photo-hashes.json`. The rule is pure and pinned by `npm run test:dedup`.
 - **A card's collage must fill its rectangle.** The by-post view sizes every
@@ -373,7 +400,7 @@ them into feature work.
 npm run typecheck && npm run lint && npm run format:check && npm run build
 npm run test:telegram && npm run test:dedup && npm run test:collage
 npm run test:names && npm run test:threads-merge && npm run test:photo-merge
-npm run test:shelves
+npm run test:shelves && npm run test:media-audit && npm run test:media-url
 ```
 
 The build must run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,

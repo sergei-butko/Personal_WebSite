@@ -17,6 +17,31 @@ const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD ?? ''
 const MEDIA_WIDTHS = [400, 800, 1200, 1600] as const
 
 /**
+ * The `v<version>` segment, or '' when the snapshot has no version recorded.
+ *
+ * ## Why a URL carries a version at all
+ *
+ * A public id here is POSITIONAL — `<Brand>-<Scent>-<n>`, where n is the
+ * image's index in its post — so reordering a post's pictures does not rename
+ * anything, it swaps the bytes underneath two stable ids. Cloudinary serves
+ * those with `cache-control: max-age=2592000`, so every browser that had
+ * loaded the page went on showing the old order for up to thirty days. That
+ * happened on 2026-09-02 and took a hard refresh to see past.
+ *
+ * The version changes on every write to an asset, so putting it in the path
+ * gives replaced bytes a URL of their own. This is Cloudinary's own convention
+ * and the reason their SDKs emit it by default.
+ *
+ * Absent is a supported state, not a gap: a snapshot written before the field
+ * existed carries none, and the versionless URL still resolves — to whatever
+ * the asset holds now, which is exactly the behaviour we had before. So this
+ * degrades to the old URL rather than to a broken one.
+ */
+function versionPath(version: number | undefined): string {
+  return version ? `v${version}/` : ''
+}
+
+/**
  * Fails the build when content needs Cloudinary and the cloud name is absent.
  *
  * The previous version of this module returned '' for every URL when the env
@@ -40,10 +65,10 @@ function assertConfigured(context: string): void {
  * so there is no local encoding step and no variant files. c_limit never
  * upscales past the original.
  */
-export function mediaUrl(publicId: string, width: number): string {
+export function mediaUrl(publicId: string, width: number, version?: number): string {
   assertConfigured(`the image "${publicId}"`)
   const transform = `f_auto,q_auto,c_limit,w_${width}`
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transform}/${encodeURI(publicId)}`
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transform}/${versionPath(version)}${encodeURI(publicId)}`
 }
 
 /**
@@ -56,14 +81,18 @@ export function mediaUrl(publicId: string, width: number): string {
  * handling. The first request for a track pays for the transcode; the CDN
  * serves the rest.
  */
-export function audioUrl(publicId: string): string {
+export function audioUrl(publicId: string, version?: number): string {
   assertConfigured(`the audio file "${publicId}"`)
-  return `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/${encodeURI(publicId)}.mp3`
+  return `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/${versionPath(version)}${encodeURI(publicId)}.mp3`
 }
 
-export function mediaSrcSet(publicId: string, intrinsicWidth: number): string {
+export function mediaSrcSet(
+  publicId: string,
+  intrinsicWidth: number,
+  version?: number
+): string {
   return MEDIA_WIDTHS.filter((w) => w <= intrinsicWidth)
-    .map((w) => `${mediaUrl(publicId, w)} ${w}w`)
+    .map((w) => `${mediaUrl(publicId, w, version)} ${w}w`)
     .join(', ')
 }
 

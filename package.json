@@ -20,9 +20,12 @@
     "test:threads-merge": "tsx scripts/threads-merge.test.ts",
     "test:photo-merge": "tsx scripts/photo-merge.test.ts",
     "test:shelves": "tsx scripts/shelves.test.ts",
+    "test:media-audit": "tsx scripts/media-audit.test.ts",
+    "test:media-url": "NEXT_PUBLIC_CLOUDINARY_CLOUD=test-cloud tsx scripts/media-url.test.ts",
     "content:pull": "tsx scripts/content.ts pull",
     "content:push": "tsx scripts/content.ts push",
     "media:organise": "tsx scripts/organise-media.ts",
+    "media:verify": "tsx scripts/verify-media.ts",
     "media:clean-demo": "tsx scripts/clean-demo-assets.ts"
   },
   "dependencies": {
