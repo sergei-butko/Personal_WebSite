@@ -147,7 +147,17 @@ feature branch cannot publish that branch.
 
 **Photos** (`sync-telegram.ts`): reads `t.me/s/<channel>`, a plain public
 preview page — no API key, no bot. Walks history backwards via `?before=`,
-re-hosts each photo in Cloudinary, writes `data/photos.json`. Parsing is
+re-hosts each photo in Cloudinary, writes `data/photos.json`.
+
+The walk stops a week past the cursor rather than reading the whole channel —
+22 pages and 259 posts became one page and six, for the same answer. The week
+is not slack: the channel posts a song seconds AFTER its album, so a run that
+lands between the two must still see that album next time to pair them. Three
+things need the whole channel and force it: `SYNC_REPAIR` (which reaches a 2019
+photo), `SYNC_FORCE`, and `SYNC_FETCH_ALL=1`. That last one exists because the
+full walk also drove the audio and caption backfills, both of which are
+complete — a full walk today adds 0 songs and repairs 0 captions — but which
+are the thing to re-run if either ever looks incomplete again. Parsing is
 isolated in `telegram-parse.ts` and pinned by `npm run test:telegram` against a
 saved fixture, so a Telegram markup change fails locally and loudly.
 `SYNC_DRY_RUN=1` does everything except write, which is how the script gets run

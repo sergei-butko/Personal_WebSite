@@ -124,6 +124,23 @@ const MAX_PHOTOS = Number(process.env.SYNC_MAX_PHOTOS ?? 0) || Infinity
 /** Runaway guard on the pagination loop, not a content limit. */
 const MAX_PAGES = Number(process.env.SYNC_MAX_PAGES ?? 200)
 
+/** Walk the whole channel even when the cursor says it is unnecessary. */
+const FETCH_ALL = process.env.SYNC_FETCH_ALL === '1'
+
+/**
+ * How far past the cursor to keep walking before stopping.
+ *
+ * The walk is newest-first, so it can stop once it is well past the newest
+ * stored post — there is nothing newer further back. This is how much "well
+ * past" means, and it is generous for one specific reason: the channel posts a
+ * song seconds AFTER the album it belongs to, and `pairAudio` binds a track to
+ * the message before it. A sync that runs between the two captures the album
+ * without its song; the next run must still see that album to pair them, even
+ * though it now sits behind the cursor. A week covers that with room to spare
+ * and costs a page or two.
+ */
+const WALK_PAST_CURSOR_MS = 7 * 24 * 60 * 60 * 1000
+
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
@@ -177,8 +194,30 @@ async function fetchPage(before?: number): Promise<string> {
   return html
 }
 
-/** Walks history backwards until Telegram stops offering an older page. */
-async function collectPosts(): Promise<ParsedPost[]> {
+/**
+ * Walks history backwards, newest first.
+ *
+ * Stops when Telegram runs out of pages, or — when given a `stopBefore` — once
+ * it has walked comfortably past the newest post already stored. Every run used
+ * to read the entire channel: 22 pages and 259 posts to discover that nothing
+ * had changed, growing with the archive.
+ *
+ * ## What the full walk was for, and when it is still needed
+ *
+ * The whole history fed three things besides finding new posts, and scoping it
+ * silently disables all three, so each has an explicit escape:
+ *
+ * - **Audio backfill.** Every row predating the feature had no track, and the
+ *   pairing runs over everything fetched. That backfill is done — a full walk
+ *   today adds 0 songs — and `WALK_PAST_CURSOR_MS` still covers the song that
+ *   arrives just after its album. `SYNC_FETCH_ALL=1` redoes the lot.
+ * - **Caption repair.** A one-time fix for line breaks an older parser ate,
+ *   which only ever rewrites a caption differing by whitespace alone. Also
+ *   done, also behind `SYNC_FETCH_ALL=1`.
+ * - **SYNC_REPAIR**, which re-hosts a row whose asset has gone missing and
+ *   needs to reach a 2019 photo. That forces a full walk on its own.
+ */
+async function collectPosts(stopBefore: string | null): Promise<ParsedPost[]> {
   const seen = new Set<number>()
   const posts: ParsedPost[] = []
   let before: number | undefined
@@ -193,6 +232,23 @@ async function collectPosts(): Promise<ParsedPost[]> {
     console.log(`  page ${page}: ${fresh.length} posts, ${images} photos`)
 
     if (parsed.nextBefore === null || fresh.length === 0) break
+
+    /*
+     * Newest-first, so the oldest post on this page is the furthest back we
+     * have reached. Once that is behind the window there is nothing left worth
+     * fetching — anything older is older still.
+     */
+    if (stopBefore && fresh.length > 0) {
+      const oldest = fresh.reduce(
+        (min, post) => (post.timestamp < min ? post.timestamp : min),
+        fresh[0]!.timestamp
+      )
+      if (oldest < stopBefore) {
+        console.log(`  reached ${oldest.slice(0, 10)}, past the cursor — stopping`)
+        break
+      }
+    }
+
     if (page === MAX_PAGES) {
       // Not a warning. Telegram still has older pages, so continuing would
       // write a snapshot missing the oldest photos — which is exactly the bug
@@ -432,8 +488,22 @@ async function main(): Promise<void> {
       : '→ nothing stored yet, taking the whole channel'
   )
 
-  console.log(`→ reading t.me/s/${CHANNEL}`)
-  const fetched = await collectPosts()
+  /*
+   * A shortened walk is the default, but three things need the whole channel:
+   * a first run, a repair that has to reach an old photo, and a forced
+   * re-upload. FETCH_ALL is the manual override for the backfills above.
+   */
+  const wholeChannel = FETCH_ALL || REPAIR || FORCE || !cursor
+  const stopBefore = wholeChannel
+    ? null
+    : new Date(new Date(cursor).getTime() - WALK_PAST_CURSOR_MS).toISOString()
+
+  console.log(
+    wholeChannel
+      ? `→ reading t.me/s/${CHANNEL} — the whole channel`
+      : `→ reading t.me/s/${CHANNEL} back to ${stopBefore!.slice(0, 10)}`
+  )
+  const fetched = await collectPosts(stopBefore)
 
   const storedIds = new Set(stored.map((photo) => photo.publicId))
   const posts = fetched.filter((post) => !cursor || post.timestamp > cursor)
