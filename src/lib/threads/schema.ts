@@ -43,8 +43,14 @@ export const threadsSnapshotSchema: z.ZodType<ThreadsSnapshot> = z.object({
       // Hand-written and optional. Both halves required together when present:
       // a brand with no scent, or the reverse, is a half-finished edit rather
       // than a meaningful state, and catching it here beats rendering it.
+      // `collection` is the exception to that pairing: a house without lines
+      // has none to give, so it is optional on its own terms.
       fragrance: z
-        .object({ brand: z.string().min(1), name: z.string().min(1) })
+        .object({
+          brand: z.string().min(1),
+          collection: z.string().min(1).optional(),
+          name: z.string().min(1),
+        })
         .optional(),
     })
   ),

@@ -47,6 +47,17 @@ export interface ThreadsImage {
 export interface Fragrance {
   /** House or brand, e.g. "Guerlain". */
   brand: string
+  /**
+   * The house's line this bottle belongs to, e.g. "Private Blend" under Tom
+   * Ford, or "Les Exclusifs" under Chanel.
+   *
+   * Absent is a normal state and always will be: plenty of houses — Nasomatto,
+   * Orto Parisi — publish a flat list of scents and have no lines at all, and
+   * a house that does have them still ships bottles outside every one. So this
+   * is optional, and the shelf orders the bottles that carry none as a group of
+   * their own rather than pretending they share a line.
+   */
+  collection?: string
   /** The scent, e.g. "Vetiver". */
   name: string
 }
