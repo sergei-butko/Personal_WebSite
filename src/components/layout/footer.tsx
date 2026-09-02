@@ -1,6 +1,7 @@
 import { footerLinks, linkRel, linkTarget } from '@/lib/links'
 import { PlatformIcon } from '@/components/links/platform-icon'
 import { profile } from '@/content/profile'
+import { withBase } from '@/lib/paths'
 
 /**
  * The marks are monochrome — `currentColor` rather than each platform's brand
@@ -37,9 +38,27 @@ export function Footer() {
        * up it is the single row it always was.
        */}
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 px-5 py-8 text-sm text-muted sm:flex-row sm:justify-between sm:gap-4">
-        <p>
-          &copy; {new Date().getFullYear()} {profile.name}
-        </p>
+        <div className="flex flex-col items-center gap-2.5 sm:items-start">
+          {/*
+           * The wordmark, from Cloudinary's `public/full` — see public/README.md.
+           *
+           * Decorative, like the header's monogram: it spells out the same name
+           * the copyright line beneath it already carries, so giving it alt
+           * text would say it twice.
+           */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={withBase('/logo-wordmark.png')}
+            alt=""
+            width={400}
+            height={144}
+            decoding="async"
+            className="h-11 w-auto"
+          />
+          <p>
+            &copy; {new Date().getFullYear()} {profile.name}
+          </p>
+        </div>
         <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5">
           {footerLinks.map((link) => (
             <li key={link.href}>

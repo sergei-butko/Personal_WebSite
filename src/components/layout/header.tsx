@@ -3,6 +3,7 @@ import { Nav } from '@/components/layout/nav'
 import { localePath, type Locale } from '@/lib/i18n'
 import type { Dictionary } from '@/content/i18n'
 import { profile } from '@/content/profile'
+import { withBase } from '@/lib/paths'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { LocaleSwitcher } from '@/components/layout/locale-switcher'
 
@@ -26,7 +27,32 @@ export function Header({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   return (
     <header className="border-b border-edge">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <Link href={localePath(locale)} className="text-lg font-semibold tracking-tight">
+        <Link
+          href={localePath(locale)}
+          className="flex items-center gap-2.5 text-lg font-semibold tracking-tight"
+        >
+          {/*
+           * The monogram, from Cloudinary's `public/main` — see public/README.md.
+           *
+           * alt is empty on purpose: the link already contains the name, so
+           * describing the logo would make a screen reader announce "Serhii
+           * Butko Serhii Butko". Decorative here is the accurate answer, not a
+           * shortcut.
+           *
+           * A raw <img> because next/image is unavailable under output:
+           * 'export', and therefore withBase() — basePath is not applied to a
+           * hand-written src. width/height are the file's real pixels so the
+           * box is reserved before it loads; the class is what sizes it.
+           */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={withBase('/logo-mark.png')}
+            alt=""
+            width={96}
+            height={96}
+            decoding="async"
+            className="h-7 w-7 shrink-0"
+          />
           {profile.name}
         </Link>
 
