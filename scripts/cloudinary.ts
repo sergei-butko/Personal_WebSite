@@ -19,6 +19,30 @@
  * instead of a stack trace.
  */
 
+/**
+ * The Media Library placement an id implies: everything before the last slash
+ * is the folder, the last segment is the name.
+ *
+ * This exists because an upload does NOT file itself. On a dynamic-folder
+ * cloud — which this one is — `asset_folder` is a field of its own, and an
+ * upload that omits it drops the asset in the ROOT of the Media Library however
+ * many slashes its public id has. That is how 653 assets came to sit in one
+ * undifferentiated list, and how two images from a post synced on 2026-09-01
+ * landed back there weeks after the migration that was meant to end it.
+ *
+ * Deriving it here rather than taking it as an argument keeps every caller
+ * honest: the folder cannot drift from the id, because it IS the id.
+ * `display_name` goes with it, since that does not follow an id either.
+ */
+function placement(publicId: string): Record<string, string> {
+  const cut = publicId.lastIndexOf('/')
+  if (cut === -1) return { display_name: publicId }
+  return {
+    asset_folder: publicId.slice(0, cut),
+    display_name: publicId.slice(cut + 1),
+  }
+}
+
 export interface UploadResult {
   publicId: string
   width: number
@@ -100,6 +124,7 @@ export async function uploadImage(
         overwrite: true,
         invalidate: true,
         resource_type: 'image',
+        ...placement(publicId),
       },
       (error, uploaded) => {
         if (error) return reject(new Error(error.message))
@@ -147,6 +172,7 @@ export async function uploadAudio(bytes: Buffer, publicId: string): Promise<stri
         overwrite: true,
         invalidate: true,
         resource_type: 'video',
+        ...placement(publicId),
       },
       (error, uploaded) => {
         if (error) return reject(new Error(error.message))
@@ -362,6 +388,7 @@ export async function uploadJson(publicId: string, data: unknown): Promise<void>
         overwrite: true,
         invalidate: true,
         resource_type: 'raw',
+        ...placement(publicId),
       },
       (error, uploaded) => {
         if (error) return reject(new Error(error.message))

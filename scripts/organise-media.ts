@@ -14,10 +14,12 @@
  * Two jobs, and they are the same job:
  *
  * 1. **Folders.** This cloud is in dynamic-folder mode, so an asset's
- *    `asset_folder` is a separate field from its `public_id` and neither the
- *    upload nor a rename sets it. Every asset these scripts have ever uploaded
- *    therefore sat in the ROOT of the Media Library — 653 of them in one
- *    undifferentiated list — while their ids said `telegram/…` and `threads/…`.
+ *    `asset_folder` is a separate field from its `public_id`. Uploads set it
+ *    themselves now (see `placement` in cloudinary.ts), so this is a REPAIR
+ *    pass rather than the only thing that files anything — a rename still does
+ *    not move an asset, and neither did an upload until 2026-09-02, which is
+ *    how 653 assets came to sit in the root of the Media Library in one
+ *    undifferentiated list while their ids said `telegram/…` and `threads/…`.
  * 2. **Names.** A Threads image called `threads/17956459470243614-0` tells a
  *    human nothing. `threads/images/Tom_Ford-Oud_Wood-1` tells them everything.
  *    The brand and scent are hand-written and absent when the sync runs, so

@@ -189,10 +189,12 @@ expires loudly and is refreshed by hand.
   renames it afterwards. Do not try to move that into the sync.
 - **A Cloudinary folder is not a public id prefix.** This cloud is in dynamic
   folder mode: `asset_folder` is what the Media Library groups by, `public_id`
-  is what the delivery URL is built from, and they are independent. Neither
-  `upload` nor `rename` sets the former — so 653 assets sat in the root of the
-  Media Library for months while every id said `telegram/…`. Only
-  `uploader.explicit` writes it. `api.update` does too, and is the wrong call:
+  is what the delivery URL is built from, and they are independent. `rename`
+  does not set the former and `upload` did not either — so 653 assets sat in the
+  root of the Media Library for months while every id said `telegram/…`, and
+  after the migration a newly synced post put two more back there. Uploads now
+  derive it from the id (`placement` in `scripts/cloudinary.ts`);
+  `uploader.explicit` is what repairs one after the fact. `api.update` does too, and is the wrong call:
   it is an Admin API request, the free plan allows 500 an hour, and a full
   `media:organise` touches 651 assets. Renaming changes delivery URLs, so a run
   is followed by a deploy — the published HTML is static and holds the old ids.

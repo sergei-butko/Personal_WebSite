@@ -21,7 +21,8 @@
     "test:photo-merge": "tsx scripts/photo-merge.test.ts",
     "content:pull": "tsx scripts/content.ts pull",
     "content:push": "tsx scripts/content.ts push",
-    "media:organise": "tsx scripts/organise-media.ts"
+    "media:organise": "tsx scripts/organise-media.ts",
+    "media:clean-demo": "tsx scripts/clean-demo-assets.ts"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",

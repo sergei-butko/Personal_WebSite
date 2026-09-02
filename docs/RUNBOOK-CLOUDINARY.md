@@ -209,11 +209,20 @@ script — nothing in the tree writes there any more.
 **An asset's folder is not its public id.** This cloud is in Cloudinary's
 _dynamic folder_ mode, where `asset_folder` — what the Media Library groups by
 — is a separate field from `public_id`, which is what the delivery URL is built
-from. Neither `uploader.upload` nor `uploader.rename` sets it, so for a long
-time every asset these scripts uploaded sat in the ROOT of the Media Library,
-653 of them in one list, while its id said `telegram/…`. Only
-`uploader.explicit` writes it; `asset_folder` and `to_asset_folder` are not
-honoured as rename options, and both were tried.
+from.
+
+Uploads set it themselves: `placement()` in `scripts/cloudinary.ts` derives the
+folder and the display name from the id, so anything a sync writes is filed as
+it arrives. That was not always so. For a long time neither upload nor rename
+set it and 653 assets sat in the ROOT of the Media Library in one list while
+their ids said `telegram/…`; even after the migration that fixed them, a post
+synced on 2026-09-01 put two more images back there before the upload path was
+fixed on 2026-09-02.
+
+**Renaming still does not move an asset.** `asset_folder` and `to_asset_folder`
+are not honoured as rename options — both were tried — so `uploader.explicit`
+remains the only way to repair a folder after the fact, which is what
+`media:organise` does.
 
 `api.update` also writes it and is the obvious call — do not use it here. It is
 an **Admin API** request, and the free plan allows 500 of those an hour, fewer
@@ -246,6 +255,27 @@ truncated sample, because that log is the only record of what went.
 
 17 were removed on 2026-08-31: five second images dropped from Kajal and Dior
 posts by hand, and twelve belonging to posts no longer in the snapshot.
+
+### Cloudinary's own demo assets: `npm run media:clean-demo`
+
+    npm run media:clean-demo                    # list them, delete nothing
+    CONFIRM_DELETE=1 npm run media:clean-demo   # delete
+
+Every account is seeded with sample images — `sample`, `cld-sample-*`,
+`main-sample` and a `samples/` tree of stock photographs and textures. Nothing
+here references them and they cost storage on the free plan, where 57 of them
+were once 164 MB and 39% of the account.
+
+**They come back.** They were deleted on 2026-08-31 and a different, smaller set
+had reappeared by 2026-09-02 — Cloudinary re-seeds when the console's media
+playground is used. Hence a command rather than a third one-off script.
+
+A demo asset is one with **no `asset_folder`** that is not under a managed
+public id prefix. Being in a folder is what protects something — which is why
+the logos in `public/` are safe even though their ids sit at the root. The
+consequence: anything you upload to the root of the Media Library, in no folder,
+looks the same from here. That is why it deletes nothing without
+`CONFIRM_DELETE=1` and prints the full list first.
 
 ### Repairing a row whose asset is gone: `SYNC_REPAIR=1`
 

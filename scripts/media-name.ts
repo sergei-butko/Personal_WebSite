@@ -10,13 +10,16 @@
  *
  * This cloud is in Cloudinary's DYNAMIC FOLDER mode, where an asset carries an
  * `asset_folder` that is independent of its `public_id`. The Media Library
- * groups by `asset_folder`; the delivery URL is built from `public_id`. Upload
- * sets neither on its own, which is why every asset on this account sat in the
- * root of the Media Library while its id said `telegram/…`.
+ * groups by `asset_folder`; the delivery URL is built from `public_id`.
  *
- * So both are set, to the same string, and `organise-media.ts` fixes either
- * one when it is wrong. Do not assume that renaming an asset moves it; it does
- * not. `uploader.explicit` is what writes `asset_folder`.
+ * Both are set, to the same string. `cloudinary.ts` derives the folder from the
+ * id at UPLOAD time, so anything the syncs write is filed as it arrives; that
+ * was not always true, and two images from a post synced on 2026-09-01 landed
+ * in the root of the Media Library because of it.
+ *
+ * Do not assume that RENAMING an asset moves it — that one is still true.
+ * `uploader.rename` leaves `asset_folder` alone, and `uploader.explicit` is
+ * what `organise-media.ts` uses to repair a folder after the fact.
  */
 
 import type { Fragrance } from '../src/lib/threads/types'
