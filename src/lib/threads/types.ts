@@ -49,10 +49,14 @@ export interface ThreadsImage {
 /**
  * The bottle a post is about.
  *
- * Hand-written, always. Threads has no such field and never will — the API
- * returns a body of text, and which fragrance it reviews is a judgement only a
- * reader makes. So this is absent on everything the sync captures and is filled
- * in through `npm run content:pull` / `content:push`, like alt text on a photo.
+ * A reading, not a value. Threads has no such field and never will — the API
+ * returns a body of text, and which fragrance it reviews is a judgement. So
+ * this is absent on everything the sync captures, and is filled in one of two
+ * ways: by hand through `npm run content:pull` / `content:push`, like alt text
+ * on a photo, or automatically by `scripts/name-fragrances.ts`, which runs
+ * daily right after the sync and writes only what `scripts/fragrance-gates.ts`
+ * can corroborate against the post's own text — see CLAUDE.md's "two syncs"
+ * section for what that does and does not trust a model to decide on its own.
  *
  * Absent is a normal state, not a gap to be filled before shipping: a post with
  * no bottle named renders as its picture alone.

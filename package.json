@@ -23,13 +23,16 @@
     "test:media-audit": "tsx scripts/media-audit.test.ts",
     "test:media-url": "NEXT_PUBLIC_CLOUDINARY_CLOUD=test-cloud tsx scripts/media-url.test.ts",
     "test:cv": "NEXT_PUBLIC_CLOUDINARY_CLOUD=test-cloud tsx scripts/cv.test.ts",
+    "test:threads-name": "tsx scripts/name-fragrances.test.ts",
     "content:pull": "tsx scripts/content.ts pull",
     "content:push": "tsx scripts/content.ts push",
     "media:organise": "tsx scripts/organise-media.ts",
     "media:verify": "tsx scripts/verify-media.ts",
     "media:clean-demo": "tsx scripts/clean-demo-assets.ts",
     "cv:upload": "node --env-file=.env node_modules/.bin/tsx scripts/upload-cv.ts",
-    "cv:portrait": "node --env-file=.env node_modules/.bin/tsx scripts/upload-portrait.ts"
+    "cv:portrait": "node --env-file=.env node_modules/.bin/tsx scripts/upload-portrait.ts",
+    "threads:name": "tsx scripts/name-fragrances.ts",
+    "threads:set": "tsx scripts/set-fragrance.ts"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",
@@ -49,6 +52,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",

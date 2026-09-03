@@ -79,16 +79,59 @@ jobs:
           CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
         run: npm run sync:threads
 
-      # After the sync, before the deploy: a run that wrote to Cloudinary is
-      # the moment the store can have gained a row pointing at nothing, and the
-      # deploy below is gated on success(), so a hole here stops the publish
-      # rather than shipping HTML that describes it.
+      # Fills in the brand, scent and (where the store already knows it) the
+      # collection for whatever the sync above left without one — see
+      # scripts/fragrance-gates.ts for the two gates that decide what a
+      # proposal is allowed to write. Unconditional, not gated on `changed`,
+      # for the same reason "Verify the media store" below is: a post left
+      # unnamed by a failed or credit-exhausted run yesterday is still unnamed
+      # today, whether or not today's sync itself changed anything, and this
+      # is the pass that self-heals it.
+      #
+      # ANTHROPIC_API_KEY is OPTIONAL, the same shape as GH_SECRETS_PAT in
+      # refresh-threads-token.yml: absent, this step announces the skip and
+      # every post keeps arriving unnamed — a supported state the site has
+      # always rendered correctly — rather than the sync failing outright over
+      # an enhancement it does not need to publish.
+      - name: Name new bottles
+        id: name
+        run: |
+          if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+            echo "ANTHROPIC_API_KEY not set — skipping automatic naming."
+            echo "named=false" >> "$GITHUB_OUTPUT"
+          else
+            npm run threads:name
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Only read when the key is workspace-scoped; a plain key ignores
+          # it. See the comment on anthropic() in scripts/name-fragrances.ts.
+          ANTHROPIC_WORKSPACE_ID: ${{ secrets.ANTHROPIC_WORKSPACE_ID }}
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+
+      # Renames each freshly-named bottle's pictures from their placeholder
+      # `<postId>-<slot>` ids to `<Brand>-<Scent>-<n>`, and rewrites the
+      # snapshot to match — see scripts/organise-media.ts. Unconditional and
+      # idempotent by construction: a run that finds nothing to rename reports
+      # so and changes nothing, which is what makes it safe to run every day
+      # rather than only after a hand-naming session.
+      - name: Rename bottle pictures
+        id: organise
+        env:
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+        run: npm run media:organise
+
+      # After every step above that can write to Cloudinary, and before the
+      # deploy: a run that wrote to Cloudinary is the moment the store can have
+      # gained a row pointing at nothing, and the deploy below is gated on
+      # success(), so a hole here stops the publish rather than shipping HTML
+      # that describes it.
       #
       # Unconditional, not gated on `changed`. The failure this catches most
       # often is not a sync at all — it is a picture added by hand through the
       # Media Library, which names an asset with a UUID unless you set the
-      # public id yourself, and which happens between runs. A sync that changed
-      # nothing is still the first chance CI gets to notice one.
+      # public id yourself, and which happens between runs. A run that changed
+      # nothing above is still the first chance CI gets to notice one.
       #
       # Not in ci.yml: the store is not part of a pull request's diff, and
       # CLOUDINARY_URL is a secret that Dependabot and fork PRs cannot read —
@@ -99,6 +142,25 @@ jobs:
         env:
           CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
         run: npm run media:verify
+
+      # Whether ANY of the three Cloudinary-writing steps above changed
+      # something worth publishing — a step, not a workflow-level env var like
+      # WANTS_DEPLOY, because it reads other steps' outputs, and those do not
+      # exist yet when workflow-level `env:` is evaluated.
+      #
+      # Computed once and read by both `if:`s below for the same reason
+      # WANTS_DEPLOY is: two copies of a three-way OR is exactly the kind of
+      # duplication that drifted apart before.
+      - name: Decide whether to publish
+        id: decide
+        run: |
+          if [[ "${{ steps.sync.outputs.changed }}" == "true" \
+             || "${{ steps.name.outputs.named }}" == "true" \
+             || "${{ steps.organise.outputs.organised }}" == "true" ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy the site
         # No commit is pushed, so nothing triggers deploy.yml on its own and
@@ -113,7 +175,7 @@ jobs:
         if: >-
           success()
           && env.WANTS_DEPLOY == 'true'
-          && steps.sync.outputs.changed == 'true'
+          && steps.decide.outputs.publish == 'true'
           && github.ref_name == github.event.repository.default_branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -126,12 +188,12 @@ jobs:
         if: >-
           success()
           && !(env.WANTS_DEPLOY == 'true'
-          && steps.sync.outputs.changed == 'true'
+          && steps.decide.outputs.publish == 'true'
           && github.ref_name == github.event.repository.default_branch)
         run: |
           if [[ "$WANTS_DEPLOY" != "true" ]]; then
             echo "The deploy input was unticked. Cloudinary is updated; the site is not."
-          elif [[ "${{ steps.sync.outputs.changed }}" != "true" ]]; then
+          elif [[ "${{ steps.decide.outputs.publish }}" != "true" ]]; then
             echo "Nothing changed, so there is nothing to publish."
           else
             echo "Ran on '${{ github.ref_name }}', not the default branch."

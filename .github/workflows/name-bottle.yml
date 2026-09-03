@@ -1,0 +1,130 @@
+name: Name a bottle
+
+# Type what a post is about; CI does the rest.
+#
+# `threads:name` fills in what a model can corroborate — see the two gates in
+# scripts/fragrance-gates.ts. This is the other half: the bottles it holds back
+# (a house line the store has never seen, a post whose house the grounding
+# check cannot match) plus anything it simply got wrong. Both write the same
+# field the same way, so the same three steps follow either: rename the
+# pictures after the bottle, verify the store, publish.
+#
+# Leave "post" blank and it takes the NEWEST post with no bottle, which is
+# almost always the one that just synced. Pass an id to name an older one.
+#
+# Actions -> Name a bottle -> Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      brand:
+        description: 'House — e.g. Filippo Sorcinelli'
+        required: true
+        type: string
+      scent:
+        description: 'Scent — e.g. But Not Today'
+        required: true
+        type: string
+      collection:
+        description: 'House line — e.g. UNUM. Blank if the house has none.'
+        required: false
+        type: string
+      post:
+        description: 'Post id. Blank = the newest post without a bottle.'
+        required: false
+        type: string
+      overwrite:
+        description: 'Replace a bottle that is already on that post'
+        type: boolean
+        default: false
+      deploy:
+        description: 'Rebuild and publish the site afterwards'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  actions: write
+
+# Shared with sync-threads.yml on purpose. Both read data/threads.json, edit
+# it and write the whole document back, so two of them overlapping would have
+# the second silently discard the first's work. The daily sync is at 10:30 UTC
+# and this is run by hand, so the collision is unlikely rather than impossible
+# — and "unlikely" is not a property worth relying on when the fix is one line.
+concurrency:
+  group: sync-threads
+  cancel-in-progress: false
+
+jobs:
+  name-bottle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Every input arrives as `env:`, never interpolated into the `run:` line.
+      # A workflow_dispatch input is arbitrary text, and `${{ inputs.brand }}`
+      # spliced into a shell command is the standard Actions injection; this is
+      # the standard answer. scripts/set-fragrance.ts reads them from the
+      # environment for exactly this reason.
+      - name: Write the bottle
+        id: set
+        env:
+          BOTTLE_BRAND: ${{ inputs.brand }}
+          BOTTLE_SCENT: ${{ inputs.scent }}
+          BOTTLE_COLLECTION: ${{ inputs.collection }}
+          BOTTLE_POST: ${{ inputs.post }}
+          BOTTLE_OVERWRITE: ${{ inputs.overwrite }}
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+        run: npm run threads:set
+
+      # Renames the post's pictures from their placeholder `<postId>-<slot>`
+      # ids to `<Brand>-<Scent>-<n>` and rewrites the snapshot to match. This
+      # is the step that makes a wrong bottle expensive, and the reason
+      # set-fragrance.ts refuses to overwrite without being told to.
+      - name: Rename its pictures
+        env:
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+        run: npm run media:organise
+
+      # A rename that half-landed is the failure worth catching before the
+      # deploy: the published HTML is static and would describe assets that
+      # are no longer at those ids.
+      - name: Verify the media store
+        env:
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+        run: npm run media:verify
+
+      - name: Deploy the site
+        # Always --ref the DEFAULT branch, never the branch this run started
+        # from: deploy.yml publishes to production Pages, so dispatching it
+        # against a feature branch would put that branch on the live site.
+        if: >-
+          success()
+          && inputs.deploy
+          && github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          gh workflow run deploy.yml --ref "$DEFAULT_BRANCH"
+          echo "Deploy dispatched against $DEFAULT_BRANCH."
+
+      - name: Explain why no deploy was dispatched
+        if: >-
+          success()
+          && !(inputs.deploy
+          && github.ref_name == github.event.repository.default_branch)
+        run: |
+          if [[ "${{ inputs.deploy }}" != "true" ]]; then
+            echo "Deploy was unticked. Cloudinary is updated; the site is not."
+          else
+            echo "Ran on '${{ github.ref_name }}', not the default branch."
+            echo "Cloudinary is updated. Run Deploy from the default branch to publish."
+          fi

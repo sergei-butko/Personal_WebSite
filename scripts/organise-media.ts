@@ -70,6 +70,7 @@ import {
 } from './media-name'
 import type { PhotoSnapshot } from '../src/lib/photos/types'
 import type { ThreadsSnapshot } from '../src/lib/threads/types'
+import { setOutput } from './github-output'
 
 const PHOTOS = 'data/photos.json'
 const HASHES = 'data/photo-hashes.json'
@@ -407,6 +408,7 @@ async function main(): Promise<void> {
     const wouldStamp = stampVersions(photos, threads, state)
     if (wouldStamp > 0) console.log(`plan : ${wouldStamp} version(s) to record`)
     console.log('\n→ dry run, nothing written')
+    await setOutput('organised', 'false')
     return
   }
 
@@ -508,6 +510,7 @@ async function main(): Promise<void> {
 
   if (renamed.size === 0 && stamped === 0) {
     console.log('\n✓ already organised, nothing to do')
+    await setOutput('organised', 'false')
     return
   }
 
@@ -534,6 +537,11 @@ async function main(): Promise<void> {
     }
   }
 
+  // A rename OR a version stamp changes a delivery URL — see versionPath in
+  // lib/media.ts — and the prerendered HTML holds the old one until the next
+  // deploy. Reaching this line means the early return above did not fire, so
+  // at least one of the two happened.
+  await setOutput('organised', 'true')
   console.log('\n✓ done. Re-run to confirm it reports nothing left to do.')
 }
 

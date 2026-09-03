@@ -218,6 +218,67 @@ a post into a gap the cursor has already moved past. `THREADS_FETCH_ALL=1`
 walks everything, for when you suspect a backdated post was missed and do not
 want to touch `syncedThrough`.
 
+**The fragrance a post reviews is named automatically too**, immediately after
+the sync, in the same job. `scripts/name-fragrances.ts` (`npm run threads:name`)
+asks Claude what bottle a post is about and writes only what two gates in
+`scripts/fragrance-gates.ts` corroborate: the house and the scent must appear in
+the post text — squashed of punctuation first, since a house is usually written
+as `@handle` rather than prose — and a house LINE (`UNUM`, `Private Blend`) is
+written only when this store already records that line for that house,
+because a line is a fact about the house, not the post, and nothing in the
+prose can confirm one the store has never seen. Either gate failing leaves the
+row exactly as absent-fragrance has always meant: rendered as its picture
+alone, with the model's guess printed in the run log for Serhii to apply by
+hand. `npm run test:threads-name` pins both gates against fixtures quoted from
+real posts, with no API call and no cost.
+
+A wrong bottle is not a free mistake to correct: `fragrance` drives the shelf a
+post files under, the card's title, and — because `npm run media:organise` now
+also runs automatically, right after naming, in the same job — the Cloudinary
+public ids of the post's pictures. So `media:organise` running daily is not
+new; what changed is that a fresh fragrance is usually waiting for it every
+time, where a hand-naming session used to be the only thing that fed it.
+
+**When a gate holds a bottle back, `name-bottle.yml` is how it gets named** —
+Actions → Name a bottle → Run workflow, three boxes (house, scent, line) and a
+run that does everything else: `scripts/set-fragrance.ts` (`npm run
+threads:set`) writes the row, then `media:organise` renames the pictures,
+`media:verify` checks them and the deploy publishes. It is the same field
+written the same way, so nothing downstream knows or cares which half of the
+pair filled it in.
+
+Two things about it are load-bearing. **The post defaults to the newest one
+without a bottle**, because that is almost always the post that just synced and
+hunting for an id to name it is the friction this exists to remove. And
+**replacing a bottle that is already there needs `overwrite` ticked**, because
+the expensive mistake is a mistyped id landing on a post that was already
+right: `fragrance` drives the pictures' public ids, so a wrong write renames
+real Cloudinary assets and costs a second rename and a second deploy to undo.
+Refusing by default turns that from an incident into a message. The grounding
+check still runs and still prints, but only as a warning — a person saying what
+a bottle is outranks it, and 8 of the 96 rows named by hand would fail it — so
+its real job here is to flag the shape a wrong id makes.
+
+Both workflows take the **same `sync-threads` concurrency group**. They each
+read `data/threads.json`, edit it and write the whole document back, so two
+overlapping runs would have the second silently discard the first's work.
+
+Every input reaches the script through `env:`, never interpolated into a
+`run:` line. A `workflow_dispatch` input is arbitrary text and
+`${{ inputs.brand }}` spliced into a shell command is the standard Actions
+injection; `set-fragrance.ts` reads them from the environment for that reason
+alone. Do not "simplify" it into flags on the command line.
+
+Naming is the optional layer: without an `ANTHROPIC_API_KEY` repository secret
+the step announces the skip and every post keeps arriving unnamed, which
+`media:organise` and the deploy gate both already treat as a normal outcome —
+the sync does not fail over an enhancement it does not need in order to
+publish. A per-post API error (a rate limit, a network blip) is caught the
+same way: that one post is skipped and retried automatically tomorrow, rather
+than the failure aborting the run and costing the day's real synced content its
+organise/verify/deploy. `ANTHROPIC_WORKSPACE_ID` is read alongside the key only
+because a workspace-scoped key needs it; a plain key ignores it.
+
 `refresh-threads-token.yml` stays on its weekly schedule — it touches no content,
 and a Threads long-lived token that misses its 60-day window dies **permanently**:
 there is no grace period, and recovery means going back through Meta's auth flow
@@ -245,9 +306,11 @@ announced itself only when someone happened to sync by hand.
   files and 827 MB across thirteen runs. Public ids are `<postId>-<slot>` now, so
   a re-upload replaces in place. **A Threads image ends up named after its
   bottle** (`threads/images/Tom_Ford-Oud_Wood-1`) — but not at upload time,
-  because the fragrance is hand-written and does not exist yet when the sync
-  runs. The sync still writes the id-shaped name and `npm run media:organise`
-  renames it afterwards. Do not try to move that into the sync.
+  because the fragrance is hand-written or model-proposed and does not exist
+  yet when the sync itself runs. The sync still writes the id-shaped name;
+  `npm run media:organise` renames it once a fragrance lands, whether that was
+  `threads:name` a few seconds later in the same CI job or a hand edit through
+  `content:push` weeks after. Do not try to move the rename into the sync.
 - **A Cloudinary folder is not a public id prefix.** This cloud is in dynamic
   folder mode: `asset_folder` is what the Media Library groups by, `public_id`
   is what the delivery URL is built from, and they are independent. `rename`
@@ -475,7 +538,7 @@ npm run typecheck && npm run lint && npm run format:check && npm run build
 npm run test:telegram && npm run test:dedup && npm run test:collage
 npm run test:names && npm run test:threads-merge && npm run test:photo-merge
 npm run test:shelves && npm run test:media-audit && npm run test:media-url
-npm run test:cv
+npm run test:cv && npm run test:threads-name
 ```
 
 The build must run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
