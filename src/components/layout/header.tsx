@@ -19,8 +19,9 @@ const navItems = [
   { key: 'perfumery', path: 'perfumery' },
   { key: 'photos', path: 'photos' },
   { key: 'links', path: 'links' },
-  { key: 'about', path: 'about' },
+  // CV before About: it is the one of the two with real content behind it.
   { key: 'cv', path: 'cv' },
+  { key: 'about', path: 'about' },
 ] as const
 
 export function Header({ locale, dict }: { locale: Locale; dict: Dictionary }) {

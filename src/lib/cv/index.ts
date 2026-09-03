@@ -110,9 +110,12 @@ const skillGroupSchema = z.strictObject({
  * same property: invisible in every screenshot except the one width where it
  * shows.
  *
- * The widths are not arbitrary either. Azure carries eight tools to AWS's six,
- * so it takes seven tracks to AWS's five — the split is what each area holds.
- * Which means adding a tool is not a free edit: it changes what its tile needs,
+ * The widths are not arbitrary either. A tile is as wide as its chips need to
+ * settle into two rows — a tile that spills to three was given the wrong width
+ * — and within a row the wider half is the half that holds more: Azure's eight
+ * tools take seven tracks to Data's four at five.
+ *
+ * Which means adding a tool is not a free edit. It changes what its tile needs,
  * and the row it shares has to give the tracks up. This function is what says
  * so, at build time, instead of the page saying it in production.
  *
@@ -158,6 +161,23 @@ const resumeSchema = z.strictObject({
   version: z.number().int().positive().optional(),
 })
 
+/**
+ * The portrait, from the LinkedIn profile and re-hosted in Cloudinary like
+ * every other image here.
+ *
+ * Optional, and the identity card falls back to the gradient monogram the home
+ * page's About tile uses — which is what it rendered before there was a
+ * photograph, and what it should render again rather than a broken frame if
+ * the asset ever goes missing.
+ */
+const portraitSchema = z.strictObject({
+  publicId: z.string().min(1),
+  /** Intrinsic size, so the browser reserves the box before the bytes land. */
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  version: z.number().int().positive().optional(),
+})
+
 const cvSchema = z.strictObject({
   /** The name as the CV's own heading. The site header keeps the English
    * wordmark in both languages — that is the brand, not a translated string. */
@@ -187,6 +207,7 @@ const cvSchema = z.strictObject({
   education: z.array(educationSchema).min(1),
   certifications: z.array(certificationSchema).default([]),
   languages: z.array(languageSchema).min(1),
+  portrait: portraitSchema.optional(),
   resume: resumeSchema.optional(),
 })
 
@@ -200,6 +221,7 @@ export type CvEducation = Cv['education'][number]
 export type CvCertification = Cv['certifications'][number]
 export type CvLanguage = Cv['languages'][number]
 export type CvContact = Cv['contacts'][number]
+export type CvPortrait = NonNullable<Cv['portrait']>
 
 function load(): Cv {
   const parsed = cvSchema.safeParse(rawCv)

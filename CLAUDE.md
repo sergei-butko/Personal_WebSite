@@ -349,15 +349,19 @@ heading takes the Ukrainian name.
 
 Two things about it that are load-bearing:
 
-- **The stack tiles' `span` is content, not styling.** Azure takes seven of
-  twelve tracks to AWS's five because it holds eight tools to AWS's six. Rows
-  must add to exactly twelve or the grid leaves a hole beside the last tile in
-  the row — same failure as a seven-tile photo collage, same invisibility.
-  `lib/cv` fails the build on it and `npm run test:cv` pins the rule, so adding
-  a tool without rebalancing its row is a red build rather than a bug nobody
-  sees. The widths cannot be Tailwind utilities: a span utility has to be a
-  literal in the source to be emitted at all, so `.stack-mosaic` in
-  `globals.css` takes the number through a custom property instead.
+- **The stack tiles' `span` is content, not styling.** A tile is as wide as its
+  chips need to settle into two rows, and within a row the wider half holds
+  more — Azure's eight entries take seven of twelve tracks to Data's four at
+  five. Rows must add to exactly twelve or the grid leaves a hole beside the
+  last tile in the row: same failure as a seven-tile photo collage, same
+  invisibility. `lib/cv` fails the build on it and `npm run test:cv` pins the
+  rule, so adding a tool without rebalancing its row is a red build rather than
+  a bug nobody sees. **The ORDER of the groups is the pairing**, and it is
+  load-bearing for the same reason: AWS needs six tracks and Azure seven, which
+  do not fit in one row, so they are dealt into different rows beside partners
+  that fit the remainder. The widths cannot be Tailwind utilities either — a
+  span utility has to be a literal in the source to be emitted at all — so
+  `.stack-mosaic` in `globals.css` takes the number through a custom property.
 - **The PDF is not linked yet, and that is a Cloudinary account setting.**
   `npm run cv:upload` puts it at `docs/cv-serhii-butko.pdf` — the extension is
   part of the id, because without it the file is served as
@@ -368,6 +372,11 @@ Two things about it that are load-bearing:
   then re-run the script and paste the version into `content/cv.ts`. Until then
   `resume` is absent and the download button is not rendered — a missing button
   beats a dead link.
+- **The portrait is the LinkedIn photograph, re-hosted.** LinkedIn serves it
+  from a signed URL that expires, so it cannot be hot-linked; `npm run
+cv:portrait -- <path>` uploads a saved copy to `profile/serhii-butko` and
+  prints the fields to record. Optional — the card falls back to the gradient
+  monogram rather than a broken frame.
 
 **The standing instruction is to fill these in, not to remove them.** Deleting
 an empty thing makes the site smaller; the site is meant to get bigger. Both

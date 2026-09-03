@@ -168,11 +168,18 @@ export const cv = {
   ],
 
   /*
-   * `span` is the tile's width in tracks, and the tracks per row are fixed —
-   * so these come in pairs that add to twelve, and the split within a pair
-   * says which of the two holds more. Azure's eight tools to AWS's six is
-   * seven tracks to five; Back end and Front end are eight and seven, near
-   * enough that splitting them would be noise.
+   * `span` is the tile's width in tracks, and the tracks per row are fixed at
+   * twelve — so these come in pairs that add up, and the split within a pair
+   * says which of the two holds more.
+   *
+   * THE ORDER IS THE PAIRING, and the pairing is not arbitrary. Every tile has
+   * to be wide enough for its chips to settle into two rows, and AWS and Azure
+   * cannot both have that in the same row: Azure needs seven tracks for its
+   * eight entries, AWS needs six before "Elastic Load Balancer" stops being
+   * pushed onto a third line, and seven and six do not fit in twelve. So they
+   * are dealt into different rows, each beside a partner that fits the
+   * remainder — AWS with CI/CD, Azure with Data — and the rows come out
+   * coherent anyway: two clouds-and-tooling, then the two language halves.
    *
    * Adding a tool is therefore not a free edit — the row has to give up the
    * tracks. `lib/cv` fails the build if one does not add up, because the
@@ -181,8 +188,20 @@ export const cv = {
   skills: [
     {
       area: 'AWS',
-      span: 5,
+      span: 6,
       items: ['S3', 'EC2', 'RDS', 'Elastic Load Balancer', 'Route 53', 'CloudFormation'],
+    },
+    {
+      area: 'CI/CD & IaC',
+      span: 6,
+      items: [
+        'GitHub Actions',
+        'Azure DevOps',
+        'Jenkins',
+        'Docker',
+        'Terraform',
+        'PowerShell',
+      ],
     },
     {
       area: 'Azure',
@@ -196,18 +215,6 @@ export const cv = {
         'Service Bus',
         'Application Gateway',
         'Alerts',
-      ],
-    },
-    {
-      area: 'CI/CD & IaC',
-      span: 7,
-      items: [
-        'GitHub Actions',
-        'Azure DevOps',
-        'Jenkins',
-        'Docker',
-        'Terraform',
-        'PowerShell',
       ],
     },
     {
@@ -282,6 +289,18 @@ export const cv = {
       level: { en: 'Upper-Intermediate', uk: 'Вище середнього' },
     },
   ],
+
+  /*
+   * The LinkedIn profile photograph, re-hosted here like every other image on
+   * the site — `npm run cv:portrait` puts it there and prints these fields.
+   * Uploaded 2026-09-03 from the 800x800 original.
+   */
+  portrait: {
+    publicId: 'profile/serhii-butko',
+    width: 800,
+    height: 800,
+    version: 1788431779,
+  },
 
   /*
    * The PDF. Absent, deliberately, and the download button is not rendered

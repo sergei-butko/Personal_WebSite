@@ -1,7 +1,8 @@
 import type { Locale } from '@/lib/i18n'
-import { type CvContact, type LocalizedText, text } from '@/lib/cv'
+import { type CvContact, type CvPortrait, type LocalizedText, text } from '@/lib/cv'
 import { PlatformIcon } from '@/components/links/platform-icon'
 import { Card } from '@/components/ui/card'
+import { CloudinaryImage } from '@/components/ui/cloudinary-image'
 
 /**
  * Who this is, and how to reach him — the top of the sticky rail.
@@ -11,6 +12,11 @@ import { Card } from '@/components/ui/card'
  * handles are the identical string, so the mark is the only thing that says
  * where a pill goes, and a wrapped row hides it at the start of the second
  * line as often as not.
+ *
+ * The portrait keeps the monogram's square-with-rounded-corners rather than
+ * becoming a circle, so the tile reads as the same object the About card on the
+ * home page already is — and falls back to the monogram outright when there is
+ * no photograph configured.
  */
 export function IdentityCard({
   name,
@@ -19,6 +25,7 @@ export function IdentityCard({
   org,
   location,
   contacts,
+  portrait,
   locale,
 }: {
   name: LocalizedText
@@ -27,16 +34,32 @@ export function IdentityCard({
   org: string
   location: LocalizedText
   contacts: CvContact[]
+  portrait?: CvPortrait
   locale: Locale
 }) {
   return (
     <Card as="section" featured>
-      <span
-        aria-hidden="true"
-        className="grid h-14 w-14 place-items-center rounded-2xl bg-linear-135 from-accent to-accent-2 text-lg font-bold text-white"
-      >
-        {initials}
-      </span>
+      {portrait ? (
+        <span className="block h-16 w-16 overflow-hidden rounded-2xl border border-edge">
+          <CloudinaryImage
+            asset={portrait}
+            // Empty on purpose: the name sits directly beneath, so describing
+            // the portrait would have a screen reader announce him twice. Same
+            // call the header's monogram makes.
+            alt=""
+            sizes="64px"
+            priority
+            className="h-full w-full object-cover"
+          />
+        </span>
+      ) : (
+        <span
+          aria-hidden="true"
+          className="grid h-16 w-16 place-items-center rounded-2xl bg-linear-135 from-accent to-accent-2 text-lg font-bold text-white"
+        >
+          {initials}
+        </span>
+      )}
 
       <h2 className="mt-3.5 text-xl font-semibold tracking-tight">
         {text(name, locale)}

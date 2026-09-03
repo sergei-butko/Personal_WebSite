@@ -54,6 +54,7 @@ export default async function CvPage({
             org={cv.org}
             location={cv.location}
             contacts={cv.contacts}
+            portrait={cv.portrait}
             locale={locale}
           />
 
