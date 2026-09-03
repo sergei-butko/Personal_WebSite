@@ -1,22 +1,30 @@
 name: Sync Threads
 
-# Manual only, on purpose.
+# Daily, plus on demand.
 #
-# This ran every six hours and pushed a "chore: sync Threads posts" commit to
-# main whenever the feed moved. Threads is not a feed anyone is waiting on, and
-# the cost — a main history made of bot commits, plus four pipeline runs a day
-# — bought nothing.
-#
-# Nothing is committed any more either: the snapshot is a JSON asset in
-# Cloudinary (data/threads.json), which the site build fetches. So main gets no
+# It once ran every six hours and pushed a "chore: sync Threads posts" commit
+# to main whenever the feed moved — four pipeline runs a day and a main history
+# made of bot commits. It was made manual to stop that, and then the reason
+# went away: nothing is committed any more, because the snapshot is a JSON
+# asset in Cloudinary (data/threads.json) that the site build fetches. So the
+# schedule is back, once a day rather than four times, and main still gets no
 # generated content and no sync commits at all.
+#
+# 10:30 UTC is 13:30 in Kyiv while Ukraine is on EEST. Cron here is UTC and has
+# no timezone support, so the run lands an hour earlier in local terms once the
+# clocks go back — expressing "13:30 Kyiv" is not possible, and an hour of
+# drift on a feed nobody is waiting on is the cheaper of the two answers.
+# :30 rather than :00 on purpose: scheduled runs are best-effort and GitHub
+# queues them heavily at the top of the hour.
 #
 # Re-running is safe. Public ids come from Meta's post id, so a repeat run
 # replaces assets in Cloudinary rather than adding copies, and a run that finds
 # no change uploads nothing.
 #
-# To pull new posts: Actions -> Sync Threads -> Run workflow.
+# To pull new posts by hand: Actions -> Sync Threads -> Run workflow.
 on:
+  schedule:
+    - cron: '30 10 * * *'
   workflow_dispatch:
     inputs:
       deploy:
@@ -32,6 +40,20 @@ permissions:
 concurrency:
   group: sync-threads
   cancel-in-progress: false
+
+# Whether this run should publish afterwards.
+#
+# `inputs` exists ONLY for workflow_dispatch. On a scheduled run `inputs.deploy`
+# is null, so gating the deploy on it directly would have every nightly sync
+# write to Cloudinary and never rebuild the site. That failure hides itself:
+# lib/live-snapshot.ts re-reads the snapshot in the browser, so the page would
+# still show new posts while the prerendered HTML — the copy search engines and
+# anyone without JavaScript get — quietly went stale.
+#
+# Computed once here rather than repeated in the two `if`s below, which is
+# where the two of them would drift apart.
+env:
+  WANTS_DEPLOY: ${{ github.event_name == 'schedule' || inputs.deploy }}
 
 jobs:
   sync:
@@ -90,7 +112,7 @@ jobs:
         # branch before merging; that must not publish anything.
         if: >-
           success()
-          && inputs.deploy
+          && env.WANTS_DEPLOY == 'true'
           && steps.sync.outputs.changed == 'true'
           && github.ref_name == github.event.repository.default_branch
         env:
@@ -103,11 +125,11 @@ jobs:
       - name: Explain why no deploy was dispatched
         if: >-
           success()
-          && !(inputs.deploy
+          && !(env.WANTS_DEPLOY == 'true'
           && steps.sync.outputs.changed == 'true'
           && github.ref_name == github.event.repository.default_branch)
         run: |
-          if [[ "${{ inputs.deploy }}" != "true" ]]; then
+          if [[ "$WANTS_DEPLOY" != "true" ]]; then
             echo "The deploy input was unticked. Cloudinary is updated; the site is not."
           elif [[ "${{ steps.sync.outputs.changed }}" != "true" ]]; then
             echo "Nothing changed, so there is nothing to publish."

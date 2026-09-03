@@ -8,10 +8,20 @@ name: Refresh Threads token
 # built-in GITHUB_TOKEN is not allowed to write secrets. If that secret is
 # absent the job skips itself and does nothing.
 #
-# Not setting it up is a valid choice. Then the token simply expires after 60
-# days, the scheduled sync fails, and GitHub emails you about the failed run —
-# at which point you run `npm run threads:refresh -- <token>` locally and
-# update THREADS_ACCESS_TOKEN by hand. Loud failure, no silent rot.
+# Not setting it up is a survivable choice, but read what it costs. The token
+# expires after 60 days; the daily Threads sync then fails and GitHub emails
+# about the failed run, at which point you run `npm run threads:refresh --
+# <token>` locally and update THREADS_ACCESS_TOKEN by hand.
+#
+# That is loud, not safe. The email arrives AFTER the window has closed, and a
+# long-lived token past its 60 days cannot be refreshed at all — recovery is
+# Meta's auth flow from the start, not one command. The refresh only works on a
+# token that is still alive, which is what this job exists to keep true.
+#
+# Note also that the alarm depends on something running daily. It does today,
+# because sync-threads.yml is scheduled. While both syncs were manual, nothing
+# touched the token between hand-runs and an expiry announced itself only when
+# someone next tried to sync.
 
 on:
   schedule:

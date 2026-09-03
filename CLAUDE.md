@@ -137,13 +137,32 @@ Don't rebuild one without a reason that has changed.
 
 ## The two syncs
 
-Both are **manual only** (`workflow_dispatch`). They used to run every six hours
-and push `chore: sync` commits to `main` — four pipeline runs a day against
-feeds nobody is waiting on, for a `main` history made of bot commits. A run now
-uploads to Cloudinary and then dispatches `deploy.yml` itself, because with
-nothing pushed there is no push event to trigger a deploy. It dispatches against
-the **default branch**, never the branch the run started from, so syncing from a
-feature branch cannot publish that branch.
+**Threads runs daily at 10:30 UTC; photos is manual only** (`workflow_dispatch`).
+Both were manual for a while: they used to run every six hours and push
+`chore: sync` commits to `main` — four pipeline runs a day against feeds nobody
+is waiting on, for a `main` history made of bot commits. The schedule came back
+for Threads once that cost was gone, because a run now commits nothing at all;
+once a day is not four times, and `main` stays clean either way.
+
+A run uploads to Cloudinary and then dispatches `deploy.yml` itself, because
+with nothing pushed there is no push event to trigger a deploy. It dispatches
+against the **default branch**, never the branch the run started from, so
+syncing from a feature branch cannot publish that branch.
+
+**`inputs` does not exist on a scheduled run,** and the deploy step used to be
+gated on `inputs.deploy` directly. Left that way, every nightly sync would write
+to Cloudinary and never rebuild the site — and it would not look broken, because
+`lib/live-snapshot.ts` re-reads the snapshot in the browser, so the page would
+show new posts while the prerendered HTML that search engines and no-JS visitors
+get went quietly stale. `sync-threads.yml` computes `WANTS_DEPLOY` once at
+workflow level for this reason. **Give `sync-telegram.yml` the same treatment
+before putting it on a schedule.**
+
+Cron is UTC and takes no timezone, so 10:30 UTC is 13:30 in Kyiv only while
+Ukraine is on EEST; the run lands an hour earlier in local terms in winter.
+There is no way to express a local time here — an hour of drift is the cheaper
+answer. The `:30` is deliberate too: scheduled runs are best-effort and GitHub
+queues them heavily on the hour.
 
 **Photos** (`sync-telegram.ts`): reads `t.me/s/<channel>`, a plain public
 preview page — no API key, no bot. Walks history backwards via `?before=`,
@@ -200,9 +219,22 @@ walks everything, for when you suspect a backdated post was missed and do not
 want to touch `syncedThrough`.
 
 `refresh-threads-token.yml` stays on its weekly schedule — it touches no content,
-and a Threads long-lived token that misses its 60-day window dies permanently.
-It self-skips unless `GH_SECRETS_PAT` is set, in which case the token simply
-expires loudly and is refreshed by hand.
+and a Threads long-lived token that misses its 60-day window dies **permanently**:
+there is no grace period, and recovery means going back through Meta's auth flow
+rather than running one command.
+
+It self-skips unless `GH_SECRETS_PAT` is set — a fine-grained PAT scoped to this
+repository with _Secrets: read and write_, because the built-in `GITHUB_TOKEN`
+may not write secrets. **It is not set today, so every weekly run is a no-op
+that reports success.** The fallback is that the daily Threads sync fails once
+the token dies and GitHub emails about it; that is loud, but loud is not the
+same as safe — by the time it fires the 60 days are already gone. Refreshing by
+hand is `npm run threads:refresh -- <current token>`, then updating
+`THREADS_ACCESS_TOKEN`.
+
+This was the whole argument for putting Threads back on a schedule at all: with
+both syncs manual, nothing touched the token between runs, so an expiry
+announced itself only when someone happened to sync by hand.
 
 ## Gotchas already paid for
 
