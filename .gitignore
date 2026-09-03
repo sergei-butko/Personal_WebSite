@@ -38,3 +38,11 @@ src/content/*.generated.ts
 
 # Personal working notes — must never reach a public repo.
 CLAUDE.local.md
+
+# Claude Code, personal to this machine
+.claude/settings.local.json
+
+# The CV PDF. Canonical copy is the Cloudinary raw asset written by
+# `npm run cv:upload`; this is the local source it is uploaded from, and a
+# few megabytes of scan-quality render does not belong in git history.
+/docs/*.pdf

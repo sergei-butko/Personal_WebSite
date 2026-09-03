@@ -18,7 +18,13 @@
  * run after the import that consumes it.
  */
 
-import { audioUrl, mediaSrcSet, mediaUrl, widestWidth } from '../src/lib/media'
+import {
+  audioUrl,
+  documentUrl,
+  mediaSrcSet,
+  mediaUrl,
+  widestWidth,
+} from '../src/lib/media'
 
 let failed = 0
 
@@ -60,6 +66,15 @@ function main(): void {
     'audio carries it too, before the id and its extension',
     audioUrl('telegram/audio/554', 1788126340),
     `${BASE}/video/upload/v1788126340/telegram/audio/554.mp3`
+  )
+
+  // The CV is replaced in place under a stable id, so the version is the only
+  // thing that stops a visitor being handed the copy they downloaded a year
+  // ago. Raw delivery takes no transform, so the version is the whole path.
+  check(
+    'a document is raw, versioned, and otherwise untouched',
+    documentUrl('docs/cv-serhii-butko', 1788400000),
+    `${BASE}/raw/upload/v1788400000/docs/cv-serhii-butko`
   )
 
   // Every candidate must carry the same version, or a browser picking a

@@ -331,10 +331,43 @@ Shipped: bilingual routing, light/dark, bento home, CI + Pages deploy, the
 Threads mirror, the Telegram photo mirror, the links directory, the MDX blog
 (tag pages, fragrance card, shiki highlighting).
 
-Placeholder routes awaiting real content: `/about`, `/cv`, `/projects`. `blog`
+Placeholder routes awaiting real content: `/about` and `/projects`. `blog`
 and `projects` are absent from the header nav while there is nothing published
-in them; `about` and `cv` are advertised and currently render "this page is a
+in them; `about` is advertised and currently renders "this page is a
 placeholder". One line in `components/layout/header.tsx` controls each.
+
+**`/cv` is real.** Data in `src/content/cv.ts`, schema in `lib/cv`, components in
+`components/cv/`. Sourced from the LinkedIn profile rather than
+`docs/CV_Serhii_Butko_2025.pdf`, which is a year behind it; the PDF's
+contribution is the skills taxonomy. Bilingual by shape rather than by field: a
+bare string in `content/cv.ts` is the same in both languages and an `{ en, uk }`
+pair is a thing that genuinely differs, which is the name, the months, the
+durations, the degrees and the two language rows. Job titles, employers, tooling
+and every bullet stay English in both — a translated "Middle DevOps Engineer"
+helps nobody. The site header wordmark stays English too; only the CV's own
+heading takes the Ukrainian name.
+
+Two things about it that are load-bearing:
+
+- **The stack tiles' `span` is content, not styling.** Azure takes seven of
+  twelve tracks to AWS's five because it holds eight tools to AWS's six. Rows
+  must add to exactly twelve or the grid leaves a hole beside the last tile in
+  the row — same failure as a seven-tile photo collage, same invisibility.
+  `lib/cv` fails the build on it and `npm run test:cv` pins the rule, so adding
+  a tool without rebalancing its row is a red build rather than a bug nobody
+  sees. The widths cannot be Tailwind utilities: a span utility has to be a
+  literal in the source to be emitted at all, so `.stack-mosaic` in
+  `globals.css` takes the number through a custom property instead.
+- **The PDF is not linked yet, and that is a Cloudinary account setting.**
+  `npm run cv:upload` puts it at `docs/cv-serhii-butko.pdf` — the extension is
+  part of the id, because without it the file is served as
+  `application/octet-stream` named `cv-serhii-butko` and `fl_attachment` cannot
+  supply a name containing a dot. But this cloud has **PDF and ZIP delivery
+  disabled**, which is Cloudinary's default, so every request for it returns
+  401 `deny or ACL failure`. Settings → Security → "PDF and ZIP files delivery",
+  then re-run the script and paste the version into `content/cv.ts`. Until then
+  `resume` is absent and the download button is not rendered — a missing button
+  beats a dead link.
 
 **The standing instruction is to fill these in, not to remove them.** Deleting
 an empty thing makes the site smaller; the site is meant to get bigger. Both
@@ -347,7 +380,7 @@ content is Serhii's to supply:
   render `rel="me"`, which is an identity claim. **These need real URLs**, and
   until they have them they are the one genuinely wrong thing the site ships:
   the links page renders each as a full-size branded card.
-- `/about` and `/cv` are in the nav and need real prose behind them.
+- `/about` is in the nav and needs real prose behind it.
 - `profile.ts` is placeholder copy, and it renders on every page through the
   header and footer.
 - `src/content/posts/` is empty. Six fabricated `draft: true` seed posts were
@@ -401,6 +434,7 @@ npm run typecheck && npm run lint && npm run format:check && npm run build
 npm run test:telegram && npm run test:dedup && npm run test:collage
 npm run test:names && npm run test:threads-merge && npm run test:photo-merge
 npm run test:shelves && npm run test:media-audit && npm run test:media-url
+npm run test:cv
 ```
 
 The build must run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,

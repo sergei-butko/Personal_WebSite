@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 interface CardProps {
   children: ReactNode
@@ -7,6 +7,12 @@ interface CardProps {
   /** Adds the subtle accent wash used by the hero tile. */
   featured?: boolean
   as?: 'div' | 'article' | 'section'
+  /**
+   * Inline custom properties, for a value that comes from content rather than
+   * from the source — the CV's stack tiles carry their grid span this way,
+   * because a Tailwind span utility has to be a literal to be emitted at all.
+   */
+  style?: CSSProperties
 }
 
 export function Card({
@@ -14,10 +20,12 @@ export function Card({
   className = '',
   featured = false,
   as = 'div',
+  style,
 }: CardProps) {
   const Tag = as
   return (
     <Tag
+      style={style}
       className={[
         'group min-w-0 rounded-[var(--radius-card)] border border-edge p-5',
         'transition duration-200 hover:-translate-y-0.5 hover:border-accent',

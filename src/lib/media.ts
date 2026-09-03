@@ -86,6 +86,25 @@ export function audioUrl(publicId: string, version?: number): string {
   return `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/${versionPath(version)}${encodeURI(publicId)}.mp3`
 }
 
+/**
+ * A delivery URL for a document — the CV PDF.
+ *
+ * `/raw/upload/`, the same resource type the snapshots use: Cloudinary stores
+ * anything that is neither picture nor sound as raw bytes and serves them
+ * back untransformed. There is no `f_auto` and no width here because there is
+ * nothing to negotiate — a PDF is delivered exactly as it was uploaded.
+ *
+ * The version matters more bluntly than it does for a photograph. A CV is
+ * replaced in place under a stable public id, and raw assets are served with
+ * the same long max-age as images, so a visitor who downloaded last year's
+ * copy would keep being handed it. Recording the version each time the file is
+ * replaced gives the new document a URL of its own.
+ */
+export function documentUrl(publicId: string, version?: number): string {
+  assertConfigured(`the document "${publicId}"`)
+  return `https://res.cloudinary.com/${CLOUD_NAME}/raw/upload/${versionPath(version)}${encodeURI(publicId)}`
+}
+
 export function mediaSrcSet(
   publicId: string,
   intrinsicWidth: number,

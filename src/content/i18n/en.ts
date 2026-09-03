@@ -88,7 +88,28 @@ export const en = {
     close: 'Close',
   },
   about: { title: 'About', intro: 'Who I am, and how to reach me.' },
-  cv: { title: 'CV', intro: 'Experience, skills, and education.' },
+  cv: {
+    title: 'CV',
+    intro: 'Experience, skills, and education.',
+    /*
+     * Section labels and chrome. Everything else on the page — job titles,
+     * employers, tooling, the descriptions — is content, and lives in
+     * content/cv.ts, in one language, because a translated "Middle DevOps
+     * Engineer" helps nobody.
+     */
+    now: 'Now',
+    experience: 'Experience',
+    concurrent: 'Alongside the DevOps role',
+    stack: 'Stack',
+    stackNote: 'by area',
+    education: 'Education',
+    certifications: 'Certifications',
+    languages: 'Languages',
+    resume: 'Take it with you',
+    resumeNote: 'The same thing on one A4 page.',
+    download: 'Download CV (PDF)',
+    openProfile: 'Open LinkedIn',
+  },
   projects: { title: 'Projects', intro: 'Things I have built.' },
   links: {
     title: 'Links',
