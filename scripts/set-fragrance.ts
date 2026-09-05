@@ -13,17 +13,16 @@
  *
  * ## What this is for
  *
- * `threads:name` fills in what a model can corroborate. This is the other
- * half: the bottles it holds back — a house line the store has never seen, a
- * post whose house is written in prose the grounding check cannot match — plus
- * anything simply typed wrong. Both write the same field the same way, so
- * whichever put a bottle there, `media:organise` renames the pictures after it
- * and the deploy publishes it.
+ * Naming a bottle, in full: a post arrives from the sync without a fragrance
+ * and stays that way until someone says what it is. A model used to propose
+ * one too — removed on 2026-09-05 — so this is now the only writer, alongside
+ * a hand edit through `content:push`. Either way `media:organise` renames the
+ * pictures after the bottle and the deploy publishes it.
  *
- * The one difference is authority. A model's proposal has to clear two gates
- * in `fragrance-gates.ts` before it may write; a person saying what a bottle
- * is outranks both of them, and the grounding check survives here only as a
- * warning, because it is the shape a mistyped post id makes.
+ * `resolveTarget` in `fragrance-gates.ts` decides which post is meant, and
+ * refuses one that already has a bottle unless `overwrite` is set. The
+ * grounding check survives only as a warning: a person saying what a bottle is
+ * outranks it, and its real job is to flag the shape a mistyped post id makes.
  */
 
 import { type BottleInput, resolveTarget } from './fragrance-gates'

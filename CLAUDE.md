@@ -218,26 +218,30 @@ a post into a gap the cursor has already moved past. `THREADS_FETCH_ALL=1`
 walks everything, for when you suspect a backdated post was missed and do not
 want to touch `syncedThrough`.
 
-**The fragrance a post reviews is named automatically too**, immediately after
-the sync, in the same job. `scripts/name-fragrances.ts` (`npm run threads:name`)
-asks Claude what bottle a post is about and writes only what two gates in
-`scripts/fragrance-gates.ts` corroborate: the house and the scent must appear in
-the post text — squashed of punctuation first, since a house is usually written
-as `@handle` rather than prose — and a house LINE (`UNUM`, `Private Blend`) is
-written only when this store already records that line for that house,
-because a line is a fact about the house, not the post, and nothing in the
-prose can confirm one the store has never seen. Either gate failing leaves the
-row exactly as absent-fragrance has always meant: rendered as its picture
-alone, with the model's guess printed in the run log for Serhii to apply by
-hand. `npm run test:threads-name` pins both gates against fixtures quoted from
-real posts, with no API call and no cost.
+**The fragrance a post reviews is named BY HAND, and only by hand.** A synced
+post arrives without one and keeps arriving without one until Serhii runs
+`name-bottle.yml`. That is a supported state, not a backlog: absent-fragrance
+has always rendered as the post's picture alone.
+
+It was automatic for a while. `scripts/name-fragrances.ts` asked Claude what
+bottle a post was about and wrote only what two gates corroborated, and it was
+**removed on 2026-09-05** at Serhii's instruction — he does not want to pay for
+API credits, so an exhausted balance had already made it a daily no-op that
+still reported green. **Do not propose reinstating it or topping up a
+balance.** Git history has the script, its tests, and the `decide` / `knownLines`
+gates if the decision ever changes.
+
+What survived is the half that serves hand-naming: `resolveTarget` in
+`scripts/fragrance-gates.ts`, pinned by `npm run test:fragrance-gates`. It
+decides which post a typed bottle lands on and refuses one that already has a
+bottle unless `overwrite` is set.
 
 A wrong bottle is not a free mistake to correct: `fragrance` drives the shelf a
-post files under, the card's title, and — because `npm run media:organise` now
-also runs automatically, right after naming, in the same job — the Cloudinary
-public ids of the post's pictures. So `media:organise` running daily is not
-new; what changed is that a fresh fragrance is usually waiting for it every
-time, where a hand-naming session used to be the only thing that fed it.
+post files under, the card's title, and — through `npm run media:organise` —
+the Cloudinary public ids of the post's pictures. `media:organise` still runs
+daily in the sync, but it now usually finds nothing: `name-bottle.yml` renames
+the pictures itself, so the case it is really there for is a fragrance arriving
+by a hand edit through `content:push`, which touches no workflow at all.
 
 **When a gate holds a bottle back, `name-bottle.yml` is how it gets named** —
 Actions → Name a bottle → Run workflow, three boxes (house, scent, line) and a
@@ -268,16 +272,6 @@ Every input reaches the script through `env:`, never interpolated into a
 `${{ inputs.brand }}` spliced into a shell command is the standard Actions
 injection; `set-fragrance.ts` reads them from the environment for that reason
 alone. Do not "simplify" it into flags on the command line.
-
-Naming is the optional layer: without an `ANTHROPIC_API_KEY` repository secret
-the step announces the skip and every post keeps arriving unnamed, which
-`media:organise` and the deploy gate both already treat as a normal outcome —
-the sync does not fail over an enhancement it does not need in order to
-publish. A per-post API error (a rate limit, a network blip) is caught the
-same way: that one post is skipped and retried automatically tomorrow, rather
-than the failure aborting the run and costing the day's real synced content its
-organise/verify/deploy. `ANTHROPIC_WORKSPACE_ID` is read alongside the key only
-because a workspace-scoped key needs it; a plain key ignores it.
 
 `refresh-threads-token.yml` stays on its weekly schedule — it touches no content,
 and a Threads long-lived token that misses its 60-day window dies **permanently**:
@@ -312,11 +306,11 @@ announced itself only when someone happened to sync by hand.
   files and 827 MB across thirteen runs. Public ids are `<postId>-<slot>` now, so
   a re-upload replaces in place. **A Threads image ends up named after its
   bottle** (`threads/images/Tom_Ford-Oud_Wood-1`) — but not at upload time,
-  because the fragrance is hand-written or model-proposed and does not exist
-  yet when the sync itself runs. The sync still writes the id-shaped name;
-  `npm run media:organise` renames it once a fragrance lands, whether that was
-  `threads:name` a few seconds later in the same CI job or a hand edit through
-  `content:push` weeks after. Do not try to move the rename into the sync.
+  because the fragrance is hand-written and does not exist yet when the sync
+  itself runs. The sync still writes the id-shaped name; `npm run
+media:organise` renames it once a fragrance lands, whether that was
+  `name-bottle.yml` minutes later or a hand edit through `content:push` weeks
+  after. Do not try to move the rename into the sync.
 - **A Cloudinary folder is not a public id prefix.** This cloud is in dynamic
   folder mode: `asset_folder` is what the Media Library groups by, `public_id`
   is what the delivery URL is built from, and they are independent. `rename`
@@ -553,7 +547,7 @@ npm run typecheck && npm run lint && npm run format:check && npm run build
 npm run test:telegram && npm run test:dedup && npm run test:collage
 npm run test:names && npm run test:threads-merge && npm run test:photo-merge
 npm run test:shelves && npm run test:media-audit && npm run test:media-url
-npm run test:cv && npm run test:threads-name
+npm run test:cv && npm run test:fragrance-gates
 ```
 
 The build must run with `NEXT_PUBLIC_BASE_PATH=/Personal_WebSite` to match CI,
