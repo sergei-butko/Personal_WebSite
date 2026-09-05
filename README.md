@@ -10,7 +10,7 @@ exported, deployed to GitHub Pages by Actions.
 ## Running it
 
 ```bash
-nvm use          # Node 22, pinned in .nvmrc
+nvm use          # Node 24, pinned in .nvmrc
 npm install
 npm run dev      # http://localhost:3000
 ```
