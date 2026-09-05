@@ -18,7 +18,7 @@ Bilingual English + Ukrainian, one route tree, both languages fully generated.
 
 ## Stack
 
-Next.js 16 App Router · React 19 · TypeScript strict · Tailwind v4 · Node 22
+Next.js 16 App Router · React 19 · TypeScript strict · Tailwind v4 · Node 24
 (`.nvmrc`) · zod for every content contract · MDX for posts · Cloudinary for all
 media and generated data.
 
@@ -527,7 +527,16 @@ function`. `eslint-plugin-react` has no ESLint 10 release yet, and
   workaround; it is not worth the fragility here, because the ESLint boundary
   rules are load-bearing and typecheck on a repo this size is already instant.
 
-Both were reverted and the lockfile restored, so the tree carries no drift from
+  **It too has been merged once and reverted**, the same way ESLint 10 was.
+  Dependabot #2 took TypeScript to 7.0.2 on 2026-09-05 and it reached `main`;
+  `npm run lint` and CI's `Lint` step failed on every branch from then on, while
+  `deploy.yml` — which does not lint — kept publishing a correct site, so again
+  only CI was wrong. Pinned back to `^6.0.3` the same day. The tracking issue is
+  for TS **>= 7.1**, so 7.0.x will never be the version that unblocks this: wait
+  for a stable 7.1 (only `7.1.0-dev.*` builds exist as of 2026-09-05) and take
+  the bump then.
+
+Both are reverted and the lockfile restored, so the tree carries no drift from
 the attempt. Take them one at a time when unblocked, verify each, and don't fold
 them into feature work.
 
