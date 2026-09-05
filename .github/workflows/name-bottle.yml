@@ -2,12 +2,15 @@ name: Name a bottle
 
 # Type what a post is about; CI does the rest.
 #
-# `threads:name` fills in what a model can corroborate — see the two gates in
-# scripts/fragrance-gates.ts. This is the other half: the bottles it holds back
-# (a house line the store has never seen, a post whose house the grounding
-# check cannot match) plus anything it simply got wrong. Both write the same
-# field the same way, so the same three steps follow either: rename the
-# pictures after the bottle, verify the store, publish.
+# This is the ONLY way a bottle gets named. Automatic naming was removed on
+# 2026-09-05, so a synced post arrives without a fragrance and stays that way
+# until you run this — which is a supported state the site has always rendered
+# correctly, not a gap that blocks anything.
+#
+# Three steps follow the write: rename the pictures after the bottle, verify
+# the store, publish. `resolveTarget` in scripts/fragrance-gates.ts decides
+# which post the bottle lands on, and refuses to replace one that already has
+# a bottle unless `overwrite` is ticked.
 #
 # Leave "post" blank and it takes the NEWEST post with no bottle, which is
 # almost always the one that just synced. Pass an id to name an older one.
