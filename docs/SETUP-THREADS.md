@@ -76,12 +76,16 @@ This token lasts **one hour**. Move to step 5 promptly.
 
 ## 5. Exchange it for a long-lived token
 
-In the repo, locally:
+In the repo, locally. Put the app secret from step 3 in `.env` —
+`threads:exchange` reads it from there, the same way `cv:upload` does:
 
 ```bash
-export THREADS_APP_SECRET='<the app secret from step 3>'
+echo "THREADS_APP_SECRET=<the app secret from step 3>" >> .env
 npm run threads:exchange -- '<the short-lived token from step 4>'
 ```
+
+`export THREADS_APP_SECRET=...` in the shell works too; what does _not_ work is
+`.env` alone with a plain `tsx` invocation, because nothing loads `.env` for it.
 
 It prints a token valid for **60 days** and tells you when it expires.
 
@@ -160,11 +164,28 @@ post on Threads.
 
 ## Troubleshooting
 
+**`Session key invalid` (code 452, subcode 4279019) from `threads:exchange`**
+— the token is already long-lived, which is what the dashboard generator now
+issues by default. `th_exchange_token` only upgrades a 1-hour token and
+rejects a 60-day one. Confirm before assuming it is revoked:
+
+```bash
+T='<the token>'
+curl -s "https://graph.threads.net/debug_token?input_token=$T&access_token=$T"
+```
+
+`expires_at` about 60 days out and `is_valid: true` means **skip step 5** and
+store the token as-is. This happened on 2026-09-05.
+
 **`Invalid parameter` (code 100) from `threads:exchange`** — not a token
-problem; code 190 is what a bad token gives. Either `THREADS_APP_SECRET` is
-the Facebook app secret instead of the Threads one (step 3), or the token is
-already long-lived — the dashboard generator sometimes issues 60-day tokens
-directly, in which case skip step 5 and store it as-is.
+problem; code 190 is what a bad token gives. `THREADS_APP_SECRET` is the
+Facebook app secret instead of the Threads one (step 3), or the token was
+truncated or copied with surrounding whitespace.
+
+**`THREADS_APP_SECRET is not set`** — the value is in `.env` but the shell
+never read it. `npm run threads:exchange` loads `.env` itself
+(`--env-file-if-exists`); if you are calling `tsx scripts/threads-token.ts`
+directly, add `--env-file=.env` or export the variable first.
 
 **`Could not read username`** — the token is invalid, expired, or
 `threads_basic` was never granted. Redo steps 4–6.

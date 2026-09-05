@@ -286,12 +286,18 @@ rather than running one command.
 
 It self-skips unless `GH_SECRETS_PAT` is set — a fine-grained PAT scoped to this
 repository with _Secrets: read and write_, because the built-in `GITHUB_TOKEN`
-may not write secrets. **It is not set today, so every weekly run is a no-op
-that reports success.** The fallback is that the daily Threads sync fails once
+may not write secrets. **It was set on 2026-09-05, so the weekly run now does
+real work** — before that every run was a no-op that reported success. The
+fallback, if it is ever removed again, is that the daily Threads sync fails once
 the token dies and GitHub emails about it; that is loud, but loud is not the
 same as safe — by the time it fires the 60 days are already gone. Refreshing by
 hand is `npm run threads:refresh -- <current token>`, then updating
 `THREADS_ACCESS_TOKEN`.
+
+**The token in place expires 2026-11-03.** It came from the app dashboard
+already long-lived (60 days), so it needed no `threads:exchange` — see the code
+452 entry in `docs/SETUP-THREADS.md` before assuming a failed exchange means a
+bad token.
 
 This was the whole argument for putting Threads back on a schedule at all: with
 both syncs manual, nothing touched the token between runs, so an expiry

@@ -50,6 +50,16 @@ function explain(error: MetaError): string {
       '(c) the token was truncated or copied with surrounding whitespace.'
     )
   }
+  if (error.code === 452 || error.error_subcode === 4279019) {
+    return (
+      'The token is almost certainly ALREADY long-lived — the app dashboard ' +
+      'issues 60-day tokens directly now, and th_exchange_token only upgrades ' +
+      'a 1-hour one. Check with:\n' +
+      '    curl -s "https://graph.threads.net/debug_token?input_token=$T&access_token=$T"\n' +
+      '  An expires_at 60 days out means skip the exchange and store it as-is. ' +
+      'Otherwise the session really was revoked — generate a new token.'
+    )
+  }
   if (error.code === 10 || error.code === 200) {
     return 'threads_basic was not granted, or the tester invitation is unaccepted.'
   }
