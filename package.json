@@ -10,7 +10,7 @@
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "sync:threads": "tsx scripts/sync-threads.ts",
-    "threads:exchange": "tsx scripts/threads-token.ts exchange",
+    "threads:exchange": "node --env-file-if-exists=.env node_modules/.bin/tsx scripts/threads-token.ts exchange",
     "threads:refresh": "tsx scripts/threads-token.ts refresh",
     "test:telegram": "tsx scripts/telegram-parse.test.ts",
     "sync:photos": "tsx scripts/sync-telegram.ts",
